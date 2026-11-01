@@ -1,0 +1,63 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+.envrc
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+.pytest_cache/
+.tox/
+.nox/
+.hypothesis/
+.mypy_cache/
+.pyright/
+.pytype/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Node.js / Vite
+node_modules/
+dist/
+build/
+.vite/
+.eslintcache
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# Local databases and uploaded files
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+uploads/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+backend/tempCodeRunnerFile.py
+backend/_auth_probe.py
+backend/_auth_probe_out.txt
+
+# Local distribution and backup archives
+/NeighborLend.rar
+/neighborlend-backend.tar
+/neighborlend-frontend.tar
+/frontend/frontend.zip
+
+# IDE and operating-system files
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+Desktop.ini

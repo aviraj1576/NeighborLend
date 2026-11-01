@@ -1,0 +1,20 @@
+.verification-message {
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  border: 1px solid rgba(0, 212, 170, 0.25);
+  border-radius: var(--radius-sm);
+  color: var(--accent-primary);
+  font-size: 0.9rem;
+}
+
+.resend-code-button {
+  display: block;
+  margin: 18px auto 0;
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+.resend-code-button:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}

@@ -1,0 +1,15 @@
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.env*
+.git/
+.pytest_cache/
+tests/
+uploads/
+*.db
+*.db-*
+*.sqlite
+*.sqlite3
+_auth_probe*
+tempCodeRunnerFile.py
