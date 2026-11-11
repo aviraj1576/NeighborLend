@@ -1,10 +1,36 @@
 /*
   NeighborLend design layer — extends the taste-skill kit (system.css, cards.css,
-  motion.css, backgrounds.css) loaded in index.html. Brand tokens (:root) are set there
-  via start.mjs brand: cream #FFEED6 ground, ink #2B061E, gold #D2BF55 accent,
-  Instrument Sans + DM Mono, soft radius, tonal buttons.
-  Only component styles the kit does not provide live here.
+  motion.css, backgrounds.css, layout.css, icon.css) imported in main.jsx.
+  Brand tokens (start.mjs brand): cream #FFEED6 ground, ink #2B061E,
+  gold #D2BF55 accent, Instrument Sans + DM Mono, soft radius, tonal buttons.
 */
+
+:root {
+  --p-bg: #ffeed6;
+  --p-surface: #f3e1cc;
+  --p-ink: #2b061e;
+  --p-muted: #76575d;
+  --p-accent: #d2bf55;
+  --p-accent-ink: #111111;
+  --p-action: #2b061e;
+  --p-action-ink: #ffeed6;
+  --p-inv-bg: #2b061e;
+  --p-inv-surface: #381429;
+  --p-inv-ink: #ffeed6;
+  --p-inv-muted: #aa8e8a;
+  --p-inv-accent: #d2bf55;
+  --p-inv-accent-ink: #111111;
+  --p-inv-action: #d2bf55;
+  --p-inv-action-ink: #111111;
+  --font-display: "Instrument Sans", system-ui, sans-serif;
+  --font-text: "Instrument Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 500;
+  --display-tracking: -0.028em;
+  --display-tracking-xl: -0.036em;
+  --display-stretch: 96%;
+  --ly-scale: 1.04;
+}
 
 /* ---------------------------------------------------------------- base text utilities */
 .measure { max-width: 62ch; }
