@@ -315,7 +315,7 @@ const Chat = () => {
       await fetchActiveConversation(activeConv.id, true);
       fetchConversations(true);
       if (borrowRequestId) {
-        // Auto-navigate to the new borrow request to start handover workflow
+        // Rental detail opens checkout; server gates keep handover locked until funded.
         navigate(`/borrow-requests/${borrowRequestId}`);
       }
     } catch (err) {
@@ -628,6 +628,14 @@ const Chat = () => {
                     <span className="detail-val text-accent">₹{latestOffer.total_cost}</span>
                   </div>
                   <div className="offer-detail-item">
+                    <span className="detail-label">Agreed refundable deposit</span>
+                    <span className="detail-val">{latestOffer.security_deposit_paise == null ? 'New offer required to confirm deposit' : `₹${(latestOffer.security_deposit_paise / 100).toFixed(2)}`}</span>
+                  </div>
+                  <div className="offer-detail-item">
+                    <span className="detail-label">Test payment total: rent + deposit</span>
+                    <span className="detail-val">{latestOffer.total_amount_paise == null ? 'Not agreed' : `₹${(latestOffer.total_amount_paise / 100).toFixed(2)}`}</span>
+                  </div>
+                  <div className="offer-detail-item">
                     <span className="detail-label">Proposed By</span>
                     <span className="detail-val">
                       {user && latestOffer.sender_id === user.id ? 'You' : latestOffer.sender_name}
@@ -651,6 +659,7 @@ const Chat = () => {
                     <div className="offer-actions-group">
                       <button 
                         className="btn-accept" 
+                        disabled={latestOffer.total_amount_paise == null}
                         onClick={() => handleAcceptOffer(latestOffer.id)}
                       >
                         <Check size={18} />

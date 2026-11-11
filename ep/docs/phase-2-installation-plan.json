@@ -1,0 +1,250 @@
+{
+  "schema_version": "1.0",
+  "status": "awaiting_user_approval",
+  "approved_environment": "D:/Anaconda_Install/envs/neighbourlend_yolo/python.exe",
+  "conda_package_changes": [],
+  "pip_package_changes": [],
+  "sources": [
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/yformer/EfficientSAM/d525f622e6f640acf5a0fc37c7ca1f243da5bde0/LICENSE",
+      "relative_target": ".runtime/models/source/efficientsam-d525f622e6f640acf5a0fc37c7ca1f243da5bde0/LICENSE",
+      "expected_bytes": 11357,
+      "git_blob_sha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "repository": "yformer/EfficientSAM",
+      "commit": "d525f622e6f640acf5a0fc37c7ca1f243da5bde0"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/yformer/EfficientSAM/d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/__init__.py",
+      "relative_target": ".runtime/models/source/efficientsam-d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/__init__.py",
+      "expected_bytes": 174,
+      "git_blob_sha1": "22a2d29cee5d2a2df01944c90b6e01f879301f3f",
+      "repository": "yformer/EfficientSAM",
+      "commit": "d525f622e6f640acf5a0fc37c7ca1f243da5bde0"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/yformer/EfficientSAM/d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/build_efficient_sam.py",
+      "relative_target": ".runtime/models/source/efficientsam-d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/build_efficient_sam.py",
+      "expected_bytes": 638,
+      "git_blob_sha1": "c6dd40ab1f4f531a94189acd5c7712ff7e43467e",
+      "repository": "yformer/EfficientSAM",
+      "commit": "d525f622e6f640acf5a0fc37c7ca1f243da5bde0"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/yformer/EfficientSAM/d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/efficient_sam.py",
+      "relative_target": ".runtime/models/source/efficientsam-d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/efficient_sam.py",
+      "expected_bytes": 11643,
+      "git_blob_sha1": "cf2af8a0b979ab4bbfe17a537c323d0ccfefce0b",
+      "repository": "yformer/EfficientSAM",
+      "commit": "d525f622e6f640acf5a0fc37c7ca1f243da5bde0"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/yformer/EfficientSAM/d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/efficient_sam_decoder.py",
+      "relative_target": ".runtime/models/source/efficientsam-d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/efficient_sam_decoder.py",
+      "expected_bytes": 12084,
+      "git_blob_sha1": "380f41c1650f1ffb824d8d911f810eabedc66ddd",
+      "repository": "yformer/EfficientSAM",
+      "commit": "d525f622e6f640acf5a0fc37c7ca1f243da5bde0"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/yformer/EfficientSAM/d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/efficient_sam_encoder.py",
+      "relative_target": ".runtime/models/source/efficientsam-d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/efficient_sam_encoder.py",
+      "expected_bytes": 7700,
+      "git_blob_sha1": "73fd7ac470b42df738e5e6bcbbcb60b4f30fb46e",
+      "repository": "yformer/EfficientSAM",
+      "commit": "d525f622e6f640acf5a0fc37c7ca1f243da5bde0"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/yformer/EfficientSAM/d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/mlp.py",
+      "relative_target": ".runtime/models/source/efficientsam-d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/mlp.py",
+      "expected_bytes": 839,
+      "git_blob_sha1": "b3be8db49cbf6990ce55a467e7e62f60daf62c9d",
+      "repository": "yformer/EfficientSAM",
+      "commit": "d525f622e6f640acf5a0fc37c7ca1f243da5bde0"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/yformer/EfficientSAM/d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/two_way_transformer.py",
+      "relative_target": ".runtime/models/source/efficientsam-d525f622e6f640acf5a0fc37c7ca1f243da5bde0/efficient_sam/two_way_transformer.py",
+      "expected_bytes": 9497,
+      "git_blob_sha1": "b06e5285869437dce0843e88d25c03b97cfc7b49",
+      "repository": "yformer/EfficientSAM",
+      "commit": "d525f622e6f640acf5a0fc37c7ca1f243da5bde0"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/LICENSE",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/LICENSE",
+      "expected_bytes": 11359,
+      "git_blob_sha1": "5471dc10377b76db85a2feca7a99a7eef4980ba8",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/__init__.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/__init__.py",
+      "expected_bytes": 218,
+      "git_blob_sha1": "ae847e46898077fe3d8701b8a181d7b4e3d41cd9",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/hub/__init__.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/hub/__init__.py",
+      "expected_bytes": 195,
+      "git_blob_sha1": "b88da6bf80be92af00b72dfdb0a806fa64a7a2d9",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/hub/backbones.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/hub/backbones.py",
+      "expected_bytes": 5586,
+      "git_blob_sha1": "af5fd95d38eb33f73a85b92a94a715773a4e70bc",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/hub/utils.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/hub/utils.py",
+      "expected_bytes": 1598,
+      "git_blob_sha1": "c6fa705f31736069cd68c5f642253cb5ad7fbe10",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/__init__.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/__init__.py",
+      "expected_bytes": 498,
+      "git_blob_sha1": "d640d145fbfb8993d6e7ceec4eb22b5b0a3e62fa",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/attention.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/attention.py",
+      "expected_bytes": 3298,
+      "git_blob_sha1": "f1d3dabf14ffbd5eb68c3c16edc56d0da19b1265",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/block.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/block.py",
+      "expected_bytes": 11609,
+      "git_blob_sha1": "7e83b71ccb428ca099d2d1d49933dc837faeecfa",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/dino_head.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/dino_head.py",
+      "expected_bytes": 2007,
+      "git_blob_sha1": "0ace8ffd6297a1dd480b19db407b662a6ea0f565",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/drop_path.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/drop_path.py",
+      "expected_bytes": 1157,
+      "git_blob_sha1": "1d640e0b969b8dcba96260243473700b4e5b24b5",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/layer_scale.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/layer_scale.py",
+      "expected_bytes": 1097,
+      "git_blob_sha1": "0b38971302b3c8fb3d4c05a5f0912fafe0e80816",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/mlp.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/mlp.py",
+      "expected_bytes": 1269,
+      "git_blob_sha1": "bbf9432aae9258612caeae910a7bde17999e328e",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/patch_embed.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/patch_embed.py",
+      "expected_bytes": 2829,
+      "git_blob_sha1": "8b7c0804784a42cf80c0297d110dcc68cc85b339",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/swiglu_ffn.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/layers/swiglu_ffn.py",
+      "expected_bytes": 3200,
+      "git_blob_sha1": "340cee356cb4ad7cb3c8bbefa121f39f7c4e5c6f",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/models/__init__.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/models/__init__.py",
+      "expected_bytes": 1574,
+      "git_blob_sha1": "817a63aeb07802ca02f75c9cef674b97355deb3f",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    },
+    {
+      "kind": "source",
+      "url": "https://raw.githubusercontent.com/facebookresearch/dinov2/7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/models/vision_transformer.py",
+      "relative_target": ".runtime/models/source/dinov2-7764ea0f912e53c92e82eb78a2a1631e92725fc8/dinov2/models/vision_transformer.py",
+      "expected_bytes": 16438,
+      "git_blob_sha1": "34694244ae4e6467a4aa315180a89b323336bf0b",
+      "repository": "facebookresearch/dinov2",
+      "commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8"
+    }
+  ],
+  "weights": [
+    {
+      "kind": "weights",
+      "name": "EfficientSAM-Ti",
+      "url": "https://raw.githubusercontent.com/yformer/EfficientSAM/d525f622e6f640acf5a0fc37c7ca1f243da5bde0/weights/efficient_sam_vitt.pt",
+      "relative_target": ".runtime/models/weights/efficient_sam_vitt.pt",
+      "expected_bytes": 40982470,
+      "git_blob_sha1": "af883c49e33c68f01107be52df0ecad26a48355f",
+      "license": "Apache-2.0",
+      "source_commit": "d525f622e6f640acf5a0fc37c7ca1f243da5bde0"
+    },
+    {
+      "kind": "weights",
+      "name": "DINOv2 ViT-S/14",
+      "url": "https://dl.fbaipublicfiles.com/dinov2/dinov2_vits14/dinov2_vits14_pretrain.pth",
+      "relative_target": ".runtime/models/weights/dinov2_vits14_pretrain.pth",
+      "expected_bytes": 88283115,
+      "license": "Apache-2.0",
+      "source_commit": "7764ea0f912e53c92e82eb78a2a1631e92725fc8",
+      "publisher_sha256": null,
+      "integrity_note": "HEAD ETag is not a SHA-256 signature. Record first-download SHA-256 over verified HTTPS and require it thereafter."
+    }
+  ],
+  "expected_download_bytes": 129383449,
+  "weight_downloads_executed": false
+}

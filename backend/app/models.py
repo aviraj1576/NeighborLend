@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -126,6 +126,8 @@ class BorrowRequest(Base):
     handover_issue_reported_at = Column(DateTime, nullable=True)
     handover_photos = Column(Text, nullable=True)           # JSON array of photo URLs (lender uploads)
     handover_confirmed_photos = Column(Text, nullable=True) # JSON array of photo URLs (borrower confirms)
+    handover_condition_note = Column(Text, nullable=True)
+    return_condition_note = Column(Text, nullable=True)
     return_photos = Column(Text, nullable=True)             # JSON array of photo URLs (borrower uploads on return)
     return_confirmed_at = Column(DateTime, nullable=True)
     return_confirmed_by = Column(String, nullable=True)
@@ -200,6 +202,12 @@ class NegotiationOffer(Base):
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
     total_cost = Column(Float, nullable=False)
+    borrower_id_snapshot = Column(String, nullable=True)
+    lender_id_snapshot = Column(String, nullable=True)
+    daily_rate_paise = Column(BigInteger, nullable=True)
+    rental_fee_paise = Column(BigInteger, nullable=True)
+    security_deposit_paise = Column(BigInteger, nullable=True)
+    total_amount_paise = Column(BigInteger, nullable=True)
     message = Column(Text, nullable=True)
     status = Column(Enum(OfferStatus), default=OfferStatus.pending, index=True)
     parent_offer_id = Column(String, ForeignKey("negotiation_offers.id"), nullable=True)
@@ -211,3 +219,9 @@ class NegotiationOffer(Base):
     sender = relationship("User")
     borrow_request = relationship("BorrowRequest", back_populates="negotiation_offers")
     listing = relationship("Listing")
+
+# Additive financial entities share the existing metadata/migration lifecycle.
+from app.payment_models import (  # noqa: E402,F401
+    EscrowLedgerEntry, FinancialAudit, JournalTransaction, PaymentTransaction,
+    ProcessedWebhook, RefundAttempt, RefundIntent, RentalBooking, RentalDispute,
+)

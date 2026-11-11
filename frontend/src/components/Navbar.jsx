@@ -59,6 +59,7 @@ const Navbar = () => {
               <Link to="/my-listings" className={`nav-link ${isActive('/my-listings')}`}>My Listings</Link>
               <Link to="/my-borrow-requests" className={`nav-link ${isActive('/my-borrow-requests')}`}>My Borrow Requests</Link>
               <Link to="/messages" className={`nav-link ${isActive('/messages')}`}>Messages</Link>
+              {user?.is_admin && <Link to="/payment-review" className="nav-link">Payment review</Link>}
               <Link to="/inbox" className={`nav-link ${isActive('/inbox')}`}>
                 Inbox{unreadCount > 0 && <span className="unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
               </Link>
@@ -102,6 +103,7 @@ const Navbar = () => {
               <Link to="/my-listings" className={`nav-link ${isActive('/my-listings')}`} onClick={() => setMobileMenuOpen(false)}>My Listings</Link>
               <Link to="/my-borrow-requests" className={`nav-link ${isActive('/my-borrow-requests')}`} onClick={() => setMobileMenuOpen(false)}>My Borrow Requests</Link>
               <Link to="/messages" className={`nav-link ${isActive('/messages')}`} onClick={() => setMobileMenuOpen(false)}>Messages</Link>
+              {user?.is_admin && <Link to="/payment-review" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Payment review</Link>}
               <Link to="/inbox" className={`nav-link ${isActive('/inbox')}`} onClick={() => setMobileMenuOpen(false)}>
                 Inbox{unreadCount > 0 && <span className="unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
               </Link>

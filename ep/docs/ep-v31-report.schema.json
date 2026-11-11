@@ -1,0 +1,1561 @@
+{
+  "$defs": {
+    "Artifact": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "2.0",
+          "default": "2.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "kind": {
+          "enum": [
+            "object_mask",
+            "object_crop",
+            "feature_matches",
+            "valid_overlap",
+            "difference_map",
+            "candidate_overlay",
+            "before_crop",
+            "after_crop",
+            "aligned_before",
+            "alignment_overlay",
+            "boundary_change_map",
+            "boundary_overlay"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "byte_size": {
+          "exclusiveMinimum": 0,
+          "maximum": 20000000,
+          "title": "Byte Size",
+          "type": "integer"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "maximum": 2048,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "maximum": 2048,
+          "title": "Height",
+          "type": "integer"
+        },
+        "content_type": {
+          "const": "image/png",
+          "default": "image/png",
+          "title": "Content Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "source_ids",
+        "kind",
+        "sha256",
+        "byte_size",
+        "width",
+        "height"
+      ],
+      "title": "Artifact",
+      "type": "object"
+    },
+    "BoundaryChange": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "2.0",
+          "default": "2.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "before_id": {
+          "format": "uuid",
+          "title": "Before Id",
+          "type": "string"
+        },
+        "after_id": {
+          "format": "uuid",
+          "title": "After Id",
+          "type": "string"
+        },
+        "before_box": {
+          "$ref": "#/$defs/Box"
+        },
+        "after_box": {
+          "$ref": "#/$defs/Box"
+        },
+        "direction": {
+          "enum": [
+            "potentially_missing",
+            "additional_or_displaced"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "observation": {
+          "const": "object_boundary_change",
+          "default": "object_boundary_change",
+          "title": "Observation",
+          "type": "string"
+        },
+        "area_pixels": {
+          "exclusiveMinimum": 0,
+          "title": "Area Pixels",
+          "type": "integer"
+        },
+        "artifact_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Artifact Ids",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "before_id",
+        "after_id",
+        "before_box",
+        "after_box",
+        "direction",
+        "area_pixels",
+        "artifact_ids"
+      ],
+      "title": "BoundaryChange",
+      "type": "object"
+    },
+    "Box": {
+      "additionalProperties": false,
+      "description": "Normalized coordinates in the cited image's orientation-corrected frame.",
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "x1": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "X1",
+          "type": "number"
+        },
+        "y1": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Y1",
+          "type": "number"
+        },
+        "x2": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "X2",
+          "type": "number"
+        },
+        "y2": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Y2",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ],
+      "title": "Box",
+      "type": "object"
+    },
+    "CVConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "2.0",
+          "default": "2.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "threshold_version": {
+          "default": "cv-thresholds-2.0-experimental",
+          "title": "Threshold Version",
+          "type": "string"
+        },
+        "device": {
+          "default": "cuda",
+          "enum": [
+            "cuda",
+            "cpu",
+            "auto"
+          ],
+          "title": "Device",
+          "type": "string"
+        },
+        "max_side": {
+          "default": 768,
+          "maximum": 1024,
+          "minimum": 128,
+          "title": "Max Side",
+          "type": "integer"
+        },
+        "max_images": {
+          "default": 8,
+          "maximum": 12,
+          "minimum": 2,
+          "title": "Max Images",
+          "type": "integer"
+        },
+        "max_pairs": {
+          "default": 16,
+          "maximum": 36,
+          "minimum": 1,
+          "title": "Max Pairs",
+          "type": "integer"
+        },
+        "timeout_seconds": {
+          "default": 180,
+          "maximum": 900,
+          "minimum": 1,
+          "title": "Timeout Seconds",
+          "type": "number"
+        },
+        "min_side": {
+          "default": 128,
+          "maximum": 512,
+          "minimum": 16,
+          "title": "Min Side",
+          "type": "integer"
+        },
+        "min_focus": {
+          "default": 25,
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Min Focus",
+          "type": "number"
+        },
+        "min_contrast": {
+          "default": 10,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Min Contrast",
+          "type": "number"
+        },
+        "max_clipped_fraction": {
+          "default": 0.65,
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Max Clipped Fraction",
+          "type": "number"
+        },
+        "min_similarity": {
+          "default": 0.65,
+          "maximum": 1,
+          "minimum": -1,
+          "title": "Min Similarity",
+          "type": "number"
+        },
+        "min_inliers": {
+          "default": 12,
+          "maximum": 200,
+          "minimum": 8,
+          "title": "Min Inliers",
+          "type": "integer"
+        },
+        "min_inlier_ratio": {
+          "default": 0.45,
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Min Inlier Ratio",
+          "type": "number"
+        },
+        "min_overlap": {
+          "default": 0.35,
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Min Overlap",
+          "type": "number"
+        },
+        "difference_threshold": {
+          "default": 0.15,
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Difference Threshold",
+          "type": "number"
+        },
+        "min_candidate_area": {
+          "default": 16,
+          "maximum": 10000,
+          "minimum": 4,
+          "title": "Min Candidate Area",
+          "type": "integer"
+        }
+      },
+      "title": "CVConfig",
+      "type": "object"
+    },
+    "CVPackage": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "2.0",
+          "default": "2.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "inspection_id": {
+          "format": "uuid",
+          "title": "Inspection Id",
+          "type": "string"
+        },
+        "pipeline_version": {
+          "const": "ep-cv-2.0",
+          "default": "ep-cv-2.0",
+          "title": "Pipeline Version",
+          "type": "string"
+        },
+        "outcome": {
+          "enum": [
+            "comparable",
+            "partially_comparable",
+            "inconclusive",
+            "failed"
+          ],
+          "title": "Outcome",
+          "type": "string"
+        },
+        "source_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "maxItems": 12,
+          "minItems": 2,
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "source_hashes": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "propertyNames": {
+            "format": "uuid"
+          },
+          "title": "Source Hashes",
+          "type": "object"
+        },
+        "source_dimensions": {
+          "additionalProperties": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array"
+          },
+          "propertyNames": {
+            "format": "uuid"
+          },
+          "title": "Source Dimensions",
+          "type": "object"
+        },
+        "processing_dimensions": {
+          "additionalProperties": {
+            "maxItems": 2,
+            "minItems": 2,
+            "prefixItems": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "integer"
+              }
+            ],
+            "type": "array"
+          },
+          "propertyNames": {
+            "format": "uuid"
+          },
+          "title": "Processing Dimensions",
+          "type": "object"
+        },
+        "coordinate_system": {
+          "const": "normalized_orientation_corrected_source",
+          "default": "normalized_orientation_corrected_source",
+          "title": "Coordinate System",
+          "type": "string"
+        },
+        "quality": {
+          "items": {
+            "$ref": "#/$defs/Quality"
+          },
+          "title": "Quality",
+          "type": "array"
+        },
+        "segmentation": {
+          "items": {
+            "$ref": "#/$defs/Segmentation"
+          },
+          "title": "Segmentation",
+          "type": "array"
+        },
+        "pairs": {
+          "items": {
+            "$ref": "#/$defs/Pair"
+          },
+          "title": "Pairs",
+          "type": "array"
+        },
+        "candidates": {
+          "items": {
+            "$ref": "#/$defs/Candidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "boundary_changes": {
+          "items": {
+            "$ref": "#/$defs/BoundaryChange"
+          },
+          "maxItems": 120,
+          "title": "Boundary Changes",
+          "type": "array"
+        },
+        "artifacts": {
+          "items": {
+            "$ref": "#/$defs/Artifact"
+          },
+          "maxItems": 150,
+          "title": "Artifacts",
+          "type": "array"
+        },
+        "unmatched_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Unmatched Ids",
+          "type": "array"
+        },
+        "models": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Models",
+          "type": "object"
+        },
+        "thresholds": {
+          "$ref": "#/$defs/CVConfig"
+        },
+        "metrics": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "integer"
+              },
+              {
+                "type": "string"
+              },
+              {
+                "additionalProperties": true,
+                "type": "object"
+              }
+            ]
+          },
+          "title": "Metrics",
+          "type": "object"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "human_review_required": {
+          "const": true,
+          "default": true,
+          "title": "Human Review Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "inspection_id",
+        "outcome",
+        "source_ids",
+        "source_hashes",
+        "quality",
+        "segmentation",
+        "pairs",
+        "models",
+        "thresholds"
+      ],
+      "title": "CVPackage",
+      "type": "object"
+    },
+    "Candidate": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "2.0",
+          "default": "2.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "before_id": {
+          "format": "uuid",
+          "title": "Before Id",
+          "type": "string"
+        },
+        "after_id": {
+          "format": "uuid",
+          "title": "After Id",
+          "type": "string"
+        },
+        "before_box": {
+          "$ref": "#/$defs/Box"
+        },
+        "after_box": {
+          "$ref": "#/$defs/Box"
+        },
+        "observation": {
+          "const": "local_appearance_change",
+          "default": "local_appearance_change",
+          "title": "Observation",
+          "type": "string"
+        },
+        "method": {
+          "default": "masked_gaussian_ssim_and_absolute_difference_v1",
+          "title": "Method",
+          "type": "string"
+        },
+        "area_pixels": {
+          "exclusiveMinimum": 0,
+          "title": "Area Pixels",
+          "type": "integer"
+        },
+        "mean_difference": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Mean Difference",
+          "type": "number"
+        },
+        "inlier_ratio": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Inlier Ratio",
+          "type": "number"
+        },
+        "artifact_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Artifact Ids",
+          "type": "array"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "before_id",
+        "after_id",
+        "before_box",
+        "after_box",
+        "area_pixels",
+        "mean_difference",
+        "inlier_ratio"
+      ],
+      "title": "Candidate",
+      "type": "object"
+    },
+    "CaptureGuidance": {
+      "additionalProperties": false,
+      "properties": {
+        "source_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "category": {
+          "enum": [
+            "input_quality",
+            "common_surface",
+            "identity",
+            "geometry",
+            "resolution",
+            "conflicting_evidence",
+            "runtime",
+            "instances"
+          ],
+          "title": "Category",
+          "type": "string"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "recommendation": {
+          "title": "Recommendation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_ids",
+        "category",
+        "reason",
+        "recommendation"
+      ],
+      "title": "CaptureGuidance",
+      "type": "object"
+    },
+    "DetailCrop": {
+      "additionalProperties": false,
+      "properties": {
+        "before_id": {
+          "format": "uuid",
+          "title": "Before Id",
+          "type": "string"
+        },
+        "after_id": {
+          "format": "uuid",
+          "title": "After Id",
+          "type": "string"
+        },
+        "candidate_id": {
+          "format": "uuid",
+          "title": "Candidate Id",
+          "type": "string"
+        },
+        "after_box": {
+          "$ref": "#/$defs/Box"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "maximum": 1024,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "maximum": 1024,
+          "title": "Height",
+          "type": "integer"
+        },
+        "sampling_floor_source_pixels": {
+          "minimum": 2,
+          "title": "Sampling Floor Source Pixels",
+          "type": "number"
+        },
+        "artifact_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "maxItems": 3,
+          "minItems": 3,
+          "title": "Artifact Ids",
+          "type": "array"
+        },
+        "coordinate_system": {
+          "const": "after_source_crop_registered_before",
+          "default": "after_source_crop_registered_before",
+          "title": "Coordinate System",
+          "type": "string"
+        },
+        "interpretation": {
+          "const": "detail_for_human_review_only",
+          "default": "detail_for_human_review_only",
+          "title": "Interpretation",
+          "type": "string"
+        }
+      },
+      "required": [
+        "before_id",
+        "after_id",
+        "candidate_id",
+        "after_box",
+        "width",
+        "height",
+        "sampling_floor_source_pixels",
+        "artifact_ids"
+      ],
+      "title": "DetailCrop",
+      "type": "object"
+    },
+    "IdentityAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "before_id": {
+          "format": "uuid",
+          "title": "Before Id",
+          "type": "string"
+        },
+        "after_id": {
+          "format": "uuid",
+          "title": "After Id",
+          "type": "string"
+        },
+        "status": {
+          "const": "identity_unverified",
+          "default": "identity_unverified",
+          "title": "Status",
+          "type": "string"
+        },
+        "visual_relation": {
+          "enum": [
+            "same_capture",
+            "local_visual_consistency",
+            "embedding_similarity_only",
+            "inconsistent_visual_evidence",
+            "insufficient_evidence"
+          ],
+          "title": "Visual Relation",
+          "type": "string"
+        },
+        "physical_identity_verified": {
+          "const": false,
+          "default": false,
+          "title": "Physical Identity Verified",
+          "type": "boolean"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "before_id",
+        "after_id",
+        "visual_relation",
+        "reasons"
+      ],
+      "title": "IdentityAssessment",
+      "type": "object"
+    },
+    "InstanceAssociation": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Instance Id"
+        },
+        "source": {
+          "enum": [
+            "operator_target_metadata",
+            "unspecified"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "significant_mask_components": {
+          "minimum": 0,
+          "title": "Significant Mask Components",
+          "type": "integer"
+        },
+        "assignment_verified": {
+          "const": false,
+          "default": false,
+          "title": "Assignment Verified",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "instance_id",
+        "source",
+        "significant_mask_components"
+      ],
+      "title": "InstanceAssociation",
+      "type": "object"
+    },
+    "Pair": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "2.0",
+          "default": "2.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "before_id": {
+          "format": "uuid",
+          "title": "Before Id",
+          "type": "string"
+        },
+        "after_id": {
+          "format": "uuid",
+          "title": "After Id",
+          "type": "string"
+        },
+        "status": {
+          "default": "inconclusive",
+          "enum": [
+            "comparable",
+            "inconclusive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "identity": {
+          "default": "uncertain",
+          "enum": [
+            "consistent_visual_evidence",
+            "uncertain"
+          ],
+          "title": "Identity",
+          "type": "string"
+        },
+        "method": {
+          "default": "dinov2_s14_sift_mutual_ratio_ransac",
+          "title": "Method",
+          "type": "string"
+        },
+        "cosine_similarity": {
+          "maximum": 1,
+          "minimum": -1,
+          "title": "Cosine Similarity",
+          "type": "number"
+        },
+        "matches": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Matches",
+          "type": "integer"
+        },
+        "local_matching_evaluated": {
+          "default": false,
+          "title": "Local Matching Evaluated",
+          "type": "boolean"
+        },
+        "alignment_status": {
+          "default": "not_attempted",
+          "enum": [
+            "not_attempted",
+            "rejected",
+            "aligned"
+          ],
+          "title": "Alignment Status",
+          "type": "string"
+        },
+        "overlap_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Overlap Id"
+        },
+        "inliers": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Inliers",
+          "type": "integer"
+        },
+        "inlier_ratio": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Inlier Ratio",
+          "type": "number"
+        },
+        "median_reprojection_error": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Median Reprojection Error"
+        },
+        "overlap_fraction": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Overlap Fraction",
+          "type": "number"
+        },
+        "homography": {
+          "anyOf": [
+            {
+              "items": {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Homography"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "geometry_model": {
+          "default": "homography",
+          "enum": [
+            "homography",
+            "similarity"
+          ],
+          "title": "Geometry Model",
+          "type": "string"
+        },
+        "source_coverage": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Source Coverage",
+          "type": "number"
+        },
+        "target_coverage": {
+          "default": 0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Target Coverage",
+          "type": "number"
+        },
+        "symmetric_reprojection_error": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Symmetric Reprojection Error"
+        }
+      },
+      "required": [
+        "before_id",
+        "after_id",
+        "cosine_similarity"
+      ],
+      "title": "Pair",
+      "type": "object"
+    },
+    "Quality": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "2.0",
+          "default": "2.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "usable",
+            "needs_recapture",
+            "inconclusive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "width": {
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "title": "Height",
+          "type": "integer"
+        },
+        "focus_variance": {
+          "title": "Focus Variance",
+          "type": "number"
+        },
+        "contrast_std": {
+          "title": "Contrast Std",
+          "type": "number"
+        },
+        "mean_exposure": {
+          "title": "Mean Exposure",
+          "type": "number"
+        },
+        "dark_fraction": {
+          "title": "Dark Fraction",
+          "type": "number"
+        },
+        "bright_fraction": {
+          "title": "Bright Fraction",
+          "type": "number"
+        },
+        "object_fraction": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Object Fraction"
+        },
+        "touches_frame": {
+          "default": false,
+          "title": "Touches Frame",
+          "type": "boolean"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "recommendations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Recommendations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "status",
+        "width",
+        "height",
+        "focus_variance",
+        "contrast_std",
+        "mean_exposure",
+        "dark_fraction",
+        "bright_fraction"
+      ],
+      "title": "Quality",
+      "type": "object"
+    },
+    "Segmentation": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "2.0",
+          "default": "2.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "evidence_id": {
+          "format": "uuid",
+          "title": "Evidence Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "segmented",
+            "inconclusive"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "box": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Box"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "area_fraction": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Area Fraction"
+        },
+        "mask_id": {
+          "anyOf": [
+            {
+              "format": "uuid",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mask Id"
+        },
+        "limitations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Limitations",
+          "type": "array"
+        },
+        "target_support": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Target Support",
+          "type": "object"
+        }
+      },
+      "required": [
+        "evidence_id",
+        "status"
+      ],
+      "title": "Segmentation",
+      "type": "object"
+    },
+    "SurfaceObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "before_id": {
+          "format": "uuid",
+          "title": "Before Id",
+          "type": "string"
+        },
+        "after_id": {
+          "format": "uuid",
+          "title": "After Id",
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "local_correspondence_hull",
+            "original_resolution_tile"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "after_box": {
+          "$ref": "#/$defs/Box"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "maximum": 1024,
+          "title": "Width",
+          "type": "integer"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "maximum": 1024,
+          "title": "Height",
+          "type": "integer"
+        },
+        "valid_fraction": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Valid Fraction",
+          "type": "number"
+        },
+        "assessed_after_mask_fraction": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Assessed After Mask Fraction",
+          "type": "number"
+        },
+        "sampling_floor_source_pixels": {
+          "minimum": 2,
+          "title": "Sampling Floor Source Pixels",
+          "type": "number"
+        },
+        "registration_uncertainty_source_pixels": {
+          "minimum": 0,
+          "title": "Registration Uncertainty Source Pixels",
+          "type": "number"
+        },
+        "appearance_regions": {
+          "items": {
+            "$ref": "#/$defs/Box"
+          },
+          "maxItems": 20,
+          "title": "Appearance Regions",
+          "type": "array"
+        },
+        "artifact_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "title": "Artifact Ids",
+          "type": "array"
+        },
+        "geometry_support": {
+          "additionalProperties": true,
+          "title": "Geometry Support",
+          "type": "object"
+        },
+        "interpretation": {
+          "const": "localized_appearance_evidence_not_damage",
+          "default": "localized_appearance_evidence_not_damage",
+          "title": "Interpretation",
+          "type": "string"
+        },
+        "uncertainty_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Uncertainty Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "before_id",
+        "after_id",
+        "scope",
+        "after_box",
+        "width",
+        "height",
+        "valid_fraction",
+        "assessed_after_mask_fraction",
+        "sampling_floor_source_pixels",
+        "registration_uncertainty_source_pixels",
+        "artifact_ids",
+        "geometry_support",
+        "uncertainty_reasons"
+      ],
+      "title": "SurfaceObservation",
+      "type": "object"
+    },
+    "ViewAssessment": {
+      "additionalProperties": false,
+      "properties": {
+        "before_id": {
+          "format": "uuid",
+          "title": "Before Id",
+          "type": "string"
+        },
+        "after_id": {
+          "format": "uuid",
+          "title": "After Id",
+          "type": "string"
+        },
+        "observation": {
+          "enum": [
+            "not_assessable",
+            "observed_appearance_difference",
+            "no_localized_change_detected"
+          ],
+          "title": "Observation",
+          "type": "string"
+        },
+        "assessable_after_fraction": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Assessable After Fraction",
+          "type": "number"
+        },
+        "unassessed_after_fraction": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Unassessed After Fraction",
+          "type": "number"
+        },
+        "sampling_floor_after_source_pixels": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Sampling Floor After Source Pixels"
+        },
+        "localization_uncertainty_after_source_pixels": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Localization Uncertainty After Source Pixels"
+        },
+        "source_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "maxItems": 2,
+          "minItems": 2,
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "candidate_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Candidate Ids",
+          "type": "array"
+        },
+        "boundary_ids": {
+          "items": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "title": "Boundary Ids",
+          "type": "array"
+        },
+        "uncertainty_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Uncertainty Reasons",
+          "type": "array"
+        }
+      },
+      "required": [
+        "before_id",
+        "after_id",
+        "observation",
+        "assessable_after_fraction",
+        "unassessed_after_fraction",
+        "source_ids",
+        "uncertainty_reasons"
+      ],
+      "title": "ViewAssessment",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "3.1",
+      "default": "3.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "engine_version": {
+      "const": "ep-v3.1-advisory",
+      "default": "ep-v3.1-advisory",
+      "title": "Engine Version",
+      "type": "string"
+    },
+    "inspection_id": {
+      "format": "uuid",
+      "title": "Inspection Id",
+      "type": "string"
+    },
+    "payment_action": {
+      "const": "none",
+      "default": "none",
+      "title": "Payment Action",
+      "type": "string"
+    },
+    "human_review_required": {
+      "const": true,
+      "default": true,
+      "title": "Human Review Required",
+      "type": "boolean"
+    },
+    "physical_identity_verified": {
+      "const": false,
+      "default": false,
+      "title": "Physical Identity Verified",
+      "type": "boolean"
+    },
+    "score_interpretation": {
+      "const": "uncalibrated_evidence_scores_not_probabilities",
+      "default": "uncalibrated_evidence_scores_not_probabilities",
+      "title": "Score Interpretation",
+      "type": "string"
+    },
+    "cv_package": {
+      "$ref": "#/$defs/CVPackage"
+    },
+    "identity": {
+      "items": {
+        "$ref": "#/$defs/IdentityAssessment"
+      },
+      "title": "Identity",
+      "type": "array"
+    },
+    "instances": {
+      "items": {
+        "$ref": "#/$defs/InstanceAssociation"
+      },
+      "title": "Instances",
+      "type": "array"
+    },
+    "views": {
+      "items": {
+        "$ref": "#/$defs/ViewAssessment"
+      },
+      "title": "Views",
+      "type": "array"
+    },
+    "possible_damage_hypotheses": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "maxItems": 0,
+      "title": "Possible Damage Hypotheses",
+      "type": "array"
+    },
+    "detail_crops": {
+      "items": {
+        "$ref": "#/$defs/DetailCrop"
+      },
+      "maxItems": 8,
+      "title": "Detail Crops",
+      "type": "array"
+    },
+    "surface_observations": {
+      "items": {
+        "$ref": "#/$defs/SurfaceObservation"
+      },
+      "maxItems": 8,
+      "title": "Surface Observations",
+      "type": "array"
+    },
+    "recapture_guidance": {
+      "items": {
+        "$ref": "#/$defs/CaptureGuidance"
+      },
+      "title": "Recapture Guidance",
+      "type": "array"
+    },
+    "fusion": {
+      "additionalProperties": true,
+      "title": "Fusion",
+      "type": "object"
+    },
+    "runtime": {
+      "additionalProperties": true,
+      "title": "Runtime",
+      "type": "object"
+    },
+    "limitations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Limitations",
+      "type": "array"
+    }
+  },
+  "required": [
+    "inspection_id",
+    "cv_package",
+    "identity",
+    "instances",
+    "views",
+    "recapture_guidance",
+    "fusion",
+    "runtime",
+    "limitations"
+  ],
+  "title": "InspectionReport",
+  "type": "object"
+}

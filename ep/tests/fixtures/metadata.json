@@ -1,0 +1,17 @@
+{
+  "purpose": "Synthetic decoder fixtures only; no damage or identity labels",
+  "files": {
+    "sample.png": {
+      "sha256": "4e105d89d4b60ecaf863a0156211f5f30802ccbca7a185d0f1528b574b176046",
+      "width": 24,
+      "height": 16,
+      "content_type": "image/png"
+    },
+    "sample.jpg": {
+      "sha256": "3b5294628ac4711ac1df9477200fddd059f0116165a8702e66b9c5322a48afb8",
+      "width": 24,
+      "height": 16,
+      "content_type": "image/jpeg"
+    }
+  }
+}

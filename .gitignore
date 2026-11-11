@@ -83,3 +83,23 @@ keystore.properties
 .DS_Store
 Thumbs.db
 Desktop.ini
+backend/.test-tools/
+backend/.payment-test-artifacts/
+backend/.pytest_cache/
+backend/.payment-demo/
+backend/.payment-verification/
+backend/private-rental-evidence/
+
+# Machine learning weights and checkpoints
+*.pt
+*.pth
+*.onnx
+*.engine
+*.safetensors
+!backend/ai_service/best_model.pt
+!backend/ai_service/models/neighborlend_yoloe_best.pt
+
+# EP engine runtime, artifacts, and private test images
+ep/.runtime/
+ep/.test-artifacts/
+ep/test_images/

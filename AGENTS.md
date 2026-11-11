@@ -1,5 +1,15 @@
 # NeighborLend - Agent Instructions
 
+## Payment Safety and Current Verification
+- Payments are strictly test-only. Default `PAYMENT_PROVIDER=disabled` starts without gateway keys.
+- `mock` requires `PAYMENT_DEMO_MODE=true` and direct local loopback exposure; public mock is rejected.
+- Public deployments require `DEPLOYMENT_EXPOSURE=public` and a privately generated strong JWT secret.
+- `AUTO_MIGRATE=false` is the default. Importing the backend no longer creates/migrates schema.
+- Never migrate or reset an existing application DB for tests. Tests initialize generated isolated DBs explicitly.
+- Backend verification: `python -B scripts/verify_payments.py` from `backend/`.
+- Frontend verification: `npm test` and `npm run build` from `frontend/`.
+- Current implementation/setup/results: `docs/payment-system-verification.md`.
+
 ## Repository Structure
 - **Monorepo**: `frontend/` (React 18 + Vite 8) + `backend/` (FastAPI + Python 3.11)
 - **Root config**: `.env` (shared), `compose.yaml`, `render.yaml`, `vercel.json`
@@ -50,17 +60,17 @@ docker compose up --build   # Requires .env with DATABASE_URL, JWT_SECRET
 
 ## Environment Variables (`.env` at root)
 - **Frontend reads**: `VITE_API_BASE_URL`, `VITE_GOOGLE_CLIENT_ID` (via `vite.config.js` `envDir: '..'`)
-- **Backend reads**: All others via `pydantic-settings` from `BASE_DIR/.env`
+- **Backend reads**: `pydantic-settings` loads absolute project-root `.env`, then `backend/.env`; process variables take precedence. Keep secrets out of `VITE_` variables.
 - **Critical for local backend**: `DATABASE_URL`, `JWT_SECRET`, `CORS_ORIGINS`
 - **Production backend**: `DATABASE_URL` (PostgreSQL), `JWT_SECRET` (32+ chars), `SUPABASE_*`, `SMTP_*`, `GOOGLE_CLIENT_ID`
 
 ## Testing
-- **Backend**: `pytest` with isolated SQLite in-memory DB (see `backend/tests/conftest.py`)
-- **Frontend**: No test runner configured; `photoUrl.test.js` exists but no test script
+- **Backend**: `pytest` with isolated SQLite DBs; optional dedicated local PostgreSQL via `PAYMENT_TEST_POSTGRES_URL` (see `backend/tests/conftest.py`)
+- **Frontend**: Node tests via `npm test`, including payment contracts and photo URL utilities
 - Run tests from `backend/` directory
 
 ## Architecture Notes
-- **Backend entrypoint**: `backend/app/main.py` — creates tables on startup (`Base.metadata.create_all`), mounts `/uploads` static files
+- **Backend entrypoint**: `backend/app/main.py` — validates provider/exposure at startup; schema preparation is explicit unless `AUTO_MIGRATE=true`; mounts public listing uploads separately from private rental evidence
 - **API routes**: `/api/auth`, `/api/listings`, `/api/borrow-requests`, `/api/chat`, `/api/ai`, `/api/uploads`, `/api/notifications`
 - **Health check**: `GET /api/health` — verifies DB connectivity
 - **CORS**: Configured via `CORS_ORIGINS` env var; must include frontend origin

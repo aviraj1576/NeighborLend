@@ -1,0 +1,18 @@
+{
+  "provider": "gemini",
+  "model": "gemini-REPLACE_WITH_APPROVED_MODEL",
+  "allow_external": true,
+  "free_only": true,
+  "free_tier_confirmed": false,
+  "max_cases": 3,
+  "max_requests": 6,
+  "max_cost_usd": 0,
+  "input_usd_per_million": 0,
+  "output_usd_per_million": 0,
+  "max_input_tokens": 20000,
+  "max_output_tokens": 2048,
+  "max_images": 8,
+  "max_image_bytes": 8000000,
+  "request_seconds": 25,
+  "run_seconds": 300
+}

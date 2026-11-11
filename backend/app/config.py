@@ -1,6 +1,9 @@
 from functools import lru_cache
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
+from typing import Literal
+
+from pydantic import SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 
@@ -9,7 +12,14 @@ BACKEND_DIR = Path(__file__).resolve().parent.parent
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=BASE_DIR/".env", extra="ignore")
+    # Absolute paths make local startup independent of the working directory.
+    # Backend-only values override the shared file; process variables override both.
+    model_config = SettingsConfigDict(
+        env_file=(BASE_DIR / ".env", BACKEND_DIR / ".env"),
+        env_file_encoding="utf-8",
+        extra="ignore",
+        hide_input_in_errors=True,
+    )
 
     database_url: str = "sqlite:///./neighborlend.db"
     app_env: str = "development"
@@ -21,6 +31,15 @@ class Settings(BaseSettings):
     ai_model_path: str = "./ai_service/best_model.pt"
     ai_confidence_threshold: float = 0.45
     mock_payments: bool = True
+    # MOCK_PAYMENTS is deprecated and never grants payment authority.
+    payment_provider: Literal["disabled", "mock", "razorpay_test"] = "disabled"
+    payment_demo_mode: bool = False
+    deployment_exposure: str = "local"
+    auto_migrate: bool = False
+    rental_evidence_dir: str = "./private-rental-evidence"
+    razorpay_key_id: str = ""
+    razorpay_key_secret: SecretStr = SecretStr("")
+    razorpay_webhook_secret: SecretStr = SecretStr("")
     cors_origins: str = "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174"
     admin_emails: str = "admin@neighborlend.com"
     supabase_url: str = ""

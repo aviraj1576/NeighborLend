@@ -14,6 +14,7 @@ import CreateBorrowRequest from './pages/CreateBorrowRequest';
 import ListingDetail from './pages/ListingDetail';
 import MyListings from './pages/MyListings';
 import Chat from './pages/Chat';
+import PaymentReviewQueue from './components/PaymentReviewQueue';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -39,6 +40,7 @@ function App() {
       <AuthProvider>
         <MainLayout>
           <Routes>
+            <Route path="/payment-review" element={<ProtectedRoute><PaymentReviewQueue /></ProtectedRoute>} />
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />

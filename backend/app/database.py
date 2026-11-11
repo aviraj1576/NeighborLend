@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect, text, event
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.config import get_settings
 
@@ -17,6 +17,12 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
 Base = declarative_base()
 
+if settings.database_url.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def configure_sqlite(connection, record):
+        connection.execute("PRAGMA foreign_keys=ON")
+        connection.execute("PRAGMA busy_timeout=15000")
+
 def get_db():
     db = SessionLocal()
     try:
@@ -28,6 +34,8 @@ def get_db():
 def migrate_schema(target_engine=None):
     """Apply additive schema changes needed by existing installations."""
     target_engine = target_engine or engine
+    from app.services.payment_migrations import migrate_payments
+    migrate_payments(target_engine)
     additions = {
         "users": {
             "is_verified": "BOOLEAN NOT NULL DEFAULT TRUE",

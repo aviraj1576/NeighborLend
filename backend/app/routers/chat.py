@@ -16,7 +16,7 @@ from app.schemas.chat import (
 )
 from app.services.auth import get_current_user
 from app.services.notifications import create_notification
-from app.services.negotiation import calculate_rental_duration_and_cost, check_listing_availability
+from app.services.negotiation import calculate_rental_duration_and_cost, check_listing_availability, snapshot_offer_terms
 
 router = APIRouter()
 
@@ -59,6 +59,12 @@ def _format_offer(offer: NegotiationOffer) -> OfferOut:
         start_date=offer.start_date,
         end_date=offer.end_date,
         total_cost=offer.total_cost,
+        borrower_id=offer.borrower_id_snapshot,
+        lender_id=offer.lender_id_snapshot,
+        daily_rate_paise=offer.daily_rate_paise,
+        rental_fee_paise=offer.rental_fee_paise,
+        security_deposit_paise=offer.security_deposit_paise,
+        total_amount_paise=offer.total_amount_paise,
         message=offer.message,
         status=offer.status,
         parent_offer_id=offer.parent_offer_id,
@@ -346,6 +352,10 @@ def create_offer(
         message=data.message,
         status=OfferStatus.pending
     )
+    try:
+        snapshot_offer_terms(offer, listing, conv)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
     db.add(offer)
     db.flush()
 
@@ -403,6 +413,14 @@ def accept_offer(
     if offer.status != OfferStatus.pending:
         raise HTTPException(status_code=400, detail=f"Offer cannot be accepted because it is already '{offer.status.value}'.")
 
+    # Serialize acceptance per listing on SQLite and PostgreSQL before overlap checks.
+    db.query(Listing).filter(Listing.id == offer.listing_id).update(
+        {Listing.updated_at: Listing.updated_at}, synchronize_session=False)
+    db.refresh(offer)
+    if offer.status != OfferStatus.pending:
+        raise HTTPException(status_code=409, detail="Offer was already accepted")
+    if offer.total_amount_paise is None:
+        raise HTTPException(409, "Historical offer lacks agreed deposit terms; submit a new offer")
     # Recheck item availability
     is_avail, reason = check_listing_availability(db, offer.listing_id, offer.start_date, offer.end_date, exclude_offer_id=offer.id)
     if not is_avail:
@@ -438,6 +456,16 @@ def accept_offer(
     db.add(borrow_req)
     db.flush()
     offer.borrow_request_id = borrow_req.id
+    from app.config import get_settings
+    from app.services.payments import snapshot_booking
+    from app.services.razorpay_service import configured_provider, ProviderError
+    try:
+        provider = configured_provider(get_settings())
+    except ProviderError as exc:
+        raise HTTPException(503, exc.code) from None
+    if provider.kind == "disabled":
+        raise HTTPException(503, "Payments disabled; new booking acceptance is unavailable")
+    snapshot_booking(db, borrow_req, offer, provider.kind, actor=current_user.id)
 
     # Post system message into conversation
     date_range = f"{offer.start_date.strftime('%b %d, %Y')} - {offer.end_date.strftime('%b %d, %Y')}"
@@ -526,6 +554,10 @@ def counter_offer(
         status=OfferStatus.pending,
         parent_offer_id=parent_offer.id
     )
+    try:
+        snapshot_offer_terms(new_offer, listing, conv)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
     db.add(new_offer)
     db.flush()
 

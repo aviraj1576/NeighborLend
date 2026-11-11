@@ -1,0 +1,51 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "3.1",
+      "default": "3.1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "engine_version": {
+      "const": "ep-v3.1-advisory",
+      "default": "ep-v3.1-advisory",
+      "title": "Engine Version",
+      "type": "string"
+    },
+    "outcome": {
+      "const": "failed",
+      "default": "failed",
+      "title": "Outcome",
+      "type": "string"
+    },
+    "payment_action": {
+      "const": "none",
+      "default": "none",
+      "title": "Payment Action",
+      "type": "string"
+    },
+    "human_review_required": {
+      "const": true,
+      "default": true,
+      "title": "Human Review Required",
+      "type": "boolean"
+    },
+    "error_code": {
+      "pattern": "^[a-z0-9_]{1,80}$",
+      "title": "Error Code",
+      "type": "string"
+    },
+    "failure_category": {
+      "const": "internal_model_or_runtime_failure",
+      "default": "internal_model_or_runtime_failure",
+      "title": "Failure Category",
+      "type": "string"
+    }
+  },
+  "required": [
+    "error_code"
+  ],
+  "title": "InspectionFailure",
+  "type": "object"
+}

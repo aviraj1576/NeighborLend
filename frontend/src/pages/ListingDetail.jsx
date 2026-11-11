@@ -93,7 +93,7 @@ const ListingDetail = () => {
             </div>
             <div className="deposit-info">
               <Shield size={16} className="text-warning" />
-              <span>Refundable Deposit: ₹{listing.security_deposit}</span>
+              <span>Refundable Deposit: ₹{listing.security_deposit} · Test booking only; total is confirmed server-side before payment.</span>
             </div>
           </div>
         </div>

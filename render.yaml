@@ -8,6 +8,14 @@ services:
     envVars:
       - key: APP_ENV
         value: production
+      - key: DEPLOYMENT_EXPOSURE
+        value: public
+      - key: PAYMENT_PROVIDER
+        value: disabled
+      - key: PAYMENT_DEMO_MODE
+        value: "false"
+      - key: AUTO_MIGRATE
+        value: "false"
       - key: DATABASE_URL
         sync: false
       - key: JWT_SECRET

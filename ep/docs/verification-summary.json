@@ -1,0 +1,29 @@
+{
+  "status": "Phase 1 verification gate passed",
+  "passed": 60,
+  "failed": 0,
+  "skipped": 0,
+  "blocked": 0,
+  "categories": {
+    "integration": 17,
+    "regression": 12,
+    "security": 12,
+    "unit": 19
+  },
+  "coverage": {
+    "covered_lines": 630,
+    "num_statements": 633,
+    "percent_covered": 99.08256880733946,
+    "percent_covered_display": "99",
+    "missing_lines": 3,
+    "excluded_lines": 41,
+    "percent_statements_covered": 99.5260663507109,
+    "percent_statements_covered_display": "99",
+    "num_branches": 130,
+    "num_partial_branches": 4,
+    "covered_branches": 126,
+    "missing_branches": 4,
+    "percent_branches_covered": 96.92307692307692,
+    "percent_branches_covered_display": "97"
+  }
+}

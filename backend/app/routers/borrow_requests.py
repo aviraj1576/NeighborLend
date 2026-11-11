@@ -1,35 +1,47 @@
 import json
 import math
-from typing import List, Optional
 from datetime import datetime, timedelta
-from fastapi import APIRouter, Depends, HTTPException, Query
+from typing import List, Optional
+
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
+
 from app.database import get_db
 from app.models import (
-    User, BorrowRequest, BorrowRequestStatus, HandoverStatus, Listing,
-    ListingStatus, Message, NegotiationOffer, OfferStatus,
+    BorrowRequest,
+    BorrowRequestStatus,
+    HandoverStatus,
+    Listing,
+    ListingStatus,
+    Message,
+    OfferStatus,
+    User,
 )
-from app.schemas.borrow_request import BorrowRequestCreateIn, BorrowRequestOut, BorrowRequestUpdateIn
+from app.schemas.borrow_request import (
+    BorrowRequestCreateIn,
+    BorrowRequestOut,
+)
 from app.schemas.notification import DisputeCreateIn, HandoverIssueCreateIn
 from app.services.auth import get_current_user
-from app.services.notifications import create_notification
 from app.services.negotiation import calculate_rental_duration_and_cost
+from app.services.notifications import create_notification
+
 
 # New schemas for handover workflow
 class HandoverPhotosIn(BaseModel):
-    photo_urls: List[str] = Field(..., min_items=1, max_items=10)
+    photo_urls: List[str] = Field(..., min_length=1, max_length=10)
 
 class HandoverConfirmIn(BaseModel):
-    photo_urls: List[str] = Field(default_factory=list)  # Borrower can add confirmation photos
-    condition_note: Optional[str] = None
+    photo_urls: List[str] = Field(default_factory=list, max_length=10)
+    condition_note: Optional[str] = Field(default=None, max_length=2000)
 
 class ReturnPhotosIn(BaseModel):
-    photo_urls: List[str] = Field(..., min_items=1, max_items=10)
+    photo_urls: List[str] = Field(..., min_length=1, max_length=10)
 
 class ReturnConfirmIn(BaseModel):
     approved: bool = True
-    condition_note: Optional[str] = None
+    condition_note: Optional[str] = Field(default=None, max_length=2000)
 
 class RatingIn(BaseModel):
     rating: int = Field(..., ge=1, le=5)
@@ -85,9 +97,11 @@ def _format_request_out(
         "handover_confirmed_by": req.handover_confirmed_by,
         "handover_issue_description": req.handover_issue_description if include_private_handover else None,
         "handover_issue_reported_at": req.handover_issue_reported_at,
-        "handover_photos": parse_photos(req.handover_photos),
-        "handover_confirmed_photos": parse_photos(req.handover_confirmed_photos),
-        "return_photos": parse_photos(req.return_photos),
+        "handover_photos": parse_photos(req.handover_photos) if include_private_handover else [],
+        "handover_confirmed_photos": parse_photos(req.handover_confirmed_photos) if include_private_handover else [],
+        "return_photos": parse_photos(req.return_photos) if include_private_handover else [],
+        "handover_condition_note": req.handover_condition_note if include_private_handover else None,
+        "return_condition_note": req.return_condition_note if include_private_handover else None,
         "return_confirmed_at": req.return_confirmed_at,
         "return_confirmed_by": req.return_confirmed_by,
         "borrowing_started_at": req.borrowing_started_at,
@@ -113,6 +127,11 @@ def _handover_conversation_id(req: BorrowRequest) -> Optional[str]:
 
 
 def _get_handover_request(request_id: str, db: Session, current_user: User, *, lock: bool = False):
+    if lock:
+        from app.payment_models import RentalBooking
+        # Match financial-service lock order: booking before physical rental.
+        db.query(RentalBooking).filter_by(borrow_request_id=request_id).update(
+            {RentalBooking.booking_status: RentalBooking.booking_status}, synchronize_session=False)
     query = db.query(BorrowRequest)
     if lock:
         query = query.with_for_update()
@@ -124,6 +143,11 @@ def _get_handover_request(request_id: str, db: Session, current_user: User, *, l
         raise HTTPException(status_code=403, detail="Not authorized for this handover")
     if req.listing_id is None or lender_id is None:
         raise HTTPException(status_code=409, detail="This request is not a negotiated rental")
+    if lock:
+        from app.services.payments import require_funded
+        if req.status == BorrowRequestStatus.cancelled:
+            raise HTTPException(409, "Cancelled rental cannot proceed to handover")
+        require_funded(db, req)
     return req, lender_id
 
 
@@ -148,100 +172,11 @@ def get_handover(
     return _format_request_out(req, include_private_handover=True)
 
 
-@router.post("/{request_id}/handover/mark-given", response_model=BorrowRequestOut)
-def mark_handover_given(
-    request_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    req, lender_id = _get_handover_request(request_id, db, current_user, lock=True)
-    if current_user.id != lender_id:
-        raise HTTPException(status_code=403, detail="Only the lender can mark the item as handed over")
-    if req.handover_status != HandoverStatus.pending.value:
-        raise HTTPException(status_code=409, detail="This handover is not awaiting lender action")
-
-    req.handover_status = HandoverStatus.marked_given.value
-    req.handover_marked_at = datetime.utcnow()
-    create_notification(
-        db, req.borrower_id, "handover_marked", "Product Handover Confirmation Required",
-        f"The lender has marked {req.title} as handed over. Please inspect it and confirm its condition.",
-        f"/borrow-requests/{req.id}", req.id,
-    )
-    _record_handover_event(db, req, current_user, f"{current_user.name} marked {req.title} as handed over. Awaiting borrower confirmation.")
-    db.commit()
-    db.refresh(req)
-    return _format_request_out(req, include_private_handover=True)
-
-
-@router.post("/{request_id}/handover/confirm", response_model=BorrowRequestOut)
-def confirm_handover(
-    request_id: str,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    req, lender_id = _get_handover_request(request_id, db, current_user, lock=True)
-    if current_user.id != req.borrower_id:
-        raise HTTPException(status_code=403, detail="Only the borrower can confirm receipt")
-    if req.handover_status != HandoverStatus.marked_given.value:
-        raise HTTPException(status_code=409, detail="The lender must mark the item as handed over first")
-    if req.needed_from is None or req.needed_until is None:
-        raise HTTPException(status_code=409, detail="Agreed rental dates are missing")
-
-    try:
-        days, _ = calculate_rental_duration_and_cost(
-            req.max_price_per_day or 0, req.needed_from, req.needed_until
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=409, detail=f"Invalid agreed rental dates: {exc}") from exc
-    now = datetime.utcnow()
-    req.handover_status = HandoverStatus.confirmed.value
-    req.handover_confirmed_at = now
-    req.handover_confirmed_by = current_user.id
-    req.borrowing_started_at = now
-    req.return_due_at = now + timedelta(days=days)
-    req.status = BorrowRequestStatus.fulfilled
-    create_notification(
-        db, lender_id, "handover_confirmed", "Borrower Confirmed Receipt",
-        f"{current_user.name} confirmed receipt of {req.title} in the agreed condition.",
-        f"/borrow-requests/{req.id}", req.id,
-    )
-    _record_handover_event(db, req, current_user, f"{current_user.name} confirmed receipt of {req.title}. Borrowing is now active.")
-    db.commit()
-    db.refresh(req)
-    return _format_request_out(req, include_private_handover=True)
-
-
-@router.post("/{request_id}/handover/report-issue", response_model=BorrowRequestOut)
-def report_handover_issue(
-    request_id: str,
-    data: HandoverIssueCreateIn,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    req, lender_id = _get_handover_request(request_id, db, current_user, lock=True)
-    if current_user.id != req.borrower_id:
-        raise HTTPException(status_code=403, detail="Only the borrower can report a handover issue")
-    if req.handover_status not in (HandoverStatus.photos_uploaded.value, HandoverStatus.borrower_confirmed.value):
-        raise HTTPException(status_code=409, detail="The item must be in handover state first")
-    description = data.description.strip()
-    if not description:
-        raise HTTPException(status_code=422, detail="Issue description cannot be blank")
-
-    req.handover_status = HandoverStatus.issue_reported.value
-    req.handover_issue_description = description
-    req.handover_issue_reported_at = datetime.utcnow()
-    create_notification(
-        db, lender_id, "handover_issue_reported", "Borrower Reported a Handover Issue",
-        f"{current_user.name} reported an issue with {req.title}. Open the request and conversation to resolve it.",
-        f"/borrow-requests/{req.id}", req.id,
-    )
-    _record_handover_event(db, req, current_user, f"{current_user.name} reported a handover issue for {req.title}: {description}")
-    db.commit()
-    db.refresh(req)
-    return _format_request_out(req, include_private_handover=True)
-    db.refresh(req)
-    return _format_request_out(req, include_private_handover=True)
-
+@router.post("/{request_id}/handover/mark-given")
+@router.post("/{request_id}/handover/confirm")
+def deprecated_handover(request_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    _get_handover_request(request_id, db, current_user, lock=True)
+    raise HTTPException(410, "Use the photo-backed upload-photos, borrower-confirm and lender-confirm workflow")
 
 # ==================== NEW HANDOVER WORKFLOW ENDPOINTS ====================
 
@@ -259,6 +194,10 @@ def upload_handover_photos(
     if req.handover_status not in (HandoverStatus.pending.value, HandoverStatus.photos_uploaded.value):
         raise HTTPException(status_code=409, detail="Handover is not in a state to upload photos")
 
+    from app.payment_models import RentalBooking
+    from app.services.rental_evidence import validate_references
+    booking = db.query(RentalBooking).filter_by(borrow_request_id=req.id).one()
+    validate_references(db, booking, current_user.id, "handover", data.photo_urls)
     req.handover_photos = json.dumps(data.photo_urls)
     req.handover_status = HandoverStatus.photos_uploaded.value
     req.updated_at = datetime.utcnow()
@@ -297,18 +236,20 @@ def borrower_confirm_handover(
         raise HTTPException(status_code=409, detail=f"Invalid agreed rental dates: {exc}") from exc
     now = datetime.utcnow()
     req.handover_confirmed_photos = json.dumps(data.photo_urls) if data.photo_urls else None
+    req.handover_condition_note = data.condition_note
     req.handover_status = HandoverStatus.borrower_confirmed.value
+    from app.payment_models import RentalBooking
+    payment_booking = db.query(RentalBooking).filter_by(borrow_request_id=req.id).first()
+    from app.services.rental_evidence import validate_references
+    validate_references(db, payment_booking, current_user.id, "receipt", data.photo_urls)
     req.handover_confirmed_at = now
     req.handover_confirmed_by = current_user.id
-    req.borrowing_started_at = now
-    req.return_due_at = now + timedelta(days=days)
-    req.status = BorrowRequestStatus.fulfilled
     create_notification(
         db, lender_id, "handover_confirmed", "Borrower Confirmed Receipt",
-        f"{current_user.name} confirmed receipt of {req.title} and marked it as borrowed.",
+        f"{current_user.name} acknowledged receipt of {req.title}. Lender confirmation is still required.",
         f"/borrow-requests/{req.id}", req.id,
     )
-    _record_handover_event(db, req, current_user, f"{current_user.name} confirmed receipt of {req.title}. Borrowing is now active.")
+    _record_handover_event(db, req, current_user, f"{current_user.name} acknowledged receipt of {req.title}. Awaiting lender confirmation before rental activation.")
     db.commit()
     db.refresh(req)
     return _format_request_out(req, include_private_handover=True)
@@ -329,6 +270,12 @@ def lender_confirm_handover(
 
     now = datetime.utcnow()
     req.handover_status = HandoverStatus.lender_confirmed.value
+    from app.payment_models import RentalBooking
+    booking = db.query(RentalBooking).filter_by(borrow_request_id=req.id).one()
+    booking.booking_status = "active"
+    req.borrowing_started_at = now
+    req.return_due_at = now + timedelta(days=booking.duration_days)
+    req.status = BorrowRequestStatus.fulfilled
     req.updated_at = now
     create_notification(
         db, req.borrower_id, "handover_lender_confirmed", "Handover Complete",
@@ -527,6 +474,9 @@ def get_borrow_request(request_id: str, db: Session = Depends(get_db)):
 
 
 def _get_rental_participants(request_id: str, db: Session, current_user: User):
+    from app.payment_models import RentalBooking
+    db.query(RentalBooking).filter_by(borrow_request_id=request_id).update(
+        {RentalBooking.booking_status: RentalBooking.booking_status}, synchronize_session=False)
     req = db.query(BorrowRequest).with_for_update().filter(
         BorrowRequest.id == request_id
     ).first()
@@ -547,6 +497,9 @@ def report_return(
     db: Session = Depends(get_db),
 ):
     req, other_user_id = _get_rental_participants(request_id, db, current_user)
+    from app.payment_models import RentalBooking
+    if db.query(RentalBooking).filter_by(borrow_request_id=req.id).first():
+        raise HTTPException(410, "Managed rentals require return/upload-photos; this legacy route cannot change them")
     if req.handover_status not in (HandoverStatus.not_applicable.value, HandoverStatus.lender_confirmed.value):
         raise HTTPException(status_code=409, detail="The rental is not active until handover is confirmed")
     if req.returned_at is not None:
@@ -581,8 +534,19 @@ def upload_return_photos(
     if req.returned_at is not None:
         raise HTTPException(status_code=409, detail="Return already reported")
 
+    from app.payment_models import RentalBooking
+    payment_booking = db.query(RentalBooking).filter_by(borrow_request_id=req.id).first()
+    if payment_booking:
+        from app.services.rental_evidence import validate_references
+        if payment_booking.payment_status != "captured" or payment_booking.settlement_kind:
+            raise HTTPException(409, "Return requires an unsettled funded booking")
+        validate_references(db, payment_booking, current_user.id, "return", data.photo_urls)
+    else:
+        raise HTTPException(409, "Legacy rental evidence requires platform review")
     req.return_photos = json.dumps(data.photo_urls)
     req.handover_status = HandoverStatus.return_photos_uploaded.value
+    if payment_booking and payment_booking.booking_status != "disputed":
+        payment_booking.booking_status = "returned"
     req.returned_at = datetime.utcnow()
     req.updated_at = datetime.utcnow()
     create_notification(
@@ -605,8 +569,22 @@ def confirm_return(
 ):
     """Lender confirms return of item (or initiates dispute if not approved)."""
     req, lender_id = _get_rental_participants(request_id, db, current_user)
-    if current_user.id != lender_id:
+    if current_user.id != req.listing.owner_id:
         raise HTTPException(status_code=403, detail="Only the lender can confirm return")
+    from app.payment_models import RentalBooking
+    booking = db.query(RentalBooking).filter_by(borrow_request_id=req.id).first()
+    if booking:
+        from app.routers.payments import payment_provider
+        from app.services.payments import PaymentService
+        actor, bid, rid = current_user.id, booking.id, req.id
+        provider = payment_provider()
+        service = PaymentService(db, provider)
+        service.return_decision(bid, actor, data.approved, data.condition_note or "")
+        if data.approved and provider.kind == booking.provider == "mock":
+            service.execute_refund(bid, actor)
+        req = db.get(BorrowRequest, rid)
+        db.refresh(req)
+        return _format_request_out(req, include_private_handover=True)
     if req.handover_status != HandoverStatus.return_photos_uploaded.value:
         raise HTTPException(status_code=409, detail="Return photos must be uploaded by borrower first")
     if req.returned_at is None:
@@ -650,6 +628,15 @@ def report_dispute(
     db: Session = Depends(get_db),
 ):
     req, other_user_id = _get_rental_participants(request_id, db, current_user)
+    from app.payment_models import RentalBooking
+    booking = db.query(RentalBooking).filter_by(borrow_request_id=req.id).first()
+    if booking:
+        from app.routers.payments import payment_provider
+        from app.services.payments import PaymentService
+        if not data.description.strip():
+            raise HTTPException(422, "Dispute reason required")
+        result = PaymentService(db, payment_provider()).escalate(booking.id, current_user.id, data.description.strip())
+        return {"status": "ok", "dispute": result}
     if req.handover_status not in (HandoverStatus.not_applicable.value, HandoverStatus.lender_confirmed.value):
         raise HTTPException(status_code=409, detail="The rental is not active until handover is confirmed")
     if req.disputed_at is not None:
@@ -676,6 +663,15 @@ def delete_borrow_request(request_id: str, current_user: User = Depends(get_curr
     req = db.query(BorrowRequest).filter(BorrowRequest.id == request_id, BorrowRequest.borrower_id == current_user.id).first()
     if not req:
         raise HTTPException(status_code=404, detail="Borrow request not found")
+    from app.payment_models import RentalBooking
+    booking = db.query(RentalBooking).filter_by(borrow_request_id=req.id).first()
+    if booking:
+        from app.routers.payments import payment_provider
+        from app.services.payments import PaymentService
+        PaymentService(db, payment_provider()).cancel(booking.id, current_user.id)
+        return {"status": "ok"}
+    if req.status == BorrowRequestStatus.fulfilled:
+        raise HTTPException(409, "An active legacy rental requires manual return review")
     req.status = BorrowRequestStatus.cancelled
     db.commit()
     return {"status": "ok"}

@@ -1,0 +1,390 @@
+{
+  "$defs": {
+    "Box": {
+      "additionalProperties": false,
+      "description": "Normalized coordinates in the cited image's orientation-corrected frame.",
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "x1": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "X1",
+          "type": "number"
+        },
+        "y1": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Y1",
+          "type": "number"
+        },
+        "x2": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "X2",
+          "type": "number"
+        },
+        "y2": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Y2",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x1",
+        "y1",
+        "x2",
+        "y2"
+      ],
+      "title": "Box",
+      "type": "object"
+    },
+    "Capture": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "format": "uuid",
+          "title": "Id",
+          "type": "string"
+        },
+        "stage": {
+          "enum": [
+            "before",
+            "after"
+          ],
+          "title": "Stage",
+          "type": "string"
+        },
+        "path": {
+          "format": "path",
+          "title": "Path",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        },
+        "normalized_sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "title": "Normalized Sha256",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Box"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "view": {
+          "anyOf": [
+            {
+              "maxLength": 128,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "View"
+        },
+        "instance_id": {
+          "anyOf": [
+            {
+              "maxLength": 80,
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Instance Id"
+        }
+      },
+      "required": [
+        "id",
+        "stage",
+        "path",
+        "sha256",
+        "normalized_sha256"
+      ],
+      "title": "Capture",
+      "type": "object"
+    },
+    "V3Config": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "2.0",
+          "default": "2.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "threshold_version": {
+          "default": "cv-thresholds-2.0-experimental",
+          "title": "Threshold Version",
+          "type": "string"
+        },
+        "device": {
+          "default": "cuda",
+          "enum": [
+            "cuda",
+            "cpu",
+            "auto"
+          ],
+          "title": "Device",
+          "type": "string"
+        },
+        "max_side": {
+          "default": 768,
+          "maximum": 1024,
+          "minimum": 128,
+          "title": "Max Side",
+          "type": "integer"
+        },
+        "max_images": {
+          "default": 8,
+          "maximum": 12,
+          "minimum": 2,
+          "title": "Max Images",
+          "type": "integer"
+        },
+        "max_pairs": {
+          "default": 16,
+          "maximum": 36,
+          "minimum": 1,
+          "title": "Max Pairs",
+          "type": "integer"
+        },
+        "timeout_seconds": {
+          "default": 180,
+          "maximum": 900,
+          "minimum": 1,
+          "title": "Timeout Seconds",
+          "type": "number"
+        },
+        "min_side": {
+          "default": 128,
+          "maximum": 512,
+          "minimum": 16,
+          "title": "Min Side",
+          "type": "integer"
+        },
+        "min_focus": {
+          "default": 25,
+          "maximum": 1000,
+          "minimum": 0,
+          "title": "Min Focus",
+          "type": "number"
+        },
+        "min_contrast": {
+          "default": 10,
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Min Contrast",
+          "type": "number"
+        },
+        "max_clipped_fraction": {
+          "default": 0.65,
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Max Clipped Fraction",
+          "type": "number"
+        },
+        "min_similarity": {
+          "default": 0.65,
+          "maximum": 1,
+          "minimum": -1,
+          "title": "Min Similarity",
+          "type": "number"
+        },
+        "min_inliers": {
+          "default": 12,
+          "maximum": 200,
+          "minimum": 8,
+          "title": "Min Inliers",
+          "type": "integer"
+        },
+        "min_inlier_ratio": {
+          "default": 0.45,
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Min Inlier Ratio",
+          "type": "number"
+        },
+        "min_overlap": {
+          "default": 0.35,
+          "exclusiveMinimum": 0,
+          "maximum": 1,
+          "title": "Min Overlap",
+          "type": "number"
+        },
+        "difference_threshold": {
+          "default": 0.15,
+          "exclusiveMaximum": 1,
+          "exclusiveMinimum": 0,
+          "title": "Difference Threshold",
+          "type": "number"
+        },
+        "min_candidate_area": {
+          "default": 16,
+          "maximum": 10000,
+          "minimum": 4,
+          "title": "Min Candidate Area",
+          "type": "integer"
+        },
+        "learned_matcher": {
+          "default": "disabled",
+          "enum": [
+            "disabled",
+            "loftr"
+          ],
+          "title": "Learned Matcher",
+          "type": "string"
+        },
+        "compare_matchers": {
+          "default": false,
+          "title": "Compare Matchers",
+          "type": "boolean"
+        },
+        "geometry_backend": {
+          "default": "opencv",
+          "enum": [
+            "opencv",
+            "kornia"
+          ],
+          "title": "Geometry Backend",
+          "type": "string"
+        },
+        "alignment_backend": {
+          "default": "opencv",
+          "enum": [
+            "opencv",
+            "cuda"
+          ],
+          "title": "Alignment Backend",
+          "type": "string"
+        },
+        "appearance_backend": {
+          "default": "cuda",
+          "enum": [
+            "opencv",
+            "cuda"
+          ],
+          "title": "Appearance Backend",
+          "type": "string"
+        },
+        "learned_max_side": {
+          "default": 512,
+          "maximum": 640,
+          "minimum": 128,
+          "title": "Learned Max Side",
+          "type": "integer"
+        },
+        "learned_confidence": {
+          "default": 0.5,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Learned Confidence",
+          "type": "number"
+        },
+        "checkpoint": {
+          "anyOf": [
+            {
+              "format": "path",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checkpoint"
+        },
+        "checkpoint_sha256": {
+          "anyOf": [
+            {
+              "pattern": "^[a-f0-9]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Checkpoint Sha256"
+        },
+        "embedding_cache_entries": {
+          "default": 32,
+          "maximum": 128,
+          "minimum": 0,
+          "title": "Embedding Cache Entries",
+          "type": "integer"
+        }
+      },
+      "title": "V3Config",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "inspection_id": {
+      "format": "uuid",
+      "title": "Inspection Id",
+      "type": "string"
+    },
+    "config": {
+      "$ref": "#/$defs/V3Config"
+    },
+    "evidence": {
+      "items": {
+        "$ref": "#/$defs/Capture"
+      },
+      "maxItems": 12,
+      "minItems": 2,
+      "title": "Evidence",
+      "type": "array"
+    },
+    "object_metadata": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "maxProperties": 20,
+      "title": "Object Metadata",
+      "type": "object"
+    },
+    "high_resolution_crops": {
+      "default": 4,
+      "maximum": 8,
+      "minimum": 0,
+      "title": "High Resolution Crops",
+      "type": "integer"
+    },
+    "surface_observation_budget": {
+      "default": 4,
+      "maximum": 8,
+      "minimum": 0,
+      "title": "Surface Observation Budget",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "inspection_id",
+    "evidence"
+  ],
+  "title": "InspectionRequest",
+  "type": "object"
+}

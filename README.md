@@ -1,5 +1,13 @@
 # 🤝 NeighborLend
 
+Payment implementation: [test payment system and verification](docs/payment-system-verification.md).
+Payments default to disabled. Local mock mode and Razorpay Test Mode are supported;
+simulated deposit accounting is not actual escrow custody or lender payout. The
+guide includes isolated setup, private evidence, administrator recovery and tests.
+
+Current completion results: [payment hardening and standalone EP v3](docs/final-payment-ep-v3-report.md).
+The opt-in [EP v3 engine](ep/docs/ep-v3.md) remains separate from application AI and payments.
+
 A modern peer-to-peer neighborhood lending platform that allows neighbors to borrow, lend, and share everyday items (tools, electronics, sports gear, books, party supplies) instead of buying them new.
 
 Built with a **React (Vite)** single-page frontend, a high-performance **FastAPI (Python)** backend, **PostgreSQL (Supabase)**, and an integrated **YOLOv8** computer-vision model for automatic item recognition.
@@ -184,11 +192,11 @@ NeighborLend/
 * **Conflict Checking**: Automatically blocks offers for dates that overlap with an existing accepted booking.
 
 ### 4. 4-Stage Handover & Dispute System
-Once an offer is accepted, a formal handover state machine is activated:
-1. `pending`: Waiting for physical pickup.
-2. `marked_given`: Lender confirms they handed the item to the borrower.
-3. `confirmed`: Borrower inspects the item and confirms receipt; active borrowing begins.
-4. `issue_reported`: If an item is damaged or missing during handover, borrower can flag an issue.
+Once complete financial terms are accepted, verified test payment unlocks the handover sequence:
+1. `pending` → `photos_uploaded`: Lender uploads private rental evidence.
+2. `borrower_confirmed`: Borrower acknowledges receipt and records condition.
+3. `lender_confirmed`: Lender acknowledges handover; active borrowing begins.
+4. `issue_reported`: Platform review can resume confirmation, permit return, or authorize eligible recovery.
 * **Return & Dispute**: Either party can mark the item as returned or file a dispute with detailed notes.
 
 ---

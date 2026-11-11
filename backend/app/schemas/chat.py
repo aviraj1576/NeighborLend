@@ -38,6 +38,12 @@ class OfferOut(BaseModel):
     start_date: datetime
     end_date: datetime
     total_cost: float
+    borrower_id: Optional[str] = None
+    lender_id: Optional[str] = None
+    daily_rate_paise: Optional[int] = None
+    rental_fee_paise: Optional[int] = None
+    security_deposit_paise: Optional[int] = None
+    total_amount_paise: Optional[int] = None
     message: Optional[str] = None
     status: OfferStatus
     parent_offer_id: Optional[str] = None

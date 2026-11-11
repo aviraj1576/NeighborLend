@@ -1,0 +1,119 @@
+.payment-card {
+  margin: 1.5rem 0;
+  padding: 1.25rem;
+  border: 1px solid var(--border, #475569);
+  border-radius: 16px;
+  background: var(--bg-card, #1e293b);
+  color: var(--text-primary, #f8fafc);
+  scroll-margin-top: 96px;
+}
+.test-mode-banner {
+  display: block;
+  padding: 0.7rem;
+  border-radius: 8px;
+  color: #6e4700;
+  background: #fff1bf;
+}
+.payment-card button {
+  padding: 0.6rem 0.9rem;
+  margin: 0.35rem 0.5rem 0.35rem 0;
+  border: 1px solid #3b4ed7;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #3044c5;
+  color: #fff;
+  font: inherit;
+  font-weight: 600;
+  min-height: 44px;
+}
+.payment-card button:hover:not(:disabled) {
+  background: #24349d;
+}
+.payment-card button:focus-visible,
+.payment-card input:focus-visible,
+.payment-card textarea:focus-visible,
+.payment-card select:focus-visible,
+.payment-card summary:focus-visible {
+  outline: 3px solid #e6ae2c;
+  outline-offset: 3px;
+}
+.payment-card button:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+.payment-card label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0.8rem 0;
+}
+.payment-card input,
+.payment-card textarea,
+.payment-card select {
+  padding: 0.65rem;
+  border: 1px solid #aab0bc;
+  border-radius: 8px;
+  color: inherit;
+  background: transparent;
+  max-width: 100%;
+}
+.payment-card dl {
+  display: block;
+  margin: 1rem 0;
+}
+.payment-card dt {
+  color: #cbd5e1;
+}
+.payment-card dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0;
+}
+.payment-card dd {
+  margin: 0;
+  font-weight: 600;
+}
+.payment-card details {
+  margin-top: 1rem;
+  overflow-wrap: anywhere;
+}
+.payment-dispute {
+  border-top: 1px solid #aab0bc;
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+}
+.demo-checkout {
+  padding: 1rem;
+  border: 1px dashed #ad8100;
+  border-radius: 10px;
+  margin-top: 1rem;
+}
+.refund-panel {
+  border-top: 1px solid #aab0bc;
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+}
+.payment-card .refund-approval {
+  flex-direction: row;
+  align-items: center;
+}
+.payment-card .refund-approval input {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+}
+.payment-card select {
+  background: var(--bg-secondary, #202533);
+  color: var(--text-primary, #fff);
+}
+@media (max-width: 600px) {
+  .payment-card {
+    padding: 0.8rem;
+  }
+  .payment-card button {
+    min-height: 44px;
+    width: 100%;
+  }
+}
