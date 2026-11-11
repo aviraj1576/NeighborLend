@@ -4,14 +4,18 @@
   justify-content: center;
   flex-grow: 1;
   padding: 40px 24px;
-  background: radial-gradient(circle at center, rgba(124, 58, 237, 0.05) 0%, transparent 70%);
+  background: var(--color-background);
+  min-height: calc(100vh - 72px);
 }
 
 .login-container {
   width: 100%;
-  max-width: 420px;
-  padding: 40px;
-  border-radius: var(--radius-lg);
+  max-width: 440px;
+  padding: 48px 40px;
+  border-radius: var(--radius-xl);
+  background: var(--color-white);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-lg);
 }
 
 .login-header {
@@ -22,6 +26,8 @@
 .login-header h1 {
   font-size: 2rem;
   margin-bottom: 8px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
 }
 
 .login-header p {
@@ -30,32 +36,33 @@
 }
 
 .error-banner {
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: var(--danger);
+  background: var(--error-bg);
+  border: var(--error-border);
+  color: var(--error-text);
   padding: 12px 16px;
   border-radius: var(--radius-sm);
   margin-bottom: 24px;
   font-size: 0.9rem;
   text-align: center;
+  box-shadow: var(--shadow-sm);
 }
 
 .login-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .form-group label {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .password-input-wrapper {
@@ -66,7 +73,7 @@
 
 .password-input-wrapper input {
   width: 100%;
-  padding-right: 60px;
+  padding-right: 44px;
 }
 
 .toggle-password {
@@ -75,16 +82,20 @@
   color: var(--text-muted);
   font-size: 0.85rem;
   font-weight: 500;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
 }
 
 .toggle-password:hover {
-  color: var(--text-primary);
+  color: var(--color-primary);
 }
 
 .login-submit-btn {
   width: 100%;
-  margin-top: 8px;
-  height: 48px;
+  margin-top: 4px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -93,18 +104,14 @@
 .spinner {
   width: 20px;
   height: 20px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(39, 24, 126, 0.2);
   border-radius: 50%;
-  border-top-color: white;
-  animation: spin 1s ease-in-out infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
+  border-top-color: var(--color-primary);
+  animation: spin 0.8s linear infinite;
 }
 
 .login-footer {
-  margin-top: 24px;
+  margin-top: 28px;
   text-align: center;
   font-size: 0.95rem;
   color: var(--text-muted);
@@ -114,9 +121,12 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  margin: 22px 0 16px;
+  margin: 26px 0 20px;
   color: var(--text-muted);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .login-divider::before,
@@ -124,7 +134,7 @@
   content: '';
   flex: 1;
   height: 1px;
-  background: var(--border);
+  background: var(--border-light);
 }
 
 .google-signin {
@@ -148,34 +158,39 @@
 .google-signin-button {
   display: flex;
   width: 100%;
-  min-height: 44px;
+  min-height: 48px;
   align-items: center;
   justify-content: center;
   gap: 10px;
   border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
-  background: #fff;
-  color: #333;
+  background: var(--color-white);
+  color: var(--text-primary);
   font-size: 0.95rem;
   font-weight: 600;
+  transition: var(--transition);
+  cursor: pointer;
 }
 
 .google-signin-button:hover {
-  background: #f7f7f7;
+  background: var(--bg-secondary);
+  border-color: var(--text-muted);
 }
 
 .google-signin-mark {
   color: #4285f4;
-  font-size: 1.15rem;
+  font-size: 1.25rem;
   font-weight: 800;
 }
 
 .auth-link {
-  color: var(--accent-primary);
+  color: var(--color-primary);
   font-weight: 600;
+  transition: var(--transition-fast);
 }
 
 .auth-link:hover {
+  color: var(--color-accent);
   text-decoration: underline;
 }
 
@@ -191,5 +206,5 @@
 
 @media (max-width: 480px) {
   .login-page { padding: 24px 16px; }
-  .login-container { padding: 28px 20px; }
+  .login-container { padding: 32px 20px; }
 }

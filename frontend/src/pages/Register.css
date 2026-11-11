@@ -4,14 +4,18 @@
   justify-content: center;
   flex-grow: 1;
   padding: 40px 24px;
-  background: radial-gradient(circle at top left, rgba(0, 212, 170, 0.05) 0%, transparent 50%);
+  background: var(--color-background);
+  min-height: calc(100vh - 72px);
 }
 
 .register-container {
   width: 100%;
-  max-width: 480px;
-  padding: 40px;
-  border-radius: var(--radius-lg);
+  max-width: 500px;
+  padding: 48px 40px;
+  border-radius: var(--radius-xl);
+  background: var(--color-white);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-lg);
 }
 
 .register-header {
@@ -22,6 +26,8 @@
 .register-header h1 {
   font-size: 2rem;
   margin-bottom: 8px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
 }
 
 .register-header p {
@@ -32,12 +38,12 @@
 .register-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 16px;
 }
 
 .form-row {
   display: flex;
-  gap: 16px;
+  gap: 14px;
 }
 
 .form-row .form-group {
@@ -45,8 +51,8 @@
 }
 
 .captcha-section {
-  background: rgba(0, 0, 0, 0.2);
-  padding: 16px;
+  background: var(--bg-elevated);
+  padding: 18px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-light);
   display: flex;
@@ -68,26 +74,31 @@
 
 .refresh-captcha {
   margin-left: auto;
-  color: var(--accent-primary);
+  color: var(--color-primary);
   font-size: 0.8rem;
-  font-weight: 500;
+  font-weight: 600;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px 8px;
 }
 
 .refresh-captcha:hover {
+  color: var(--color-accent);
   text-decoration: underline;
 }
 
 .register-submit-btn {
   width: 100%;
-  margin-top: 8px;
-  height: 48px;
+  margin-top: 4px;
+  height: 52px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .register-footer {
-  margin-top: 24px;
+  margin-top: 28px;
   text-align: center;
   font-size: 0.95rem;
   color: var(--text-muted);
@@ -95,9 +106,9 @@
 
 @media (max-width: 480px) {
   .register-page { padding: 24px 16px; }
-  .register-container { padding: 28px 20px; }
+  .register-container { padding: 32px 20px; }
   .form-row {
     flex-direction: column;
-    gap: 20px;
+    gap: 16px;
   }
 }

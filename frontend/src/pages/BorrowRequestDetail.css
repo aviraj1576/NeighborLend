@@ -1,55 +1,72 @@
 .rental-detail-page {
   width: 100%;
-  padding-top: 44px;
-  padding-bottom: 56px;
+  padding-top: 20px;
+  padding-bottom: 80px;
+  background: var(--color-background);
+  min-height: calc(100vh - 72px);
 }
 
 .rental-detail-card {
-  max-width: 760px;
+  max-width: 800px;
   margin: 0 auto;
-  padding: 32px;
-  border-radius: var(--radius-lg);
+  padding: 40px;
+  border-radius: var(--radius-xl);
+  background: var(--color-white);
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-lg);
 }
 
 .rental-category {
-  color: var(--accent-primary);
+  color: var(--text-primary);
   font-size: 0.85rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .rental-detail-card h1 {
   margin: 10px 0;
+  font-size: 2.25rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
 }
 
 .rental-description {
   color: var(--text-secondary);
-  line-height: 1.6;
+  line-height: 1.8;
+  font-size: 1.05rem;
+  margin-bottom: 24px;
 }
 
 .rental-detail-card dl {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 18px;
-  margin-top: 24px;
+  gap: 20px;
+  margin-top: 28px;
 }
 
 .rental-detail-card dt {
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  margin-bottom: 4px;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 6px;
 }
 
 .rental-detail-card dd {
-  font-weight: 600;
+  font-weight: 800;
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  margin-bottom: 0;
 }
 
 .rental-lifecycle {
   display: grid;
   gap: 16px;
-  margin-top: 30px;
-  padding-top: 24px;
-  border-top: 1px solid var(--border);
+  margin-top: 34px;
+  padding-top: 28px;
+  border-top: 1px solid var(--border-light);
 }
 
 .rental-lifecycle form {
@@ -63,28 +80,32 @@
 }
 
 .handover-panel {
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  padding: 22px;
+  background: var(--handover-panel-bg);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-sm);
 }
 
 .handover-status {
   width: fit-content;
   margin: 0;
-  padding: 7px 12px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  padding: 8px 16px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
   color: var(--text-primary);
-  font-weight: 700;
+  font-weight: 800;
+  font-size: 0.85rem;
+  background: var(--surface-faint);
 }
 
 .handover-meta,
 .handover-active-details p,
 .handover-issue-details p {
   color: var(--text-secondary);
-  line-height: 1.55;
+  line-height: 1.7;
   margin: 0;
+  font-size: 0.95rem;
 }
 
 .handover-actions,
@@ -108,11 +129,15 @@
 
 .handover-issue-actions {
   grid-template-columns: repeat(auto-fit, minmax(130px, max-content));
+  gap: 10px;
 }
 
 .handover-active-label {
-  color: var(--accent-primary) !important;
-  font-weight: 700;
+  color: var(--text-primary);
+  font-weight: 800;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
 }
 
 .handover-chat-link {
@@ -120,12 +145,14 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  margin-top: 6px;
 }
 
 .rental-detail-loading {
   padding: 100px 24px;
   text-align: center;
   color: var(--text-secondary);
+  font-size: 1.1rem;
 }
 
 .photo-preview {
@@ -134,20 +161,22 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   object-position: center;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-sm);
 }
 
 .photo-previews {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 10px;
   align-items: center;
 }
 
 @media (max-width: 600px) {
   .rental-detail-card {
-    padding: 22px;
+    padding: 26px 20px;
   }
   .photo-preview {
     max-width: 80px;

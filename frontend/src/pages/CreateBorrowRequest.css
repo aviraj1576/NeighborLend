@@ -1,45 +1,53 @@
 .create-request-page {
-  padding-top: 100px;
-  padding-bottom: 60px;
-  max-width: 650px;
+  padding-top: 20px;
+  padding-bottom: 80px;
+  max-width: 680px;
   margin: 0 auto;
+  background: var(--color-background);
+  min-height: calc(100vh - 72px);
 }
 
 .request-card {
-  padding: 36px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--bg-glass-border);
+  padding: 40px;
+  border-radius: var(--radius-xl);
+  border: 1px solid var(--border-light);
+  background: var(--color-white);
+  box-shadow: var(--shadow-lg);
 }
 
 .request-card .title {
   font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 700;
+  font-size: 2rem;
+  font-weight: 800;
   margin-bottom: 8px;
+  letter-spacing: -0.5px;
 }
 
 .request-card .subtitle {
   color: var(--text-secondary);
-  font-size: 14px;
-  margin-bottom: 28px;
+  font-size: 1rem;
+  margin-bottom: 32px;
+  line-height: 1.6;
 }
 
 .request-form {
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
 }
 
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .form-group label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .form-group input,
@@ -47,76 +55,96 @@
 .form-group textarea {
   width: 100%;
   padding: 12px 16px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 14px;
+  font-size: 0.95rem;
+  transition: var(--transition-fast);
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  outline: none;
   border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+  background: var(--color-white);
 }
 
 .location-section {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-top: 10px;
+  gap: 12px;
+  margin-top: 8px;
+  flex-wrap: wrap;
 }
 
 .location-text {
-  font-size: 13px;
+  font-size: 0.85rem;
   color: var(--text-muted);
+  font-weight: 500;
 }
 
 .btn-primary {
-  padding: 14px 24px;
+  padding: 14px 28px;
   background: var(--accent-gradient);
   border: none;
   border-radius: var(--radius-sm);
   color: #fff;
-  font-weight: 600;
-  font-size: 16px;
+  font-weight: 700;
+  font-size: 1rem;
   cursor: pointer;
   transition: var(--transition);
+  box-shadow: 0 4px 14px rgba(255, 134, 0, 0.25);
+  margin-top: 8px;
 }
 
 .btn-primary:hover {
   background: var(--accent-gradient-hover);
+  box-shadow: var(--shadow-glow);
   transform: translateY(-2px);
 }
 
+.btn-primary:active {
+  transform: translateY(0);
+}
+
 .btn-secondary {
-  padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
+  padding: 12px 20px;
+  background: var(--surface-faint);
+  border: 1px solid var(--border-light);
   border-radius: var(--radius-sm);
   color: var(--text-primary);
   cursor: pointer;
+  transition: var(--transition);
+  font-weight: 600;
+}
+
+.btn-secondary:hover {
+  background: rgba(39, 24, 126, 0.05);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
 }
 
 .error-banner {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid var(--danger);
-  color: var(--danger);
+  background: var(--error-bg);
+  border: var(--error-border);
+  color: var(--error-text);
   padding: 12px 16px;
   border-radius: var(--radius-sm);
-  font-size: 14px;
+  font-size: 0.9rem;
   margin-bottom: 20px;
+  box-shadow: var(--shadow-sm);
 }
 
 @media (max-width: 600px) {
   .create-request-page {
-    padding: 32px 16px 48px;
+    padding: 20px 16px 48px;
   }
 
   .request-card {
-    padding: 24px 20px;
+    padding: 28px 20px;
   }
 
   .location-section {

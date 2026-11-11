@@ -1,41 +1,159 @@
 :root {
-  --bg-primary: #0f172a;
-  --bg-secondary: #1e293b;
-  --bg-card: #1e293b;
-  --bg-elevated: #334155;
-  --bg-glass: #1e293b;
-  --bg-glass-border: #334155;
+  /* Brand palette */
+  --color-primary: #27187E;
+  --color-secondary: #758BFD;
+  --color-tint: #AEB8FE;
+  --color-background: #F1F2F6;
+  --color-accent: #FF8600;
+  --color-accent-text: #27187E;
+  --color-white: #ffffff;
 
-  --accent-primary: #38bdf8;
-  --accent-secondary: #0ea5e9;
-  --accent-gradient: linear-gradient(135deg, #38bdf8 0%, #0284c7 100%);
-  --accent-gradient-hover: linear-gradient(135deg, #7dd3fc 0%, #0369a1 100%);
+  /* Semantic surfaces */
+  --bg-primary: var(--color-background);
+  --bg-secondary: var(--color-tint);
+  --bg-card: var(--color-white);
+  --bg-elevated: rgba(39, 24, 126, 0.08);
+  --bg-glass: rgba(255, 255, 255, 0.6);
+  --bg-glass-border: var(--color-tint);
 
-  --text-primary: #f8fafc;
-  --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  /* Text */
+  --text-primary: var(--color-primary);
+  --text-secondary: rgba(39, 24, 126, 0.55);
+  --text-muted: rgba(39, 24, 126, 0.35);
 
+  /* Status */
   --success: #22c55e;
   --warning: #f59e0b;
   --danger: #ef4444;
-  --info: #38bdf8;
+  --info: var(--color-secondary);
 
-  --border: #475569;
-  --border-light: #334155;
+  /* Borders */
+  --border: var(--color-tint);
+  --border-light: rgba(39, 24, 126, 0.2);
 
-  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --shadow-glow: 0 0 15px rgba(56, 189, 248, 0.15);
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(39, 24, 126, 0.08);
+  --shadow-md: 0 4px 6px -1px rgba(39, 24, 126, 0.1);
+  --shadow-lg: 0 10px 15px -3px rgba(39, 24, 126, 0.12);
+  --shadow-glow: 0 0 20px rgba(255, 134, 0, 0.12);
 
-  --radius: 6px;
-  --radius-sm: 4px;
-  --radius-lg: 8px;
-  --radius-xl: 12px;
+  /* Radius */
+  --radius: 10px;
+  --radius-sm: 6px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
 
-  --font-main: 'Inter', -apple-system, sans-serif;
-  --font-display: 'Inter', -apple-system, sans-serif;
+  /* Fonts */
+  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-display: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 
-  --transition: all 0.2s ease;
-  --transition-fast: all 0.1s ease;
+  /* Transitions */
+  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-fast: all 0.15s ease;
+  --transition-spring: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+
+  /* Accent (CTA backgrounds only — never as text on light bg) */
+  --accent-primary: var(--color-accent);
+  --accent-secondary: var(--color-secondary);
+  --accent-gradient: linear-gradient(135deg, #FF8600 0%, #e07300 100%);
+  --accent-gradient-hover: linear-gradient(135deg, #f29a20 0%, #c66300 100%);
+  --accent-text: var(--color-accent-text);
+
+  /* Helper tokens */
+  --focus-ring: rgba(39, 24, 126, 0.2);
+  --bg-input: rgba(255, 255, 255, 1);
+  --surface-faint: rgba(255, 255, 255, 0.5);
+  --accent-border-light: rgba(255, 134, 0, 0.2);
+  --photo-overlay-bg: linear-gradient(to top, rgba(39, 24, 126, 0.85) 0%, transparent 60%);
+  --hero-glow-start: rgba(39, 24, 126, 0.1);
+  --hero-glow-end: rgba(117, 139, 253, 0.1);
+  --cta-box-bg: linear-gradient(135deg, rgba(39, 24, 126, 0.05), rgba(117, 139, 253, 0.05));
+  --cta-box-border: 1px solid rgba(117, 139, 253, 0.15);
+  --page-glow: rgba(117, 139, 253, 0.06);
+  --use-location-bg: rgba(255, 134, 0, 0.1);
+  --use-location-border: 1px solid rgba(255, 134, 0, 0.25);
+  --use-location-hover-bg: rgba(255, 134, 0, 0.18);
+  --dropdown-active-bg: rgba(255, 134, 0, 0.12);
+  --shadow-accent: 0 0 12px rgba(255, 134, 0, 0.15);
+  --ai-verification-bg: rgba(117, 139, 253, 0.06);
+  --ai-verification-border: 1px solid rgba(117, 139, 253, 0.15);
+  --dropzone-hover-bg: rgba(117, 139, 253, 0.05);
+  --ai-result-bg: rgba(117, 139, 253, 0.08);
+  --ai-result-border: 1px solid rgba(117, 139, 253, 0.15);
+  --confidence-bar-bg: rgba(39, 24, 126, 0.1);
+  --price-box-border: 1px solid rgba(255, 134, 0, 0.2);
+  --price-box-bg: rgba(39, 24, 126, 0.04);
+  --error-bg: rgba(239, 68, 68, 0.08);
+  --error-border: 1px solid rgba(239, 68, 68, 0.18);
+  --error-text: #ef4444;
+  --warning-bg: rgba(245, 158, 11, 0.08);
+  --warning-border: 1px solid rgba(245, 158, 11, 0.18);
+  --warning-text: #f59e0b;
+  --suggestion-card-bg: rgba(39, 24, 126, 0.04);
+  --border-muted: #c4c7d6;
+  --text-light: #6b7280;
+  --rent-card-bg: rgba(255, 134, 0, 0.05);
+  --deposit-border: 3px solid #a855f7;
+  --deposit-bg: rgba(168, 85, 247, 0.06);
+  --deposit-text: #a855f7;
+  --success-bg: rgba(34, 197, 94, 0.08);
+  --success-border: 1px solid rgba(34, 197, 94, 0.18);
+  --badge-success-bg: rgba(34, 197, 94, 0.1);
+  --badge-success-text: #22c55e;
+  --badge-success-border: 1px solid rgba(34, 197, 94, 0.2);
+  --reset-btn-hover-bg: rgba(255, 134, 0, 0.08);
+  --location-feedback-text: #22c55e;
+  --published-bg: rgba(117, 139, 253, 0.1);
+  --published-border: 1px solid rgba(117, 139, 253, 0.18);
+  --paused-bg: rgba(245, 158, 11, 0.1);
+  --paused-border: 1px solid rgba(245, 158, 11, 0.18);
+  --unread-border: 1px solid rgba(255, 134, 0, 0.3);
+  --handover-panel-bg: rgba(255, 255, 255, 0.6);
+  --sidebar-bg: rgba(39, 24, 126, 0.04);
+  --search-bg: rgba(255, 255, 255, 1);
+  --conversation-bg: rgba(255, 255, 255, 0.7);
+  --conversation-hover-bg: rgba(255, 255, 255, 1);
+  --conversation-active-bg: rgba(255, 134, 0, 0.08);
+  --conversation-active-border: 1px solid rgba(255, 134, 0, 0.25);
+  --chat-window-bg: #F1F2F6;
+  --chat-header-bg: rgba(255, 255, 255, 0.9);
+  --negotiation-btn-bg: rgba(255, 134, 0, 0.08);
+  --negotiation-btn-border: 1px solid rgba(255, 134, 0, 0.2);
+  --negotiation-btn-hover-bg: rgba(255, 134, 0, 0.14);
+  --negotiation-btn-shadow: 0 0 12px rgba(255, 134, 0, 0.12);
+  --date-separator-bg: rgba(255, 255, 255, 0.6);
+  --outgoing-shadow: 0 2px 8px rgba(255, 134, 0, 0.15);
+  --system-bubble-bg: rgba(39, 24, 126, 0.06);
+  --input-bar-bg: rgba(255, 255, 255, 0.9);
+  --textarea-bg: rgba(255, 255, 255, 1);
+  --negotiation-panel-bg: #ffffff;
+  --negotiation-header-bg: rgba(255, 255, 255, 0.9);
+  --offer-card-bg: rgba(255, 255, 255, 0.8);
+  --offer-details-bg: rgba(39, 24, 126, 0.04);
+  --offer-note-bg: rgba(39, 24, 126, 0.04);
+  --btn-accept-gradient: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  --btn-counter-bg: rgba(255, 134, 0, 0.08);
+  --btn-counter-border: 1px solid rgba(255, 134, 0, 0.25);
+  --btn-reject-bg: rgba(239, 68, 68, 0.08);
+  --btn-reject-border: 1px solid rgba(239, 68, 68, 0.18);
+  --waiting-indicator-bg: rgba(245, 158, 11, 0.08);
+  --accepted-banner-bg: rgba(34, 197, 94, 0.1);
+  --accepted-banner-border: 1px solid rgba(34, 197, 94, 0.18);
+  --calculation-preview-bg: rgba(39, 24, 126, 0.04);
+  --calculation-preview-border: 1px solid rgba(255, 134, 0, 0.2);
+  --form-error-bg: rgba(239, 68, 68, 0.08);
+  --form-error-border: 1px solid rgba(239, 68, 68, 0.18);
+  --form-error-text: #ef4444;
+  --history-toggle-bg: rgba(39, 24, 126, 0.04);
+  --history-item-bg: rgba(255, 255, 255, 0.6);
+  --status-pending-bg: rgba(245, 158, 11, 0.1);
+  --status-pending-border: 1px solid rgba(245, 158, 11, 0.2);
+  --status-accepted-bg: rgba(34, 197, 94, 0.1);
+  --status-accepted-border: 1px solid rgba(34, 197, 94, 0.2);
+  --status-countered-bg: rgba(255, 134, 0, 0.1);
+  --status-countered-border: 1px solid rgba(255, 134, 0, 0.2);
+  --status-rejected-bg: rgba(239, 68, 68, 0.1);
+  --status-rejected-border: 1px solid rgba(239, 68, 68, 0.2);
+  --status-cancelled-bg: rgba(100, 116, 139, 0.1);
 }
