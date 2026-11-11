@@ -2,6 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Edit2, Play, Pause, Trash2, X, Save } from 'lucide-react';
 import api from '../api/client';
+import ListingCard from '../components/ListingCard';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import Input from '../components/ui/Input';
 import './MyListings.css';
 
 const MyListings = () => {
@@ -28,7 +32,7 @@ const MyListings = () => {
     const newStatus = currentStatus === 'published' ? 'paused' : 'published';
     try {
       await api.patch(`/listings/${id}`, { status: newStatus });
-      setListings(listings.map(l => l.id === id ? { ...l, status: newStatus } : l));
+      setListings((items) => items.map((l) => (l.id === id ? { ...l, status: newStatus } : l)));
     } catch (err) {
       console.error(err);
     }
@@ -38,7 +42,7 @@ const MyListings = () => {
     if (!window.confirm('Are you sure you want to delete this listing?')) return;
     try {
       await api.delete(`/listings/${id}`);
-      setListings(listings.filter(l => l.id !== id));
+      setListings((items) => items.filter((l) => l.id !== id));
     } catch (err) {
       console.error(err);
     }
@@ -51,7 +55,7 @@ const MyListings = () => {
       description: listing.description,
       price_per_day: listing.price_per_day,
       security_deposit: listing.security_deposit,
-      lending_radius_km: listing.lending_radius_km
+      lending_radius_km: listing.lending_radius_km,
     });
   };
 
@@ -62,7 +66,6 @@ const MyListings = () => {
 
   const saveEdit = async (id) => {
     try {
-      // Convert numeric fields
       const payload = {
         ...editForm,
         price_per_day: editForm.price_per_day ? Number(editForm.price_per_day) : undefined,
@@ -70,7 +73,7 @@ const MyListings = () => {
         lending_radius_km: editForm.lending_radius_km ? Number(editForm.lending_radius_km) : undefined,
       };
       await api.patch(`/listings/${id}`, payload);
-      setListings(listings.map(l => l.id === id ? { ...l, ...payload } : l));
+      setListings((items) => items.map((l) => (l.id === id ? { ...l, ...payload } : l)));
       cancelEdit();
     } catch (err) {
       console.error(err);
@@ -79,149 +82,134 @@ const MyListings = () => {
 
   const handleEditChange = (e) => {
     const { name, value } = e.target;
-    setEditForm(prev => ({ ...prev, [name]: value }));
+    setEditForm((prev) => ({ ...prev, [name]: value }));
   };
 
   return (
-    <div className="my-listings-page container fade-in-up">
-      <div className="page-header">
-        <h1>My Listings</h1>
-        <Link to="/create-listing" className="btn-primary add-listing-btn">
-          <Plus size={20} />
-          Create New
-        </Link>
-      </div>
-
-      {loading ? (
-        <div className="loading-state">Loading your listings...</div>
-      ) : listings.length > 0 ? (
-        <div className="dashboard-grid">
-          {listings.map(listing => (
-            <div key={listing.id} className="dashboard-card glass">
-              
-              {editingId === listing.id ? (
-                <div className="edit-form">
-                  <div className="edit-header">
-                    <h3>Edit Listing</h3>
-                    <button className="icon-action-btn" onClick={cancelEdit} title="Cancel">
-                      <X size={18} />
-                    </button>
-                  </div>
-                  <div className="form-grid">
-                    <div className="form-group full-width">
-                      <label>Item Name</label>
-                      <input 
-                        type="text" 
-                        name="name" 
-                        value={editForm.name} 
-                        onChange={handleEditChange} 
-                      />
-                    </div>
-                    <div className="form-group full-width">
-                      <label>Description</label>
-                      <textarea 
-                        name="description" 
-                        value={editForm.description} 
-                        onChange={handleEditChange} 
-                        rows={3}
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Price per Day (₹)</label>
-                      <input 
-                        type="number" 
-                        name="price_per_day" 
-                        value={editForm.price_per_day} 
-                        onChange={handleEditChange} 
-                        min="0" step="any"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Security Deposit (₹)</label>
-                      <input 
-                        type="number" 
-                        name="security_deposit" 
-                        value={editForm.security_deposit} 
-                        onChange={handleEditChange} 
-                        min="0" step="any"
-                      />
-                    </div>
-                    <div className="form-group">
-                      <label>Lending Radius (km)</label>
-                      <input 
-                        type="number" 
-                        name="lending_radius_km" 
-                        value={editForm.lending_radius_km} 
-                        onChange={handleEditChange} 
-                        min="1" max="50"
-                      />
-                    </div>
-                  </div>
-                  <div className="edit-actions">
-                    <button className="btn-outline" onClick={cancelEdit}>Cancel</button>
-                    <button className="btn-primary" onClick={() => saveEdit(listing.id)}>
-                      <Save size={16} /> Save
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="card-header">
-                    <div className={`status-badge ${listing.status}`}>
-                      {listing.status}
-                    </div>
-                    <div className="actions">
-                      <button className="icon-action-btn" title="Edit" onClick={() => startEdit(listing)}>
-                        <Edit2 size={16} />
-                      </button>
-                      <button 
-                        className="icon-action-btn" 
-                        title={listing.status === 'published' ? 'Pause' : 'Resume'}
-                        onClick={() => toggleStatus(listing.id, listing.status)}
-                      >
-                        {listing.status === 'published' ? <Pause size={16} /> : <Play size={16} />}
-                      </button>
-                      <button 
-                        className="icon-action-btn delete" 
-                        title="Delete"
-                        onClick={() => deleteListing(listing.id)}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="card-body">
-                    <h3>{listing.title}</h3>
-                    <span className="card-category">{listing.category}</span>
-                    <div className="card-price">₹{listing.price_per_day} / day</div>
-                  </div>
-
-                  <div className="card-footer">
-                    <div className="stat">
-                      <span className="stat-val">{listing.views}</span>
-                      <span className="stat-label">Views</span>
-                    </div>
-                    <div className="stat">
-                      <span className="stat-val">{listing.requests}</span>
-                      <span className="stat-label">Requests</span>
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="empty-state glass">
-          <div className="empty-icon-wrapper">
-            <Plus size={48} />
+    <div className="my-listings-page section" style={{ '--h': '2' }}>
+      <div className="wrap">
+        <div className="page-header section-head--split">
+          <div>
+            <h2 className="t-h2">My listings</h2>
+            <p className="t-lead measure">Manage the items you share with neighbors.</p>
           </div>
-          <h3>You haven't listed anything yet</h3>
-          <p>Turn your unused items into extra cash today.</p>
-          <Link to="/create-listing" className="btn-primary mt-4">List an Item</Link>
+          <Link to="/create-listing">
+            <Button variant="primary" className="add-listing-btn">
+              <Plus size={18} />
+              <span style={{ marginLeft: 'var(--s-2)' }}>List something</span>
+            </Button>
+          </Link>
         </div>
-      )}
+
+        {loading ? (
+          <div className="dashboard-loading">Loading your listings…</div>
+        ) : listings.length > 0 ? (
+          <div className="dashboard-grid">
+            {listings.map((listing) => (
+              <div key={listing.id} className="dashboard-wrap">
+                {editingId === listing.id ? (
+                  <Card variant="default" className="edit-card">
+                    <div className="edit-head">
+                      <h3 className="t-card">Edit listing</h3>
+                      <Button variant="secondary" size="sm" onClick={cancelEdit} className="cancel-edit">
+                        <X size={16} />
+                        <span style={{ marginLeft: 'var(--s-2)' }}>Cancel</span>
+                      </Button>
+                    </div>
+                    <div className="edit-form">
+                      <div className="form-row">
+                        <Input
+                          id="edit-name"
+                          name="name"
+                          label="Item name"
+                          type="text"
+                          value={editForm.name}
+                          onChange={handleEditChange}
+                          required
+                        />
+                        <Input
+                          id="edit-category"
+                          name="category"
+                          label="Category"
+                          type="text"
+                          placeholder="e.g. Tools"
+                          value={editForm.category || listing.category}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))}
+                        />
+                      </div>
+                      <Input
+                        id="edit-description"
+                        name="description"
+                        label="Description"
+                        type="textarea"
+                        rows={3}
+                        value={editForm.description}
+                        onChange={handleEditChange}
+                      />
+                      <div className="form-row">
+                        <Input
+                          id="edit-price"
+                          name="price_per_day"
+                          label="Price per day (₹)"
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={editForm.price_per_day}
+                          onChange={handleEditChange}
+                        />
+                        <Input
+                          id="edit-deposit"
+                          name="security_deposit"
+                          label="Security deposit (₹)"
+                          type="number"
+                          min="0"
+                          step="any"
+                          value={editForm.security_deposit}
+                          onChange={handleEditChange}
+                        />
+                        <Input
+                          id="edit-radius"
+                          name="lending_radius_km"
+                          label="Lending radius (km)"
+                          type="number"
+                          min="1"
+                          max="50"
+                          value={editForm.lending_radius_km}
+                          onChange={handleEditChange}
+                        />
+                      </div>
+                    </div>
+                    <div className="edit-actions">
+                      <Button variant="secondary" onClick={cancelEdit}>
+                        Cancel
+                      </Button>
+                      <Button variant="primary" onClick={() => saveEdit(listing.id)}>
+                        <Save size={16} />
+                        <span style={{ marginLeft: 'var(--s-2)' }}>Save</span>
+                      </Button>
+                    </div>
+                  </Card>
+                ) : (
+                  <ListingCard listing={listing} />
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Card variant="default" className="empty-card">
+            <div className="empty-body">
+              <Plus size={44} className="empty-icon" />
+              <h3 className="t-card">You haven&rsquo;t listed anything yet</h3>
+              <p className="t-body">Turn your unused items into extra cash today.</p>
+              <div className="empty-actions" style={{ marginTop: 'var(--s-5)' }}>
+                <Link to="/create-listing">
+                  <Button variant="primary">List an item</Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };

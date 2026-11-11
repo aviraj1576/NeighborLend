@@ -1,31 +1,45 @@
+/*
+  VerifyEmail — soft auth surface, one section per screen, asymmetric layout.
+*/
+
+.verify-page { display: flex; flex-direction: column; min-height: 0; }
+.verify-page .wrap { height: 100%; }
+.verify-copy { display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+.verify-header h1 { margin: 0 0 var(--s-4, 16px) 0; color: #2b061e; letter-spacing: var(--display-tracking, -0.028em); }
+.verify-header p { margin: 0; color: #4a3630; }
+
+.verify-form-wrap { display: flex; align-items: center; justify-content: center; min-height: 0; }
+.verify-card { max-width: 440px; width: 100%; }
+.verify-card .form-body { display: flex; flex-direction: column; gap: var(--s-5, 24px); }
+.error-banner {
+  padding: var(--s-3, 12px) var(--s-4, 16px);
+  border-radius: var(--r-md, 12px);
+  border: 1px solid color-mix(in oklab, #ef4444 35%, transparent);
+  background: color-mix(in oklab, #ef4444 10%, var(--card));
+  color: #b3261e;
+  font: 400 var(--t-small, 14px)/1.45 var(--font-text);
+}
 .verification-message {
-  padding: 12px 16px;
-  margin-bottom: 20px;
-  border: var(--accent-border-light);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  background: var(--surface-faint);
+  padding: var(--s-3, 12px) var(--s-4, 16px);
+  border-radius: var(--r-md, 12px);
+  border: 1px solid color-mix(in oklab, #22c55e 30%, transparent);
+  background: color-mix(in oklab, #22c55e 10%, var(--card));
+  color: #15803d;
+  font: 400 var(--t-small, 14px)/1.45 var(--font-text);
+  margin-bottom: var(--s-2, 8px);
 }
+.verify-footer { margin-top: var(--s-2, 8px); }
+.verify-footer p { margin: 0; color: #4a3630; text-align: center; }
+.auth-link { color: #8d5a28; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
 
-.resend-code-button {
-  display: block;
-  margin: 22px auto 0;
-  color: var(--color-primary);
-  font-weight: 600;
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px 8px;
-  font-size: 0.9rem;
+@media (max-width: 1023px) {
+  .verify-page .wrap { grid-template-columns: 1fr !important; gap: var(--s-6, 32px); }
+  .verify-copy.span-6, .verify-form-wrap.span-5 { grid-column: 1 / -1; }
+  .verify-copy { text-align: center; align-items: center; padding-top: var(--s-6, 32px); }
+  .verify-header p { max-width: none; margin: 0 auto; }
+  .verify-form-wrap { justify-content: center; padding-bottom: var(--s-6, 32px); }
 }
-
-.resend-code-button:hover {
-  color: var(--color-accent);
-  text-decoration: underline;
-}
-
-.resend-code-button:disabled {
-  color: var(--text-muted);
-  cursor: not-allowed;
+@media (max-width: 639px) {
+  .verify-header h1 { font-size: 28px; }
+  .verify-card { max-width: 100%; }
 }

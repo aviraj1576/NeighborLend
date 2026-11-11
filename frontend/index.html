@@ -1,12 +1,53 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-radius="soft" data-buttons="tonal">
   <head>
     <meta charset="UTF-8" />
-    <meta name="theme-color" content="#0b1220" />
-    <link rel="icon" type="image/svg+xml" href="/neighborlend-icon.svg" />
+    <meta name="theme-color" content="#FFEED6" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>NeighborLend - Share More, Own Less</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="page-type" content="software" />
+    <meta name="site-kind" content="software" />
+    <meta name="description" content="NeighborLend — borrow and lend the things you need, from neighbors nearby. Warm, human-led lending with fair rates and no fees." />
+    <link rel="icon" type="image/svg+xml" href="/neighborlend-icon.svg" />
+    <title>NeighborLend — Share More, Own Less</title>
+    <!-- taste-skill kit: system, cards, motion, backgrounds, layout, icons -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wdth,wght@75..100,400..700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/assets/system.css">
+    <link rel="stylesheet" href="/assets/ui/cards.css">
+    <link rel="stylesheet" href="/assets/motion/motion.css">
+    <link rel="stylesheet" href="/assets/backgrounds/backgrounds.css">
+    <link rel="stylesheet" href="/assets/layout/layout.css">
+    <link rel="stylesheet" href="/assets/icons/icon.css">
+    <!-- brand :root overrides (start.mjs brand) — kept after the links per the skill -->
+    <style>
+:root {
+  --p-bg: #ffeed6;
+  --p-surface: #f3e1cc;
+  --p-ink: #2b061e;
+  --p-muted: #76575d;
+  --p-accent: #d2bf55;
+  --p-accent-ink: #111111;
+  --p-action: #2b061e;
+  --p-action-ink: #ffeed6;
+  --p-inv-bg: #2b061e;
+  --p-inv-surface: #381429;
+  --p-inv-ink: #ffeed6;
+  --p-inv-muted: #aa8e8a;
+  --p-inv-accent: #d2bf55;
+  --p-inv-accent-ink: #111111;
+  --p-inv-action: #d2bf55;
+  --p-inv-action-ink: #111111;
+  --font-display: "Instrument Sans", system-ui, sans-serif;
+  --font-text: "Instrument Sans", system-ui, sans-serif;
+  --font-mono: "DM Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  --display-weight: 500;
+  --display-tracking: -0.028em;
+  --display-tracking-xl: -0.036em;
+  --display-stretch: 96%;
+  --ly-scale: 1.04;
+}
+    </style>
     <script src="https://accounts.google.com/gsi/client" async defer></script>
   </head>
   <body>

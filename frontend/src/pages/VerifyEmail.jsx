@@ -2,7 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
-import './Login.css';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Card from '../components/ui/Card';
 import './VerifyEmail.css';
 
 const VerifyEmail = () => {
@@ -54,54 +56,85 @@ const VerifyEmail = () => {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-container glass fade-in-up">
-        <div className="login-header">
-          <h1 className="gradient-text">Verify your email</h1>
-          <p>Enter the 6-digit code we sent to activate your account.</p>
+    <div className="verify-page section" style={{ '--h': '1' }}>
+      <div className="wrap grid grid--top">
+        <div className="verify-copy span-6">
+          <div className="verify-header">
+            <h1 className="t-h1">Verify your email</h1>
+            <p className="t-lead measure">
+              Enter the 6-digit code we sent to activate your account.
+            </p>
+          </div>
         </div>
-        {error && <div className="error-banner">{error}</div>}
-        {message && <div className="verification-message">{message}</div>}
-        <form className="login-form" onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="verification-email">Email address</label>
-            <input
-              id="verification-email"
-              type="email"
-              value={email}
-              onChange={(event) => setEmail(event.target.value)}
-              autoComplete="email"
-              required
-            />
-          </div>
-          <div className="form-group">
-            <label htmlFor="verification-code">Verification code</label>
-            <input
-              id="verification-code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              pattern="[0-9]{6}"
-              maxLength={6}
-              value={code}
-              onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-              required
-            />
-          </div>
-          <button type="submit" className="btn-primary login-submit-btn" disabled={isLoading}>
-            {isLoading ? <span className="spinner" /> : 'Verify and continue'}
-          </button>
-        </form>
-        <button
-          type="button"
-          className="resend-code-button"
-          onClick={handleResend}
-          disabled={!email || resendCooldown > 0}
-        >
-          {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
-        </button>
-        <div className="login-footer">
-          <p>Already verified? <Link to="/login" className="auth-link">Log in</Link></p>
+
+        <div className="verify-form-wrap span-5 start-7">
+          <Card variant="default" className="verify-card">
+            <div className="form-body">
+              {error && (
+                <div className="error-banner" role="alert">
+                  {error}
+                </div>
+              )}
+              {message && (
+                <div className="verification-message" role="status">
+                  {message}
+                </div>
+              )}
+
+              <form className="verify-form" onSubmit={handleSubmit}>
+                <Input
+                  id="verification-email"
+                  name="email"
+                  label="Email address"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(event) => setEmail(event.target.value)}
+                  required
+                />
+                <Input
+                  id="verification-code"
+                  name="code"
+                  label="Verification code"
+                  type="text"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  value={code}
+                  onChange={(event) => setCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                  required
+                />
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={isLoading}
+                  className="verify-submit-btn"
+                >
+                  {isLoading ? 'Verifying…' : 'Verify and continue'}
+                </Button>
+              </form>
+
+              <Button
+                variant="secondary"
+                type="button"
+                onClick={handleResend}
+                disabled={!email || resendCooldown > 0}
+                className="resend-code-button"
+              >
+                {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : 'Resend code'}
+              </Button>
+
+              <div className="verify-footer">
+                <p className="t-body">
+                  Already verified?{' '}
+                  <Link to="/login" className="auth-link">
+                    Log in
+                  </Link>
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
     </div>

@@ -1,18 +1,19 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Image as ImageIcon, Star } from 'lucide-react';
+import { MapPin, Star } from 'lucide-react';
 import { resolvePhotoUrl } from '../utils/photoUrl';
+import Card from './ui/Card';
+import Badge from './ui/Badge';
 import './ListingCard.css';
 
 const ListingCard = ({ listing }) => {
   const navigate = useNavigate();
-  
+
   const handleClick = () => {
     navigate(`/listing/${listing.id}`);
   };
 
   const titleText = listing.title || listing.name || 'Untitled Item';
-
   const ownerName = listing.owner?.username || listing.owner?.name || listing.owner_username || listing.owner_name || 'Owner';
   const ownerInitial = ownerName[0]?.toUpperCase() || 'U';
   const rawRating = listing.owner?.rating ?? listing.owner?.avg_rating ?? listing.owner_avg_rating;
@@ -27,33 +28,35 @@ const ListingCard = ({ listing }) => {
   }
 
   const imageUrl = resolvePhotoUrl(listing.image_url || listing.photos?.[0]);
+  const pricePerDay = typeof listing.price_per_day === 'number' ? listing.price_per_day.toFixed(0) : (listing.price_per_day ?? '—');
 
   return (
-    <div className="listing-card glass" onClick={handleClick}>
-      <div className="listing-photo-area">
+    <Card
+      variant="default"
+      className="listing-card"
+      onClick={handleClick}
+    >
+      <div className="listing-photo-wrap">
         {imageUrl ? (
-          <img src={imageUrl} alt={titleText} className="listing-photo" />
+          <img src={imageUrl} alt={titleText} className="listing-photo" loading="lazy" />
         ) : (
           <div className="listing-photo-placeholder">
-            <ImageIcon size={48} className="placeholder-icon" />
+            <span className="photo-initial">{ownerInitial}</span>
           </div>
         )}
-        
-        <div className="photo-overlay">
-          <div className="listing-category-badge">
+        <div className="listing-overlay">
+          <Badge variant="outline" className="listing-category-badge">
             {listing.category || 'Item'}
-          </div>
-          <div className="listing-price-badge">
-            ₹{listing.price_per_day}/day
-          </div>
+          </Badge>
+          <span className="listing-price-badge">₹{pricePerDay}/day</span>
         </div>
       </div>
 
       <div className="listing-content">
         <h3 className="listing-title">{titleText}</h3>
-        
+
         <div className="listing-location">
-          <MapPin size={14} className="location-icon" />
+          <MapPin size={13} className="location-icon" />
           <span>{locationText}</span>
           {listing.distance_km != null && (
             <span className="distance-badge">• {listing.distance_km.toFixed(1)} km</span>
@@ -66,12 +69,12 @@ const ListingCard = ({ listing }) => {
           </div>
           <span className="owner-name">{ownerName}</span>
           <div className="owner-rating">
-            <Star size={12} className="star-icon" fill="currentColor" />
+            <Star size={12} className="star-icon" />
             <span>{ownerRating}</span>
           </div>
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 

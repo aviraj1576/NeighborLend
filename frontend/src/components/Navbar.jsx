@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Menu, X, User } from 'lucide-react';
 import api from '../api/client';
+import Button from './ui/Button';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -43,27 +44,45 @@ const Navbar = () => {
     navigate('/');
   };
 
+  const authedLinks = (
+    <>
+      <Link to="/create-listing" className={`nav-link ${isActive('/create-listing')}`}>
+        Lend Item
+      </Link>
+      <Link to="/create-request" className={`nav-link ${isActive('/create-request')}`}>
+        Request Item
+      </Link>
+      <Link to="/my-listings" className={`nav-link ${isActive('/my-listings')}`}>
+        My Listings
+      </Link>
+      <Link to="/my-borrow-requests" className={`nav-link ${isActive('/my-borrow-requests')}`}>
+        My Borrow Requests
+      </Link>
+      <Link to="/messages" className={`nav-link ${isActive('/messages')}`}>
+        Messages
+      </Link>
+      <Link to="/inbox" className={`nav-link ${isActive('/inbox')}`}>
+        Inbox
+        {unreadCount > 0 && <span className="unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+      </Link>
+    </>
+  );
+
   return (
-    <nav className="navbar glass">
-      <div className="container nav-container">
-        <Link to="/" className="nav-logo gradient-text">
+    <nav className="navbar">
+      <a href="#" className="skip-link visually-hidden" tabIndex={0}>
+        Skip to content
+      </a>
+      <div className="wrap nav-wrap">
+        <Link to="/" className="nav-logo">
           NeighborLend
         </Link>
 
         <div className="nav-links desktop-only">
-          <Link to="/browse" className={`nav-link ${isActive('/browse')}`}>Browse</Link>
-          {isAuthenticated && (
-            <>
-              <Link to="/create-listing" className={`nav-link ${isActive('/create-listing')}`}>Lend Item</Link>
-              <Link to="/create-request" className={`nav-link ${isActive('/create-request')}`}>Request Item</Link>
-              <Link to="/my-listings" className={`nav-link ${isActive('/my-listings')}`}>My Listings</Link>
-              <Link to="/my-borrow-requests" className={`nav-link ${isActive('/my-borrow-requests')}`}>My Borrow Requests</Link>
-              <Link to="/messages" className={`nav-link ${isActive('/messages')}`}>Messages</Link>
-              <Link to="/inbox" className={`nav-link ${isActive('/inbox')}`}>
-                Inbox{unreadCount > 0 && <span className="unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
-              </Link>
-            </>
-          )}
+          <Link to="/browse" className={`nav-link ${isActive('/browse')}`}>
+            Browse
+          </Link>
+          {isAuthenticated ? authedLinks : null}
         </div>
 
         <div className="nav-actions desktop-only">
@@ -73,19 +92,31 @@ const Navbar = () => {
                 <User size={18} />
               </div>
               <span className="user-name">{user?.username || 'User'}</span>
-              <button onClick={handleLogout} className="btn-outline logout-btn">Logout</button>
+              <Button variant="secondary" size="sm" onClick={handleLogout} className="logout-btn">
+                Logout
+              </Button>
             </div>
           ) : (
             <div className="auth-buttons">
-              <Link to="/login" className="btn-outline">Log in</Link>
-              <Link to="/register" className="btn-primary">Sign up</Link>
+              <Link to="/login">
+                <Button variant="secondary" size="sm">
+                  Log in
+                </Button>
+              </Link>
+              <Link to="/register">
+                <Button variant="primary" size="sm">
+                  Sign up
+                </Button>
+              </Link>
             </div>
           )}
         </div>
 
-        <button 
-          className="mobile-menu-btn mobile-only" 
+        <button
+          className="mobile-menu-btn mobile-only"
           onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          aria-expanded={mobileMenuOpen}
+          aria-label="Toggle menu"
         >
           {mobileMenuOpen ? <X /> : <Menu />}
         </button>
@@ -93,27 +124,32 @@ const Navbar = () => {
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="mobile-menu glass">
-          <Link to="/browse" className={`nav-link ${isActive('/browse')}`} onClick={() => setMobileMenuOpen(false)}>Browse</Link>
+        <div className="mobile-menu">
+          <Link to="/browse" className={`nav-link ${isActive('/browse')}`} onClick={() => setMobileMenuOpen(false)}>
+            Browse
+          </Link>
           {isAuthenticated ? (
             <>
-              <Link to="/create-listing" className={`nav-link ${isActive('/create-listing')}`} onClick={() => setMobileMenuOpen(false)}>Lend Item</Link>
-              <Link to="/create-request" className={`nav-link ${isActive('/create-request')}`} onClick={() => setMobileMenuOpen(false)}>Request Item</Link>
-              <Link to="/my-listings" className={`nav-link ${isActive('/my-listings')}`} onClick={() => setMobileMenuOpen(false)}>My Listings</Link>
-              <Link to="/my-borrow-requests" className={`nav-link ${isActive('/my-borrow-requests')}`} onClick={() => setMobileMenuOpen(false)}>My Borrow Requests</Link>
-              <Link to="/messages" className={`nav-link ${isActive('/messages')}`} onClick={() => setMobileMenuOpen(false)}>Messages</Link>
-              <Link to="/inbox" className={`nav-link ${isActive('/inbox')}`} onClick={() => setMobileMenuOpen(false)}>
-                Inbox{unreadCount > 0 && <span className="unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
-              </Link>
+              {authedLinks}
               <div className="mobile-user">
                 <span>{user?.username}</span>
-                <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }} className="btn-outline logout-btn">Logout</button>
+                <Button variant="secondary" size="sm" onClick={() => { handleLogout(); setMobileMenuOpen(false); }} className="logout-btn">
+                  Logout
+                </Button>
               </div>
             </>
           ) : (
             <div className="mobile-auth">
-              <Link to="/login" className="btn-outline" onClick={() => setMobileMenuOpen(false)}>Log in</Link>
-              <Link to="/register" className="btn-primary" onClick={() => setMobileMenuOpen(false)}>Sign up</Link>
+              <Link to="/login">
+                <Button variant="secondary" size="sm" onClick={() => setMobileMenuOpen(false)}>
+                  Log in
+                </Button>
+              </Link>
+              <Link to="/register">
+                <Button variant="primary" size="sm" onClick={() => setMobileMenuOpen(false)}>
+                  Sign up
+                </Button>
+              </Link>
             </div>
           )}
         </div>

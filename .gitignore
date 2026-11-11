@@ -83,3 +83,11 @@ keystore.properties
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# Design-taste skill metadata (not part of the shipped app)
+.agents/
+skills-lock.json
+.taste-skill/
+
+# Third-party design kit (not app source; kept out of the repo for a clean GitHub)
+frontend/public/assets/

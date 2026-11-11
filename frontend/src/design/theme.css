@@ -1,159 +1,149 @@
-:root {
-  /* Brand palette */
-  --color-primary: #27187E;
-  --color-secondary: #758BFD;
-  --color-tint: #AEB8FE;
-  --color-background: #F1F2F6;
-  --color-accent: #FF8600;
-  --color-accent-text: #27187E;
-  --color-white: #ffffff;
+/*
+  NeighborLend design layer — extends the taste-skill kit (system.css, cards.css,
+  motion.css, backgrounds.css) loaded in index.html. Brand tokens (:root) are set there
+  via start.mjs brand: cream #FFEED6 ground, ink #2B061E, gold #D2BF55 accent,
+  Instrument Sans + DM Mono, soft radius, tonal buttons.
+  Only component styles the kit does not provide live here.
+*/
 
-  /* Semantic surfaces */
-  --bg-primary: var(--color-background);
-  --bg-secondary: var(--color-tint);
-  --bg-card: var(--color-white);
-  --bg-elevated: rgba(39, 24, 126, 0.08);
-  --bg-glass: rgba(255, 255, 255, 0.6);
-  --bg-glass-border: var(--color-tint);
+/* ---------------------------------------------------------------- base text utilities */
+.measure { max-width: 62ch; }
+.text-balance { text-wrap: balance; }
+.text-pretty { text-wrap: pretty; }
 
-  /* Text */
-  --text-primary: var(--color-primary);
-  --text-secondary: rgba(39, 24, 126, 0.55);
-  --text-muted: rgba(39, 24, 126, 0.35);
+/* section padding: skill rhythm (--padt / --padb) without locking exact viewport heights,
+   so dynamic React content (browse results) still flows */
+.section { padding-block: var(--padt) calc(var(--padb) + var(--bar)); }
+.section--tight { padding-block: 96px calc(var(--padb) + var(--bar)); }
 
-  /* Status */
-  --success: #22c55e;
-  --warning: #f59e0b;
-  --danger: #ef4444;
-  --info: var(--color-secondary);
+/* a section heading block (h2 first, top-aligned, equal edges) */
+.section-head { max-width: 760px; margin-bottom: var(--head-gap); display: grid; gap: var(--s-4); }
+.section-head h2 { margin: 0; }
+.section-head p { color: var(--ink); font-size: var(--t-lead); line-height: 1.5; max-width: 60ch; }
+.section-head--split {
+  max-width: none;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--s-5);
+  flex-wrap: wrap;
+}
+.section-head--split > div { display: grid; gap: var(--s-4); max-width: 760px; }
 
-  /* Borders */
-  --border: var(--color-tint);
-  --border-light: rgba(39, 24, 126, 0.2);
+/* ---------------------------------------------------------------- card surface tweaks */
+.card--unpadded { padding: 0; }
+.card:hover {
+  border-color: color-mix(in oklab, var(--ink) 16%, transparent);
+}
 
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(39, 24, 126, 0.08);
-  --shadow-md: 0 4px 6px -1px rgba(39, 24, 126, 0.1);
-  --shadow-lg: 0 10px 15px -3px rgba(39, 24, 126, 0.12);
-  --shadow-glow: 0 0 20px rgba(255, 134, 0, 0.12);
+/* ---------------------------------------------------------------- input */
+.input-wrap { display: grid; gap: var(--s-2); }
+.input-label {
+  font: 500 var(--t-label)/1.4 var(--font-text);
+  color: var(--ink);
+  letter-spacing: 0.01em;
+}
+.input {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--line-strong);
+  color: var(--ink);
+  border-radius: var(--r-md);
+  padding: 12px 16px;
+  font: 400 var(--t-body)/1.5 var(--font-text);
+  transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
+}
+.input::placeholder { color: var(--muted); opacity: 0.7; }
+.input:focus {
+  border-color: var(--action);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--action) 35%, transparent);
+  background: var(--surface);
+}
+.input--error {
+  border-color: color-mix(in oklab, #ef4444 45%, transparent);
+}
+.input--error:focus {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px color-mix(in oklab, #ef4444 30%, transparent);
+}
+.input-error {
+  margin: 0;
+  font: 400 var(--t-small)/1.4 var(--font-text);
+  color: #ef4444;
+}
 
-  /* Radius */
-  --radius: 10px;
-  --radius-sm: 6px;
-  --radius-lg: 14px;
-  --radius-xl: 20px;
-  --radius-full: 9999px;
+/* ---------------------------------------------------------------- badge */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 var(--s-3);
+  border-radius: var(--r-btn);
+  border: 1px solid var(--line);
+  background: var(--card);
+  font: 500 var(--t-label)/1 var(--font-text);
+  color: var(--ink);
+  white-space: nowrap;
+}
+.badge--accent {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: transparent;
+}
+.badge--success {
+  background: color-mix(in oklab, #22c55e 12%, var(--card));
+  color: #16a34a;
+  border-color: color-mix(in oklab, #22c55e 35%, transparent);
+}
+.badge--outline {
+  background: transparent;
+  border-color: var(--line-strong);
+}
 
-  /* Fonts */
-  --font-main: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-display: 'Outfit', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+/* ---------------------------------------------------------------- modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  background: color-mix(in oklab, var(--ink) 35%, transparent);
+  backdrop-filter: blur(6px);
+  padding: var(--s-6);
+  animation: modal-fade-in var(--m-panel) var(--m-ease);
+}
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.modal {
+  width: min(100% - 2 * var(--s-6), 520px);
+  max-height: 85svh;
+  overflow-y: auto;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg);
+  padding: var(--s-7);
+  color: var(--ink);
+  box-shadow: 0 20px 40px color-mix(in oklab, var(--ink) 18%, transparent);
+  animation: modal-slide-in var(--m-panel) var(--m-ease);
+}
+@keyframes modal-slide-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+.modal-title {
+  margin: 0 0 var(--s-5) 0;
+  font-size: var(--t-h3);
+  line-height: 1.2;
+  letter-spacing: var(--display-tracking);
+}
+.modal-body { display: grid; gap: var(--s-5); }
+.modal .btn-row { margin-top: var(--s-3); }
 
-  /* Transitions */
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --transition-fast: all 0.15s ease;
-  --transition-spring: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-
-  /* Accent (CTA backgrounds only — never as text on light bg) */
-  --accent-primary: var(--color-accent);
-  --accent-secondary: var(--color-secondary);
-  --accent-gradient: linear-gradient(135deg, #FF8600 0%, #e07300 100%);
-  --accent-gradient-hover: linear-gradient(135deg, #f29a20 0%, #c66300 100%);
-  --accent-text: var(--color-accent-text);
-
-  /* Helper tokens */
-  --focus-ring: rgba(39, 24, 126, 0.2);
-  --bg-input: rgba(255, 255, 255, 1);
-  --surface-faint: rgba(255, 255, 255, 0.5);
-  --accent-border-light: rgba(255, 134, 0, 0.2);
-  --photo-overlay-bg: linear-gradient(to top, rgba(39, 24, 126, 0.85) 0%, transparent 60%);
-  --hero-glow-start: rgba(39, 24, 126, 0.1);
-  --hero-glow-end: rgba(117, 139, 253, 0.1);
-  --cta-box-bg: linear-gradient(135deg, rgba(39, 24, 126, 0.05), rgba(117, 139, 253, 0.05));
-  --cta-box-border: 1px solid rgba(117, 139, 253, 0.15);
-  --page-glow: rgba(117, 139, 253, 0.06);
-  --use-location-bg: rgba(255, 134, 0, 0.1);
-  --use-location-border: 1px solid rgba(255, 134, 0, 0.25);
-  --use-location-hover-bg: rgba(255, 134, 0, 0.18);
-  --dropdown-active-bg: rgba(255, 134, 0, 0.12);
-  --shadow-accent: 0 0 12px rgba(255, 134, 0, 0.15);
-  --ai-verification-bg: rgba(117, 139, 253, 0.06);
-  --ai-verification-border: 1px solid rgba(117, 139, 253, 0.15);
-  --dropzone-hover-bg: rgba(117, 139, 253, 0.05);
-  --ai-result-bg: rgba(117, 139, 253, 0.08);
-  --ai-result-border: 1px solid rgba(117, 139, 253, 0.15);
-  --confidence-bar-bg: rgba(39, 24, 126, 0.1);
-  --price-box-border: 1px solid rgba(255, 134, 0, 0.2);
-  --price-box-bg: rgba(39, 24, 126, 0.04);
-  --error-bg: rgba(239, 68, 68, 0.08);
-  --error-border: 1px solid rgba(239, 68, 68, 0.18);
-  --error-text: #ef4444;
-  --warning-bg: rgba(245, 158, 11, 0.08);
-  --warning-border: 1px solid rgba(245, 158, 11, 0.18);
-  --warning-text: #f59e0b;
-  --suggestion-card-bg: rgba(39, 24, 126, 0.04);
-  --border-muted: #c4c7d6;
-  --text-light: #6b7280;
-  --rent-card-bg: rgba(255, 134, 0, 0.05);
-  --deposit-border: 3px solid #a855f7;
-  --deposit-bg: rgba(168, 85, 247, 0.06);
-  --deposit-text: #a855f7;
-  --success-bg: rgba(34, 197, 94, 0.08);
-  --success-border: 1px solid rgba(34, 197, 94, 0.18);
-  --badge-success-bg: rgba(34, 197, 94, 0.1);
-  --badge-success-text: #22c55e;
-  --badge-success-border: 1px solid rgba(34, 197, 94, 0.2);
-  --reset-btn-hover-bg: rgba(255, 134, 0, 0.08);
-  --location-feedback-text: #22c55e;
-  --published-bg: rgba(117, 139, 253, 0.1);
-  --published-border: 1px solid rgba(117, 139, 253, 0.18);
-  --paused-bg: rgba(245, 158, 11, 0.1);
-  --paused-border: 1px solid rgba(245, 158, 11, 0.18);
-  --unread-border: 1px solid rgba(255, 134, 0, 0.3);
-  --handover-panel-bg: rgba(255, 255, 255, 0.6);
-  --sidebar-bg: rgba(39, 24, 126, 0.04);
-  --search-bg: rgba(255, 255, 255, 1);
-  --conversation-bg: rgba(255, 255, 255, 0.7);
-  --conversation-hover-bg: rgba(255, 255, 255, 1);
-  --conversation-active-bg: rgba(255, 134, 0, 0.08);
-  --conversation-active-border: 1px solid rgba(255, 134, 0, 0.25);
-  --chat-window-bg: #F1F2F6;
-  --chat-header-bg: rgba(255, 255, 255, 0.9);
-  --negotiation-btn-bg: rgba(255, 134, 0, 0.08);
-  --negotiation-btn-border: 1px solid rgba(255, 134, 0, 0.2);
-  --negotiation-btn-hover-bg: rgba(255, 134, 0, 0.14);
-  --negotiation-btn-shadow: 0 0 12px rgba(255, 134, 0, 0.12);
-  --date-separator-bg: rgba(255, 255, 255, 0.6);
-  --outgoing-shadow: 0 2px 8px rgba(255, 134, 0, 0.15);
-  --system-bubble-bg: rgba(39, 24, 126, 0.06);
-  --input-bar-bg: rgba(255, 255, 255, 0.9);
-  --textarea-bg: rgba(255, 255, 255, 1);
-  --negotiation-panel-bg: #ffffff;
-  --negotiation-header-bg: rgba(255, 255, 255, 0.9);
-  --offer-card-bg: rgba(255, 255, 255, 0.8);
-  --offer-details-bg: rgba(39, 24, 126, 0.04);
-  --offer-note-bg: rgba(39, 24, 126, 0.04);
-  --btn-accept-gradient: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  --btn-counter-bg: rgba(255, 134, 0, 0.08);
-  --btn-counter-border: 1px solid rgba(255, 134, 0, 0.25);
-  --btn-reject-bg: rgba(239, 68, 68, 0.08);
-  --btn-reject-border: 1px solid rgba(239, 68, 68, 0.18);
-  --waiting-indicator-bg: rgba(245, 158, 11, 0.08);
-  --accepted-banner-bg: rgba(34, 197, 94, 0.1);
-  --accepted-banner-border: 1px solid rgba(34, 197, 94, 0.18);
-  --calculation-preview-bg: rgba(39, 24, 126, 0.04);
-  --calculation-preview-border: 1px solid rgba(255, 134, 0, 0.2);
-  --form-error-bg: rgba(239, 68, 68, 0.08);
-  --form-error-border: 1px solid rgba(239, 68, 68, 0.18);
-  --form-error-text: #ef4444;
-  --history-toggle-bg: rgba(39, 24, 126, 0.04);
-  --history-item-bg: rgba(255, 255, 255, 0.6);
-  --status-pending-bg: rgba(245, 158, 11, 0.1);
-  --status-pending-border: 1px solid rgba(245, 158, 11, 0.2);
-  --status-accepted-bg: rgba(34, 197, 94, 0.1);
-  --status-accepted-border: 1px solid rgba(34, 197, 94, 0.2);
-  --status-countered-bg: rgba(255, 134, 0, 0.1);
-  --status-countered-border: 1px solid rgba(255, 134, 0, 0.2);
-  --status-rejected-bg: rgba(239, 68, 68, 0.1);
-  --status-rejected-border: 1px solid rgba(239, 68, 68, 0.2);
-  --status-cancelled-bg: rgba(100, 116, 139, 0.1);
+/* ---------------------------------------------------------------- reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .modal-overlay { animation: none; }
+  .modal { animation: none; }
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }

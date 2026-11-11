@@ -1,8 +1,12 @@
 import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, CheckCircle2, Sparkles, MapPin, Search, Calculator, RotateCcw, Loader2, Compass } from 'lucide-react';
+import { UploadCloud, CheckCircle2, Sparkles, MapPin, Calculator, RotateCcw, Loader2, Compass } from 'lucide-react';
 import api from '../api/client';
 import { detectUserLocation } from '../utils/location';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
 import './CreateListing.css';
 
 const CATEGORIES = ['Tools', 'Electronics', 'Sports', 'Party', 'Books', 'Other'];
@@ -20,7 +24,7 @@ const CreateListing = () => {
   const [aiData, setAiData] = useState(null);
   const [uploadedUrls, setUploadedUrls] = useState([]);
   const [uploadError, setUploadError] = useState('');
-  
+
   const [formData, setFormData] = useState({
     title: '',
     category: 'Other',
@@ -32,13 +36,13 @@ const CreateListing = () => {
     address: '',
     lending_radius: 5,
     years_owned: '',
-    price_bought: ''
+    price_bought: '',
   });
 
   // Temporary Rule-Based Price Calculator state (never saved to database)
   const [calcInputs, setCalcInputs] = useState({
     purchase_price: '',
-    item_age: ''
+    item_age: '',
   });
   const [suggestion, setSuggestion] = useState(null);
   const [isSuggesting, setIsSuggesting] = useState(false);
@@ -87,9 +91,9 @@ const CreateListing = () => {
             setAiData({
               label: data.ai_label,
               confidence: (data.ai_confidence * 100).toFixed(0),
-              suggested_category: 'Other'
+              suggested_category: 'Other',
             });
-            setFormData(prev => ({ ...prev, title: data.ai_label }));
+            setFormData((prev) => ({ ...prev, title: data.ai_label }));
           }
         } catch (err) {
           failedUploads += 1;
@@ -124,38 +128,32 @@ const CreateListing = () => {
     setIsSuggesting(true);
 
     try {
-      // Calculate via FastAPI backend endpoint
       const res = await api.post('/listings/suggest-price', {
         purchase_price: rawPrice,
-        age_years: rawAge
+        age_years: rawAge,
       });
       const data = res.data;
       setSuggestion(data);
-      // Auto-populate form with suggested values; owner can freely edit them below
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         price_per_day: data.daily_rent,
-        security_deposit: data.security_deposit
+        security_deposit: data.security_deposit,
       }));
     } catch (err) {
       console.warn('Backend suggest-price failed, evaluating client-side rule formula:', err);
-      // Rule-based fallback:
-      // Current value = purchase_price * (0.85 ** age_years)
-      // Daily rent = 4% of current value, rounded to nearest 5
-      // Refundable security deposit = 20% of current value, rounded to nearest 5
       const currentVal = Math.round(rawPrice * Math.pow(0.85, rawAge) * 100) / 100;
       const dailyRent = Math.round((currentVal * 0.04) / 5) * 5;
       const deposit = Math.round((currentVal * 0.20) / 5) * 5;
       const fallbackData = {
         current_value: currentVal,
         daily_rent: dailyRent,
-        security_deposit: deposit
+        security_deposit: deposit,
       };
       setSuggestion(fallbackData);
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         price_per_day: dailyRent,
-        security_deposit: deposit
+        security_deposit: deposit,
       }));
     } finally {
       setIsSuggesting(false);
@@ -175,13 +173,15 @@ const CreateListing = () => {
     setLocationNotice('');
     try {
       const loc = await detectUserLocation();
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         lat: loc.latitude,
         lon: loc.longitude,
-        address: prev.address && prev.address !== 'Current Location' ? prev.address : loc.address
+        address: prev.address && prev.address !== 'Current Location' ? prev.address : loc.address,
       }));
-      setLocationNotice(`📍 Located: ${loc.address} (${loc.method === 'gps' ? 'High-accuracy GPS' : 'Network/IP Geolocation'})`);
+      setLocationNotice(
+        `📍 Located: ${loc.address} (${loc.method === 'gps' ? 'High-accuracy GPS' : 'Network/IP Geolocation'})`,
+      );
     } catch (err) {
       console.error('Failed to get location:', err);
       setLocationNotice('Could not find location automatically. Please enter your address or coordinates.');
@@ -207,7 +207,7 @@ const CreateListing = () => {
         address_text: formData.address,
         ai_label: aiData?.label || null,
         ai_confidence: aiData ? Number(aiData.confidence) / 100.0 : null,
-        photo_urls: uploadedUrls
+        photo_urls: uploadedUrls,
       };
 
       await api.post('/listings', payload);
@@ -219,34 +219,38 @@ const CreateListing = () => {
     }
   };
 
+  const isNextDisabled = !previews.length || isLoading || Boolean(uploadError) || uploadedUrls.length !== files.length;
 
   return (
-    <div className="create-listing-page container fade-in-up">
-      <div className="wizard-container glass">
-        
-        {/* Progress Tracker */}
+    <div className="create-listing-page section" style={{ '--h': '2' }}>
+      <div className="wrap">
+        <div className="wizard-header">
+          <h2 className="t-h2">List your item</h2>
+          <p className="t-lead measure">Upload photos, set the details, and publish to neighbors nearby.</p>
+        </div>
+
         <div className="wizard-progress">
-          <div className={`step-indicator ${step >= 1 ? 'active' : ''}`}>1. AI Scan</div>
-          <div className="step-line"></div>
-          <div className={`step-indicator ${step >= 2 ? 'active' : ''}`}>2. Details</div>
-          <div className="step-line"></div>
-          <div className={`step-indicator ${step >= 3 ? 'active' : ''}`}>3. Publish</div>
+          <div className={`step-indicator ${step >= 1 ? 'active' : ''}`}>01 · Photos</div>
+          <div className={`step-indicator ${step >= 2 ? 'active' : ''}`}>02 · Details</div>
+          <div className={`step-indicator ${step === 3 ? 'active' : ''}`}>03 · Publish</div>
         </div>
 
         {/* Step 1: AI Scan */}
         {step === 1 && (
-          <div className="wizard-step">
-            <h2>Identify your item</h2>
-            <p className="text-muted">Upload a photo and our AI will do the heavy lifting.</p>
-            
-            <div 
-              className={`dropzone ${previews.length ? 'has-image' : ''}`}
-              onDragOver={e => e.preventDefault()}
+          <Card variant="default" className="wizard-step scan-step">
+            <div className="scan-head">
+              <h3 className="t-card">Identify your item</h3>
+              <p className="t-small muted">Upload a photo and our AI will suggest a title and category.</p>
+            </div>
+
+            <div
+              className={['dropzone', previews.length ? 'has-image' : ''].join(' ')}
+              onDragOver={(e) => e.preventDefault()}
               onDrop={handleFileDrop}
               onClick={() => !previews.length && fileInputRef.current?.click()}
             >
               <input type="file" ref={fileInputRef} onChange={handleFileSelect} hidden accept="image/*" multiple />
-              
+
               {previews.length ? (
                 <div className="preview-container">
                   <div className="preview-grid">
@@ -254,23 +258,28 @@ const CreateListing = () => {
                       <img key={previewUrl} src={previewUrl} alt={`Photo ${index + 1}`} className="image-preview" />
                     ))}
                   </div>
-                  <button className="btn-outline reupload-btn" disabled={isLoading} onClick={(e) => {
-                    e.stopPropagation();
-                    setPreviews([]);
-                    setFiles([]);
-                    setUploadedUrls([]);
-                    setAiData(null);
-                    setUploadError('');
-                    setAiOffline(false);
-                  }}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    disabled={isLoading}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPreviews([]);
+                      setFiles([]);
+                      setUploadedUrls([]);
+                      setAiData(null);
+                      setUploadError('');
+                      setAiOffline(false);
+                    }}
+                  >
                     Choose different photos
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <div className="dropzone-content">
-                  <UploadCloud size={48} className="upload-icon" />
-                  <h3>Click or drag photos here</h3>
-                  <p>Supports JPG and PNG</p>
+                  <UploadCloud size={44} className="upload-icon" />
+                  <h3 className="t-card">Click or drag photos here</h3>
+                  <p className="t-small muted">Supports JPG and PNG</p>
                 </div>
               )}
             </div>
@@ -278,7 +287,7 @@ const CreateListing = () => {
             {isLoading && (
               <div className="ai-loading">
                 <Sparkles className="sparkle-icon" />
-                <p>AI is analyzing your image...</p>
+                <p className="t-body">AI is analyzing your image…</p>
               </div>
             )}
 
@@ -286,336 +295,333 @@ const CreateListing = () => {
               <div className="ai-result success">
                 <CheckCircle2 size={24} />
                 <div className="ai-result-text">
-                  <h4>AI identified: {aiData.label}</h4>
-                  <div className="confidence-bar-bg">
-                    <div className="confidence-bar" style={{width: `${aiData.confidence}%`}}></div>
+                  <h4 className="t-card">AI identified: {aiData.label}</h4>
+                  <div className="confidence-track">
+                    <div className="confidence-bar" style={{ width: `${aiData.confidence}%` }} />
                   </div>
-                  <span className="confidence-text">{aiData.confidence}% match</span>
+                  <span className="t-small muted">{aiData.confidence}% match</span>
                 </div>
               </div>
             )}
 
             {aiOffline && (
               <div className="ai-result error">
-                <p>{uploadError || 'AI detection is unavailable. Photos were uploaded and you can enter details manually.'}</p>
+                <p className="t-body">{uploadError || 'AI detection is unavailable. Photos were uploaded and you can enter details manually.'}</p>
               </div>
             )}
 
             {previews.length > 0 && !isLoading && !uploadError && (
-              <p className="text-muted photo-upload-status">{uploadedUrls.length} of {files.length} photos uploaded.</p>
+              <p className="t-small muted photo-upload-status">{uploadedUrls.length} of {files.length} photos uploaded.</p>
             )}
 
             <div className="wizard-actions">
-              <button 
-                className="btn-primary" 
-                onClick={() => setStep(2)}
-                disabled={!previews.length || isLoading || Boolean(uploadError) || uploadedUrls.length !== files.length}
-              >
-                Next Step
-              </button>
+              <Button variant="secondary" onClick={() => {}} disabled>
+                Back
+              </Button>
+              <Button variant="primary" onClick={() => setStep(2)} disabled={isNextDisabled}>
+                Next step
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
 
         {/* Step 2: Details */}
         {step === 2 && (
-          <div className="wizard-step">
-            <h2>Item Details</h2>
-            <div className="form-grid">
-              <div className="form-group full-width">
-                <label>Item Name</label>
-                <input type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="e.g. Bosch Power Drill" />
-              </div>
-              
-              <div className="form-group">
-                <label>Category</label>
-                <select name="category" value={formData.category} onChange={handleInputChange}>
-                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
-              </div>
-              
-              <div className="form-group full-width">
-                <label>Description</label>
-                <textarea name="description" value={formData.description} onChange={handleInputChange} rows={4} placeholder="Describe the condition, what's included, etc."></textarea>
-              </div>
+          <Card variant="default" className="wizard-step details-step">
+            <div className="scan-head">
+              <h3 className="t-card">Item details</h3>
+              <p className="t-small muted">Give your item a clear name and fair price.</p>
+            </div>
 
-              {/* Rule-based Price Suggestion Calculator (Temporary / Ephemeral) */}
-              <div className="form-group full-width price-suggestion-box glass">
-                <div className="box-header">
-                  <Calculator size={22} className="text-accent" />
+            <div className="form-grid">
+              <Input
+                id="title"
+                name="title"
+                label="Item name"
+                type="text"
+                placeholder="e.g. Bosch Power Drill"
+                value={formData.title}
+                onChange={handleInputChange}
+                required
+              />
+              <Input
+                id="category"
+                name="category"
+                label="Category"
+                type="select"
+                value={formData.category}
+                onChange={handleInputChange}
+              >
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </Input>
+              <Input
+                id="description"
+                name="description"
+                label="Description"
+                type="textarea"
+                rows={4}
+                placeholder="Describe the condition and what&rsquo;s included."
+                value={formData.description}
+                onChange={handleInputChange}
+              />
+
+              {/* Price calculator card */}
+              <Card variant="default" className="price-calculator-card">
+                <div className="calculator-head">
+                  <Calculator size={20} className="calc-icon" />
                   <div>
-                    <h4>Rental Price Calculator</h4>
-                    <p className="suggestion-subtitle">
-                      Calculate fair rental pricing based on item depreciation (formula-driven).
-                    </p>
+                    <h4 className="t-card">Rental price calculator</h4>
+                    <p className="t-small muted">Formula-driven estimate based on depreciation. Not saved until you publish.</p>
                   </div>
                 </div>
 
-                <div className="price-inputs-grid">
-                  <div className="form-group">
-                    <label htmlFor="input-purchase-price">Original Purchase Price (₹)</label>
-                    <input 
-                      id="input-purchase-price"
-                      type="number" 
-                      min="0"
-                      step="any"
-                      placeholder="e.g. 10000"
-                      value={calcInputs.purchase_price} 
-                      onChange={(e) => {
-                        setCalcInputs(prev => ({ ...prev, purchase_price: e.target.value }));
-                        if (calcError) setCalcError('');
-                      }} 
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label htmlFor="input-item-age">Item Age (years)</label>
-                    <input 
-                      id="input-item-age"
-                      type="number" 
-                      min="0" 
-                      step="0.5"
-                      placeholder="e.g. 2"
-                      value={calcInputs.item_age} 
-                      onChange={(e) => {
-                        setCalcInputs(prev => ({ ...prev, item_age: e.target.value }));
-                        if (calcError) setCalcError('');
-                      }} 
-                    />
-                  </div>
+                <div className="calc-inputs">
+                  <Input
+                    id="input-purchase-price"
+                    label="Original purchase price (₹)"
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="e.g. 10000"
+                    value={calcInputs.purchase_price}
+                    onChange={(e) => {
+                      setCalcInputs((prev) => ({ ...prev, purchase_price: e.target.value }));
+                      if (calcError) setCalcError('');
+                    }}
+                  />
+                  <Input
+                    id="input-item-age"
+                    label="Item age (years)"
+                    type="number"
+                    min="0"
+                    step="0.5"
+                    placeholder="e.g. 2"
+                    value={calcInputs.item_age}
+                    onChange={(e) => {
+                      setCalcInputs((prev) => ({ ...prev, item_age: e.target.value }));
+                      if (calcError) setCalcError('');
+                    }}
+                  />
                 </div>
 
                 {calcError && (
-                  <div className="price-calc-error">
+                  <div className="calc-error" role="alert">
                     {calcError}
                   </div>
                 )}
 
-                <div className="suggest-actions">
-                  <button 
-                    type="button"
-                    id="btn-suggest-price"
-                    className="btn-primary suggest-btn" 
-                    onClick={handleSuggestPrice} 
-                    disabled={isSuggesting}
-                  >
-                    <Sparkles size={18} />
-                    {isSuggesting ? 'Calculating...' : 'Suggest Price'}
-                  </button>
-                </div>
+                <Button
+                  variant="primary"
+                  type="button"
+                  onClick={handleSuggestPrice}
+                  disabled={isSuggesting}
+                  className="suggest-btn"
+                >
+                  <Sparkles size={16} />
+                  {isSuggesting ? 'Calculating…' : 'Suggest price'}
+                </Button>
 
-                {/* Display All Three Calculated Values */}
                 {suggestion && (
-                  <div className="suggestion-results-container fade-in">
-                    <div className="results-header">
-                      <h5>Calculated Price Breakdown</h5>
-                      <span className="temporary-tag">Temporary calculation &bull; Not saved to DB</span>
+                  <div className="suggestion-results">
+                    <div className="results-head">
+                      <span className="temporary-tag">Temporary calculation · Not saved to DB</span>
                     </div>
-
-                    <div className="suggestion-results-grid">
-                      {/* 1. Current Value */}
+                    <div className="results-grid">
                       <div className="suggestion-card current-value-card">
-                        <span className="card-label">Current Value</span>
-                        <div className="card-value">₹{Number(suggestion.current_value).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
-                        <span className="card-formula">purchase_price &times; (0.85<sup>age</sup>)</span>
+                        <span className="t-label">Current value</span>
+                        <div className="t-stat">₹{Number(suggestion.current_value).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</div>
+                        <span className="t-small muted">purchase price × (0.85^age)</span>
                       </div>
-
-                      {/* 2. Daily Rent */}
                       <div className="suggestion-card rent-card">
-                        <span className="card-label">Daily Rent</span>
-                        <div className="card-value">₹{suggestion.daily_rent}</div>
-                        <span className="card-formula">4% of current value (nearest ₹5)</span>
+                        <span className="t-label">Daily rent</span>
+                        <div className="t-stat">₹{suggestion.daily_rent}</div>
+                        <span className="t-small muted">4% of current value (nearest ₹5)</span>
                       </div>
-
-                      {/* 3. Refundable Security Deposit */}
                       <div className="suggestion-card deposit-card">
-                        <span className="card-label">Refundable Security Deposit</span>
-                        <div className="card-value">₹{suggestion.security_deposit}</div>
-                        <span className="card-formula">20% of current value (nearest ₹5)</span>
+                        <span className="t-label">Security deposit</span>
+                        <div className="t-stat">₹{suggestion.security_deposit}</div>
+                        <span className="t-small muted">20% of current value (nearest ₹5)</span>
                       </div>
                     </div>
-
-                    <div className="suggestion-applied-note">
+                    <div className="suggestion-applied">
                       <CheckCircle2 size={16} className="text-success" />
-                      <span>Suggested daily rent & deposit applied below. You can edit them freely before publishing.</span>
+                      <span className="t-small muted">Suggested rent &amp; deposit applied below. Edit freely before publishing.</span>
                     </div>
                   </div>
                 )}
-              </div>
 
-              {/* Editable Rent & Deposit Inputs */}
-              <div className="form-group">
-                <div className="label-with-hint">
-                  <label htmlFor="input-price-per-day">Price per Day (₹) *</label>
-                  {suggestion && (
-                    Number(formData.price_per_day) === Number(suggestion.daily_rent) ? (
-                      <span className="badge-suggested">Suggested applied</span>
-                    ) : (
-                      <button 
-                        type="button" 
-                        className="reset-to-suggested-btn"
-                        onClick={() => setFormData(prev => ({ ...prev, price_per_day: suggestion.daily_rent }))}
-                        title="Reset to suggested price"
-                      >
-                        <RotateCcw size={12} /> Reset to ₹{suggestion.daily_rent}
-                      </button>
-                    )
-                  )}
+                <div className="form-group">
+                  <div className="label-with-hint">
+                    <label htmlFor="input-price-per-day">Price per day (₹)</label>
+                    {suggestion && Number(formData.price_per_day) === Number(suggestion.daily_rent) ? (
+                      <Badge variant="accent" className="badge-suggested">Suggested applied</Badge>
+                    ) : suggestion && (
+                      <Button variant="secondary" size="sm" onClick={() => setFormData((prev) => ({ ...prev, price_per_day: suggestion.daily_rent }))}>
+                        Reset to ₹{suggestion.daily_rent}
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    id="input-price-per-day"
+                    name="price_per_day"
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="e.g. 150"
+                    value={formData.price_per_day}
+                    onChange={handleInputChange}
+                  />
                 </div>
-                <input 
-                  id="input-price-per-day"
-                  type="number" 
-                  name="price_per_day" 
-                  min="0"
-                  step="any"
-                  placeholder="e.g. 150"
-                  value={formData.price_per_day} 
-                  onChange={handleInputChange} 
-                  required
-                />
-              </div>
 
-              <div className="form-group">
-                <div className="label-with-hint">
-                  <label htmlFor="input-security-deposit">Security Deposit (₹)</label>
-                  {suggestion && (
-                    Number(formData.security_deposit) === Number(suggestion.security_deposit) ? (
-                      <span className="badge-suggested">Suggested applied</span>
-                    ) : (
-                      <button 
-                        type="button" 
-                        className="reset-to-suggested-btn"
-                        onClick={() => setFormData(prev => ({ ...prev, security_deposit: suggestion.security_deposit }))}
-                        title="Reset to suggested deposit"
-                      >
-                        <RotateCcw size={12} /> Reset to ₹{suggestion.security_deposit}
-                      </button>
-                    )
-                  )}
+                <div className="form-group">
+                  <div className="label-with-hint">
+                    <label htmlFor="input-security-deposit">Security deposit (₹)</label>
+                    {suggestion && Number(formData.security_deposit) === Number(suggestion.security_deposit) ? (
+                      <Badge variant="accent" className="badge-suggested">Suggested applied</Badge>
+                    ) : suggestion && (
+                      <Button variant="secondary" size="sm" onClick={() => setFormData((prev) => ({ ...prev, security_deposit: suggestion.security_deposit }))}>
+                        Reset to ₹{suggestion.security_deposit}
+                      </Button>
+                    )}
+                  </div>
+                  <Input
+                    id="input-security-deposit"
+                    name="security_deposit"
+                    type="number"
+                    min="0"
+                    step="any"
+                    placeholder="e.g. 1000"
+                    value={formData.security_deposit}
+                    onChange={handleInputChange}
+                  />
                 </div>
-                <input 
-                  id="input-security-deposit"
-                  type="number" 
-                  name="security_deposit" 
-                  min="0"
-                  step="any"
-                  placeholder="e.g. 1000"
-                  value={formData.security_deposit} 
-                  onChange={handleInputChange} 
-                />
-              </div>
 
-              {/* Original Purchase Price & Item Age (saved to DB) */}
-              <div className="form-group">
-                <label htmlFor="input-price-bought">Original Purchase Price (₹)</label>
-                <input 
+                <Input
                   id="input-price-bought"
-                  type="number" 
-                  name="price_bought" 
+                  name="price_bought"
+                  label="Original purchase price (₹)"
+                  type="number"
                   min="0"
                   step="any"
                   placeholder="e.g. 15000"
-                  value={formData.price_bought} 
-                  onChange={handleInputChange} 
+                  value={formData.price_bought}
+                  onChange={handleInputChange}
                 />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="input-years-owned">Item Age (years)</label>
-                <input 
+                <Input
                   id="input-years-owned"
-                  type="number" 
-                  name="years_owned" 
+                  name="years_owned"
+                  label="Item age (years)"
+                  type="number"
                   min="0"
                   step="0.5"
                   placeholder="e.g. 2"
-                  value={formData.years_owned} 
-                  onChange={handleInputChange} 
+                  value={formData.years_owned}
+                  onChange={handleInputChange}
                 />
-              </div>
+              </Card>
             </div>
-
 
             <div className="wizard-actions">
-              <button className="btn-outline" onClick={() => setStep(1)}>Back</button>
-              <button className="btn-primary" onClick={() => setStep(3)}>Next Step</button>
+              <Button variant="secondary" onClick={() => setStep(1)}>
+                Back
+              </Button>
+              <Button variant="primary" onClick={() => setStep(3)}>
+                Next step
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
 
-        {/* Step 3: Location */}
+        {/* Step 3: Location & Publish */}
         {step === 3 && (
-          <div className="wizard-step">
-            <h2>Location & Availability</h2>
+          <Card variant="default" className="wizard-step publish-step">
+            <div className="scan-head">
+              <h3 className="t-card">Location &amp; availability</h3>
+              <p className="t-small muted">Borrowers within your lending radius can see and request this item.</p>
+            </div>
+
             <div className="form-grid">
-              
               <div className="form-group full-width">
-                <label>Pickup Address</label>
+                <label className="t-label">Pickup address</label>
                 <div className="input-with-button">
-                  <input 
-                    type="text" 
-                    name="address" 
-                    value={formData.address} 
-                    onChange={handleInputChange} 
-                    placeholder="Enter locality, colony, or click Find Location" 
+                  <Input
+                    id="address"
+                    name="address"
+                    type="text"
+                    placeholder="Enter locality, colony, or click Find Location"
+                    value={formData.address}
+                    onChange={handleInputChange}
                   />
-                  <button 
+                  <Button
+                    variant="secondary"
                     type="button"
-                    className="btn-primary locate-btn-styled" 
-                    onClick={handleGetLocation} 
+                    onClick={handleGetLocation}
                     disabled={isLocating}
+                    className="locate-btn"
                     title="Find My Location (GPS + Network)"
                   >
-                    {isLocating ? <Loader2 size={18} className="animate-spin" /> : <Compass size={18} />}
-                    <span>{isLocating ? 'Locating...' : 'Use My GPS'}</span>
-                  </button>
+                    {isLocating ? <Loader2 size={16} className="animate-spin" /> : <Compass size={16} />}
+                    <span>{isLocating ? 'Locating…' : 'Use GPS'}</span>
+                  </Button>
                 </div>
                 {locationNotice && (
-                  <span className="location-feedback-hint">{locationNotice}</span>
+                  <span className="location-feedback-hint t-small muted">{locationNotice}</span>
                 )}
               </div>
 
-              <div className="form-group">
-                <label>Latitude</label>
-                <input type="text" name="lat" value={formData.lat} onChange={handleInputChange} />
-              </div>
-              <div className="form-group">
-                <label>Longitude</label>
-                <input type="text" name="lon" value={formData.lon} onChange={handleInputChange} />
-              </div>
+              <Input
+                id="lat"
+                name="lat"
+                label="Latitude"
+                type="text"
+                value={formData.lat}
+                onChange={handleInputChange}
+              />
+              <Input
+                id="lon"
+                name="lon"
+                label="Longitude"
+                type="text"
+                value={formData.lon}
+                onChange={handleInputChange}
+              />
 
               <div className="form-group full-width">
                 <div className="slider-label-row">
-                  <label>Lending Radius: <strong>{formData.lending_radius} km</strong></label>
-                  <span className="slider-badge">Borrowers within {formData.lending_radius} km can see and request this item</span>
+                  <label className="t-label">Lending radius: <strong>{formData.lending_radius} km</strong></label>
+                  <span className="slider-badge">Borrowers within {formData.lending_radius} km can see this item</span>
                 </div>
-                <input 
-                  type="range" 
+                <Input
+                  id="lending_radius"
                   name="lending_radius"
-                  min="1" max="50" 
-                  value={formData.lending_radius} 
+                  type="range"
+                  min="1"
+                  max="50"
+                  value={formData.lending_radius}
                   onChange={handleInputChange}
-                  className="full-width-slider"
+                  className="range-input"
                 />
                 <div className="radius-scale-markers">
-                  <span>1 km (Neighbourhood)</span>
-                  <span>10 km</span>
-                  <span>25 km</span>
-                  <span>50 km (City-wide)</span>
+                  <span className="t-small muted">1 km</span>
+                  <span className="t-small muted">10 km</span>
+                  <span className="t-small muted">25 km</span>
+                  <span className="t-small muted">50 km</span>
                 </div>
               </div>
-
-
             </div>
 
             <div className="wizard-actions">
-              <button className="btn-outline" onClick={() => setStep(2)}>Back</button>
-              <button className="btn-primary publish-btn" onClick={handleSubmit} disabled={isLoading}>
-                {isLoading ? <span className="spinner"></span> : 'Publish Listing'}
-              </button>
+              <Button variant="secondary" onClick={() => setStep(2)}>
+                Back
+              </Button>
+              <Button variant="primary" onClick={handleSubmit} disabled={isLoading} className="publish-btn">
+                {isLoading ? <Loader2 size={16} className="animate-spin" /> : 'Publish listing'}
+              </Button>
             </div>
-          </div>
+          </Card>
         )}
-
       </div>
     </div>
   );

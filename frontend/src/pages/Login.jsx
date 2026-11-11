@@ -1,6 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Card from '../components/ui/Card';
 import './Login.css';
 
 const Login = () => {
@@ -71,69 +74,100 @@ const Login = () => {
   };
 
   return (
-    <div className="login-page">
-      <div className="login-container glass fade-in-up">
-        <div className="login-header">
-          <h1 className="gradient-text">Welcome Back</h1>
-          <p>Login to continue sharing with your neighborhood.</p>
+    <div className="login-page section" style={{ '--h': '1' }}>
+      <div className="wrap grid grid--top">
+        <div className="login-copy span-6">
+          <div className="login-header">
+            <h1 className="t-h1">Welcome back.</h1>
+            <p className="t-lead measure">
+              Sign in to continue borrowing and lending with your neighbors.
+            </p>
+          </div>
         </div>
 
-        {error && <div className="error-banner">{error}</div>}
+        <div className="login-form-wrap span-5 start-7">
+          <Card variant="default" className="login-card">
+            <div className="form-body">
+              {error && (
+                <div className="error-banner" role="alert">
+                  {error}
+                </div>
+              )}
 
-        <form onSubmit={handleSubmit} className="login-form">
-          <div className="form-group">
-            <label htmlFor="identifier">Username or Email</label>
-            <input
-              id="identifier"
-              type="text"
-              value={identifier}
-              onChange={(e) => setIdentifier(e.target.value)}
-              placeholder="Enter your username or email"
-              required
-            />
-          </div>
+              <form onSubmit={handleSubmit} className="login-form">
+                <Input
+                  id="identifier"
+                  name="identifier"
+                  label="Username or email"
+                  type="text"
+                  placeholder="Enter your username or email"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  required
+                />
+                <div className="password-group">
+                  <Input
+                    id="password"
+                    name="password"
+                    label="Password"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="toggle-password"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <div className="password-input-wrapper">
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Enter your password"
-                required
-              />
-              <button 
-                type="button" 
-                className="toggle-password"
-                onClick={() => setShowPassword(!showPassword)}
-              >
-                {showPassword ? 'Hide' : 'Show'}
-              </button>
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={isLoading}
+                  className="login-submit-btn"
+                >
+                  {isLoading ? 'Signing in…' : 'Sign in'}
+                </Button>
+              </form>
+
+              <div className="login-divider">
+                <span>Or continue with</span>
+              </div>
+
+              {googleClientId ? (
+                <div className="google-signin" ref={googleButtonRef} />
+              ) : (
+                <div className="google-signin-unconfigured">
+                  <Button
+                    variant="secondary"
+                    type="button"
+                    onClick={handleGoogleSetupNotice}
+                    className="google-signin-button"
+                  >
+                    Continue with Google
+                  </Button>
+                  <p className="t-small muted">
+                    Google Sign-In requires an OAuth client ID to be configured.
+                  </p>
+                </div>
+              )}
+
+              <div className="login-footer">
+                <p className="t-body">
+                  Don&rsquo;t have an account?{' '}
+                  <Link to="/register" className="auth-link">
+                    Create an account
+                  </Link>
+                </p>
+              </div>
             </div>
-          </div>
-
-          <button type="submit" className="btn-primary login-submit-btn" disabled={isLoading}>
-            {isLoading ? <span className="spinner"></span> : 'Login'}
-          </button>
-        </form>
-
-        <div className="login-divider"><span>or continue with</span></div>
-        {googleClientId ? (
-          <div className="google-signin" ref={googleButtonRef} />
-        ) : (
-          <div className="google-signin-unconfigured">
-            <button type="button" className="google-signin-button" onClick={handleGoogleSetupNotice}>
-              <span className="google-signin-mark" aria-hidden="true">G</span>
-              Continue with Google
-            </button>
-            <p>Google Sign-In requires an OAuth client ID to be configured.</p>
-          </div>
-        )}
-
-        <div className="login-footer">
-          <p>Don't have an account? <Link to="/register" className="auth-link">Register</Link></p>
+          </Card>
         </div>
       </div>
     </div>

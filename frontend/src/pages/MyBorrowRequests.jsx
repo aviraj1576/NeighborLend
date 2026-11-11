@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Edit2, Play, Pause, Trash2, X, Save, ArrowRight } from 'lucide-react';
+import { Plus, ArrowRight, Clock, Check, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
-import './MyListings.css';
+import Button from '../components/ui/Button';
+import Card from '../components/ui/Card';
+import Badge from '../components/ui/Badge';
+import './MyBorrowRequests.css';
 
 const MyBorrowRequests = () => {
   const { user } = useAuth();
@@ -25,71 +28,101 @@ const MyBorrowRequests = () => {
     fetchMyRequests();
   }, []);
 
-  const filteredRequests = requests.filter(r => {
+  const filteredRequests = requests.filter((r) => {
     if (activeTab === 'all') return true;
     if (activeTab === 'as_borrower') return r.borrower_id === user?.id;
     if (activeTab === 'as_lender') return r.lender_id === user?.id;
     return true;
   });
 
+  const tabs = [
+    { key: 'all', label: 'All' },
+    { key: 'as_borrower', label: 'As borrower' },
+    { key: 'as_lender', label: 'As lender' },
+  ];
+
   return (
-    <div className="my-listings-page container fade-in-up">
-      <div className="page-header">
-        <h1>My Borrow Requests</h1>
-        <div className="tab-buttons">
-          <button className={`tab-btn ${activeTab === 'all' ? 'active' : ''}`} onClick={() => setActiveTab('all')}>All</button>
-          <button className={`tab-btn ${activeTab === 'as_borrower' ? 'active' : ''}`} onClick={() => setActiveTab('as_borrower')}>As Borrower</button>
-          <button className={`tab-btn ${activeTab === 'as_lender' ? 'active' : ''}`} onClick={() => setActiveTab('as_lender')}>As Lender</button>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="loading-state">Loading your borrow requests...</div>
-      ) : filteredRequests.length > 0 ? (
-        <div className="dashboard-grid">
-          {filteredRequests.map(request => (
-            <Link key={request.id} to={`/borrow-requests/${request.id}`} className="dashboard-card glass card-link">
-              <div className="card-header">
-                <div className={`status-badge ${request.status}`}>
-                  {request.status}
-                </div>
-                <div className="status-badge handover-badge">
-                  {request.handover_status || 'not_applicable'}
-                </div>
-              </div>
-
-              <div className="card-body">
-                <h3>{request.title}</h3>
-                <span className="card-category">{request.category}</span>
-                <div className="card-price">₹{request.max_price_per_day || request.price_per_day} / day</div>
-              </div>
-
-              <div className="card-footer">
-                <div className="stat">
-                  <span className="stat-val">{request.borrower_name || 'Unknown'}</span>
-                  <span className="stat-label">Borrower</span>
-                </div>
-                <div className="stat">
-                  <span className="stat-val">{request.lender_id ? 'Lender' : 'Open'}</span>
-                  <span className="stat-label">{request.lender_id ? 'Matched' : 'Waiting'}</span>
-                </div>
-              </div>
-              <div className="card-action-hint">
-                <ArrowRight size={16} /> Click to view details
-              </div>
-            </Link>
-          ))}
-        </div>
-      ) : (
-        <div className="empty-state glass">
-          <div className="empty-icon-wrapper">
-            <Plus size={48} />
+    <div className="my-borrow-requests-page section" style={{ '--h': '2' }}>
+      <div className="wrap">
+        <div className="page-header section-head--split">
+          <div>
+            <h2 className="t-h2">My borrow requests</h2>
+            <p className="t-lead measure">Track rentals you&rsquo;ve requested and offers made to you.</p>
           </div>
-          <h3>No borrow requests yet</h3>
-          <p>Start a conversation and make an offer to create a rental request.</p>
-          <Link to="/browse" className="btn-primary mt-4">Browse Items</Link>
+          <div className="tab-buttons">
+            {tabs.map((t) => (
+              <Button
+                key={t.key}
+                variant="secondary"
+                size="sm"
+                className={`tab-btn ${activeTab === t.key ? 'active' : ''}`}
+                onClick={() => setActiveTab(t.key)}
+              >
+                {t.label}
+              </Button>
+            ))}
+          </div>
         </div>
-      )}
+
+        {loading ? (
+          <div className="dashboard-loading">Loading your borrow requests…</div>
+        ) : filteredRequests.length > 0 ? (
+          <div className="request-grid">
+            {filteredRequests.map((request) => (
+              <Card
+                key={request.id}
+                variant="default"
+                className="request-card"
+              >
+                <Link to={`/borrow-requests/${request.id}`} className="request-link">
+                  <div className="request-head">
+                    <div className={`status-badge status-${request.status}`}>{request.status}</div>
+                    <Badge variant="outline" className="handover-badge">
+                      {request.handover_status || 'Not applicable'}
+                    </Badge>
+                  </div>
+                  <div className="request-body">
+                    <h3 className="t-card">{request.title}</h3>
+                    <span className="request-category">{request.category}</span>
+                    <div className="request-price">
+                      ₹{request.max_price_per_day || request.price_per_day || 0} / day
+                    </div>
+                  </div>
+                  <div className="request-foot">
+                    <div className="request-parties">
+                      <span className="party-label">Borrower</span>
+                      <span className="party-val">{request.borrower_name || '—'}</span>
+                    </div>
+                    <div className="request-parties">
+                      <span className="party-label">Status</span>
+                      <span className="party-val">{request.lender_id ? 'Matched' : 'Waiting'}</span>
+                    </div>
+                  </div>
+                  <div className="request-hint">
+                    <ArrowRight size={14} />
+                    <span>View details</span>
+                  </div>
+                </Link>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <Card variant="default" className="empty-card">
+            <div className="empty-body">
+              <Plus size={44} className="empty-icon" />
+              <h3 className="t-card">No borrow requests yet</h3>
+              <p className="t-body">
+                Start a conversation and make an offer to create a rental request.
+              </p>
+              <div className="empty-actions" style={{ marginTop: 'var(--s-5)' }}>
+                <Link to="/browse">
+                  <Button variant="primary">Browse items</Button>
+                </Link>
+              </div>
+            </div>
+          </Card>
+        )}
+      </div>
     </div>
   );
 };
