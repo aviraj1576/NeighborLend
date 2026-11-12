@@ -14,6 +14,7 @@ from app.models import BorrowRequest, BorrowRequestStatus, NegotiationOffer, Off
 from app.payment_models import (
     EscrowLedgerEntry,
     FinancialAudit,
+    JournalTransaction,
     PaymentTransaction,
     RefundAttempt,
     RefundIntent,
@@ -90,8 +91,12 @@ def authorize(booking, actor, *, borrower=False, lender=False, admin=False):
 def snapshot_booking(db, request, offer, provider, actor=None):
     if provider not in {"mock", "razorpay_test"}:
         conflict("A sandbox payment provider is required")
+    if request.listing_id != offer.listing_id:
+        conflict("Accepted offer belongs to another listing")
     existing = db.scalar(select(RentalBooking).where(RentalBooking.borrow_request_id == request.id))
     if existing:
+        if existing.offer_id != offer.id:
+            conflict("Rental already belongs to another accepted offer")
         return existing
     if offer.status != OfferStatus.accepted or not offer.listing:
         conflict("An accepted offer and listing are required")
@@ -137,6 +142,9 @@ def snapshot_booking(db, request, offer, provider, actor=None):
         total_amount_paise=daily * days + deposit,
         provider=provider,
     )
+    # Persist the accepted offer's request association before PostgreSQL checks
+    # the snapshot at INSERT time; the application's autoflush can be disabled.
+    db.flush()
     db.add(booking)
     db.flush()
     audit(db, booking, actor or request.borrower_id, "booking_snapshot_created")
@@ -167,6 +175,13 @@ def require_funded(db, request):
 class PaymentService:
     def __init__(self, db, provider):
         self.db, self.provider = db, provider
+
+    def _refund_admin(self, actor, admin):
+        from app.models import User
+
+        operator = self.db.get(User, actor)
+        if not admin or operator is None or not operator.is_admin:
+            raise HTTPException(403, "Only an administrator may operate refunds")
 
     def _mode(self, booking):
         try:
@@ -202,6 +217,9 @@ class PaymentService:
 
     def view(self, booking):
         db = self.db
+        db.flush()
+        from app.services.rating_eligibility import rating_eligible
+
         refund = db.scalar(select(RefundIntent).where(RefundIntent.booking_id == booking.id))
         dispute = db.scalar(select(RentalDispute).where(RentalDispute.booking_id == booking.id))
         transactions = db.scalars(
@@ -211,9 +229,34 @@ class PaymentService:
         ).all()
         lines = db.scalars(
             select(EscrowLedgerEntry)
-            .where(EscrowLedgerEntry.booking_id == booking.id)
+            .join(JournalTransaction, JournalTransaction.id == EscrowLedgerEntry.journal_id)
+            .where(
+                EscrowLedgerEntry.booking_id == booking.id, JournalTransaction.status == "posted"
+            )
             .order_by(EscrowLedgerEntry.created_at)
         ).all()
+        deposit_accounts = {"escrow_deposit_held", "escrow_deposit_frozen"}
+        remaining_liability = sum(
+            row.amount_paise * (1 if row.entry_type == "CREDIT" else -1)
+            for row in lines
+            if row.account_type in deposit_accounts
+        )
+        processed_deposit_refund = (
+            min(refund.amount_paise, booking.security_deposit_paise)
+            if refund and refund.status == "processed"
+            else 0
+        )
+        processed_compensation = (
+            refund.deduction_paise if refund and refund.status == "processed" else 0
+        )
+        reserved = (
+            min(refund.amount_paise, booking.security_deposit_paise)
+            if refund and refund.status != "processed"
+            else 0
+        )
+        expected_deposit = (
+            booking.security_deposit_paise if booking.payment_status == "captured" else 0
+        )
         return {
             "id": booking.id,
             "borrow_request_id": booking.borrow_request_id,
@@ -229,6 +272,33 @@ class PaymentService:
             "booking_status": booking.booking_status,
             "payment_status": booking.payment_status,
             "deposit_state": booking.deposit_state,
+            "rating_eligible": rating_eligible(
+                db, db.get(BorrowRequest, booking.borrow_request_id), booking
+            ),
+            "lender_settlement": {
+                "mode": "simulated",
+                "rental_earnings_payable_paise": booking.rental_fee_paise
+                if booking.payment_status == "captured"
+                and booking.settlement_kind != "cancellation"
+                else 0,
+                "compensation_payable_paise": booking.deduction_paise,
+                "provider_transfer_verified": False,
+            },
+            "reconciliation": {
+                "original_deposit_paise": expected_deposit,
+                "processed_deposit_refund_paise": processed_deposit_refund,
+                "allocated_compensation_paise": processed_compensation,
+                "remaining_liability_paise": remaining_liability,
+                "reserved_refund_paise": reserved,
+                "available_unreserved_paise": max(
+                    0,
+                    remaining_liability
+                    - reserved
+                    - (refund.deduction_paise if refund and refund.status != "processed" else 0),
+                ),
+                "balanced": expected_deposit
+                == processed_deposit_refund + processed_compensation + remaining_liability,
+            },
             "duration_days": booking.duration_days,
             "daily_rate_paise": booking.daily_rate_paise,
             "rental_fee_paise": booking.rental_fee_paise,
@@ -237,11 +307,7 @@ class PaymentService:
             "currency": booking.currency,
             "deposit_refunded_paise": booking.refunded_paise,
             "deduction_paise": booking.deduction_paise,
-            "held_deposit_paise": (
-                booking.security_deposit_paise - booking.refunded_paise - booking.deduction_paise
-                if booking.payment_status == "captured"
-                else 0
-            ),
+            "held_deposit_paise": remaining_liability,
             "handover_unlocked": booking.payment_status == "captured"
             and booking.booking_status in {"funded", "active"},
             "pending_payment_id": next(
@@ -334,11 +400,20 @@ class PaymentService:
             authorize(booking, actor, admin=admin)
             return self.view(booking)
 
-    def order(self, booking_id, actor):
+    def order(self, booking_id, actor, *, accepted_terms=None):
         db = self.db
         with locked(db, booking_id) as booking:
             authorize(booking, actor, borrower=True)
             self._mode(booking)
+            if accepted_terms is False:
+                raise HTTPException(422, "Accept the rental terms before checkout")
+            offer = db.get(NegotiationOffer, booking.offer_id)
+            if (
+                not offer
+                or offer.status != OfferStatus.accepted
+                or offer.borrow_request_id != booking.borrow_request_id
+            ):
+                conflict("Accepted rental terms are required before checkout")
             if booking.booking_status != "awaiting_payment":
                 conflict("Booking is not awaiting payment")
             if booking.end_date.date() < datetime.utcnow().date():
@@ -359,6 +434,19 @@ class PaymentService:
                 return self._order_view(row)
             reconcile = row is not None and row.status != "rejected"
             if row is None:
+                audit(
+                    db,
+                    booking,
+                    actor,
+                    "checkout_terms_accepted",
+                    source="checkout_confirmation"
+                    if accepted_terms is True
+                    else "legacy_accepted_offer",
+                    offer_id=booking.offer_id,
+                    rental_fee_paise=booking.rental_fee_paise,
+                    security_deposit_paise=booking.security_deposit_paise,
+                    total_amount_paise=booking.total_amount_paise,
+                )
                 row = PaymentTransaction(
                     id=str(uuid4()),
                     booking_id=booking.id,
@@ -421,6 +509,15 @@ class PaymentService:
             return self._order_view(row)
 
     def _order_view(self, row):
+        from app.models import User
+
+        booking = self.db.get(RentalBooking, row.booking_id)
+        customer = self.db.get(User, booking.borrower_id)
+        prefill = (
+            {"name": customer.name, "email": customer.email}
+            if customer and customer.is_verified
+            else {}
+        )
         return {
             "order_id": row.razorpay_order_id,
             "amount_paise": row.amount_paise,
@@ -431,6 +528,7 @@ class PaymentService:
             "test_mode": True,
             "sandbox_only": self.provider.sandbox_only,
             "simulated_escrow": True,
+            "prefill": prefill,
         }
 
     def _capture(self, booking, payment, actor):
@@ -923,7 +1021,7 @@ class PaymentService:
             )
             return self._dispute_view(row)
 
-    def resolve(self, booking_id, actor, amount, admin=False, reason=""):
+    def resolve(self, booking_id, actor, amount, admin=False, reason="", claim_version=None):
         with locked(self.db, booking_id) as booking:
             authorize(booking, actor, admin=admin)
             if not admin or actor in {booking.borrower_id, booking.lender_id}:
@@ -950,6 +1048,10 @@ class PaymentService:
                 "settled_arbitrated",
             }:
                 conflict("No claim to resolve")
+            # Version-one legacy clients remain compatible; revised claims must
+            # explicitly identify the version the administrator actually reviewed.
+            if (claim_version if claim_version is not None else 1) != row.claim_version:
+                conflict("Claim changed; refresh and review the current claim version")
             if type(amount) is not int or not 0 <= amount <= booking.security_deposit_paise:
                 conflict("Deduction exceeds deposit")
             if row.resolved_at:
@@ -975,6 +1077,7 @@ class PaymentService:
                 "dispute_resolved",
                 reason=row.resolution_reason,
                 approved_deduction_paise=amount,
+                claim_version=row.claim_version,
                 authority="administrator",
                 evidence_references={
                     "return_photos": json.loads(request.return_photos),
@@ -988,6 +1091,10 @@ class PaymentService:
     def execute_refund(
         self, booking_id, actor, demo_outcome="processed", admin=False, *, allow_dispatch=True
     ):
+        # Verified gateway webhooks may reconcile existing outcomes with GETs.
+        # Every dispatch, including mock settlement, requires a real admin actor.
+        if allow_dispatch or self.provider.kind == "mock":
+            self._refund_admin(actor, admin)
         db = self.db
         with locked(db, booking_id) as booking:
             authorize(booking, actor, admin=admin)
@@ -1018,6 +1125,16 @@ class PaymentService:
             )
             if not payment:
                 conflict("No captured payment")
+            if (
+                not allow_dispatch
+                and self.provider.kind == "razorpay_test"
+                and row.status == "created"
+                and not row.provider_refund_id
+            ):
+                # Clean-return approval creates an intent, not a gateway request.
+                # Reading an unsent intent must not invent a dispatch attempt or
+                # turn the absence of a gateway refund into an unknown outcome.
+                return self.view(booking)
             rid, reference, amount, pid, existing_id = (
                 row.id,
                 row.idempotency_key,
@@ -1031,7 +1148,14 @@ class PaymentService:
             db.flush()
             attempt_id = attempt.id
             row.active_attempt_id = attempt_id
-            audit(db, booking, actor, "refund_requested", refund_id=rid, attempt_id=attempt_id)
+            status_check = self.provider.kind == "razorpay_test" and (
+                bool(existing_id) or not allow_dispatch
+            )
+            audit(
+                db, booking, actor,
+                "refund_status_check_requested" if status_check else "refund_requested",
+                refund_id=rid, attempt_id=attempt_id,
+            )
         try:
             if amount == 0:
                 result = {"id": None, "payment_id": pid, "amount": 0, "status": "processed"}
@@ -1168,6 +1292,8 @@ class PaymentService:
             return self.view(booking)
 
     def reconcile_refund(self, booking_id, actor, demo_outcome="processed", admin=False):
+        if self.provider.kind == "mock":
+            self._refund_admin(actor, admin)
         # Crash recovery preserves the same provider idempotency key and exact payload.
         with locked(self.db, booking_id) as booking:
             authorize(booking, actor, admin=admin)
@@ -1187,6 +1313,7 @@ class PaymentService:
         )
 
     def retry_failed_refund(self, booking_id, actor, admin=False):
+        self._refund_admin(actor, admin)
         if not admin or self.provider.kind != "razorpay_test":
             raise HTTPException(403, "Confirmed failed gateway refunds require administrator retry")
         with locked(self.db, booking_id) as booking:

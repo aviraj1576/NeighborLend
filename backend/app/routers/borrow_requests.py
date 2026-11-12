@@ -89,6 +89,8 @@ def _format_request_out(
         "status": req.status,
         "listing_id": req.listing_id,
         "lender_id": req.listing.owner_id if req.listing else None,
+        "lender_name": req.listing.owner.name if req.listing and req.listing.owner else None,
+        "lender_username": req.listing.owner.username if req.listing and req.listing.owner else None,
         "returned_at": req.returned_at,
         "disputed_at": req.disputed_at,
         "handover_status": req.handover_status,
@@ -329,14 +331,16 @@ def rate_lender(
     req, lender_id = _get_rental_participants(request_id, db, current_user)
     if current_user.id != req.borrower_id:
         raise HTTPException(status_code=403, detail="Only the borrower can rate the lender")
-    if req.handover_status != HandoverStatus.return_confirmed.value:
-        raise HTTPException(status_code=409, detail="Can only rate after return is confirmed")
+    from app.services.rating_eligibility import rating_eligible
+    if not rating_eligible(db, req):
+        raise HTTPException(status_code=409, detail="Ratings require confirmed return and completed financial settlement")
     if req.lender_rating is not None:
         raise HTTPException(status_code=409, detail="Lender already rated for this rental")
 
     req.lender_rating = data.rating
     req.lender_rating_comment = data.comment
     req.lender_rated_at = datetime.utcnow()
+    _update_rating_aggregate(db, lender_id, data.rating)
     create_notification(
         db, lender_id, "rating", "You Received a Rating",
         f"{current_user.name} rated you {data.rating}/5 stars for {req.title}.",
@@ -357,16 +361,18 @@ def rate_borrower(
 ):
     """Lender rates the borrower after rental completion."""
     req, lender_id = _get_rental_participants(request_id, db, current_user)
-    if current_user.id != lender_id:
+    if current_user.id != req.listing.owner_id:
         raise HTTPException(status_code=403, detail="Only the lender can rate the borrower")
-    if req.handover_status != HandoverStatus.return_confirmed.value:
-        raise HTTPException(status_code=409, detail="Can only rate after return is confirmed")
+    from app.services.rating_eligibility import rating_eligible
+    if not rating_eligible(db, req):
+        raise HTTPException(status_code=409, detail="Ratings require confirmed return and completed financial settlement")
     if req.borrower_rating is not None:
         raise HTTPException(status_code=409, detail="Borrower already rated for this rental")
 
     req.borrower_rating = data.rating
     req.borrower_rating_comment = data.comment
     req.borrower_rated_at = datetime.utcnow()
+    _update_rating_aggregate(db, req.borrower_id, data.rating)
     create_notification(
         db, req.borrower_id, "rating", "You Received a Rating",
         f"{current_user.name} rated you {data.rating}/5 stars for {req.title}.",
@@ -471,6 +477,16 @@ def get_borrow_request(request_id: str, db: Session = Depends(get_db)):
     if req is None:
         raise HTTPException(status_code=404, detail="Borrow request not found")
     return _format_request_out(req)
+
+
+def _update_rating_aggregate(db: Session, user_id: str, rating: int):
+    # Lock the rated account so ratings from different rentals cannot lose updates.
+    from sqlalchemy import func, update
+    count = func.coalesce(User.rating_count, 0)
+    average = func.coalesce(User.avg_rating, 0.0)
+    db.execute(update(User).where(User.id == user_id).values(
+        avg_rating=(average * count + rating) / (count + 1), rating_count=count + 1
+    ))
 
 
 def _get_rental_participants(request_id: str, db: Session, current_user: User):
@@ -580,8 +596,6 @@ def confirm_return(
         provider = payment_provider()
         service = PaymentService(db, provider)
         service.return_decision(bid, actor, data.approved, data.condition_note or "")
-        if data.approved and provider.kind == booking.provider == "mock":
-            service.execute_refund(bid, actor)
         req = db.get(BorrowRequest, rid)
         db.refresh(req)
         return _format_request_out(req, include_private_handover=True)

@@ -7,6 +7,7 @@ from threading import Event
 
 import httpx
 import pytest
+from pydantic import ValidationError
 from sqlalchemy import select, text
 from test_razorpay_escrow import assert_balanced, call, evidence, fund, physical_return
 from test_razorpay_escrow import flow as payment_flow
@@ -97,7 +98,9 @@ def test_disabled_configuration_and_live_key_rejection():
             Settings(**{**public, "payment_provider": "mock"}, payment_demo_mode=True)
         )
     for secret in ("neighborlend-super-secret-key-2026-prototype", "a" * 64, "short"):
-        with pytest.raises(ProviderError, match="private_strong_jwt"):
+        # Invalid JWT settings now fail before any provider can be constructed,
+        # including local development and isolated test configurations.
+        with pytest.raises(ValidationError, match="JWT_SECRET"):
             configured_provider(
                 Settings(_env_file=None, deployment_exposure="public", jwt_secret=secret)
             )
@@ -453,7 +456,7 @@ def test_expired_refund_lease_fences_delayed_pending_response(flow):
     def delayed():
         with flow["factory"]() as db:
             return PaymentService(db, DelayedProvider()).execute_refund(
-                flow["booking"]["id"], flow["ids"]["borrower"], "pending"
+                flow["booking"]["id"], flow["ids"]["admin"], "pending", admin=True
             )
 
     with ThreadPoolExecutor(max_workers=1) as pool:

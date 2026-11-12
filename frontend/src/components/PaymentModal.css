@@ -1,40 +1,40 @@
 .payment-card {
   margin: 1.5rem 0;
   padding: 1.25rem;
-  border: 1px solid var(--border, #475569);
-  border-radius: 16px;
-  background: var(--bg-card, #1e293b);
-  color: var(--text-primary, #f8fafc);
+  border: 1px solid var(--line, #d8c5b4);
+  border-radius: var(--r-lg, 16px);
+  background: var(--card, #ffeed6);
+  color: var(--ink, #2b061e);
   scroll-margin-top: 96px;
 }
 .test-mode-banner {
   display: block;
   padding: 0.7rem;
   border-radius: 8px;
-  color: #6e4700;
-  background: #fff1bf;
+  color: var(--accent-ink, #111);
+  background: var(--accent, #d2bf55);
 }
 .payment-card button {
   padding: 0.6rem 0.9rem;
   margin: 0.35rem 0.5rem 0.35rem 0;
-  border: 1px solid #3b4ed7;
-  border-radius: 8px;
+  border: 1px solid var(--action, #2b061e);
+  border-radius: var(--r-btn, 8px);
   cursor: pointer;
-  background: #3044c5;
-  color: #fff;
+  background: var(--action, #2b061e);
+  color: var(--action-ink, #ffeed6);
   font: inherit;
   font-weight: 600;
   min-height: 44px;
 }
 .payment-card button:hover:not(:disabled) {
-  background: #24349d;
+  filter: brightness(1.1);
 }
 .payment-card button:focus-visible,
 .payment-card input:focus-visible,
 .payment-card textarea:focus-visible,
 .payment-card select:focus-visible,
 .payment-card summary:focus-visible {
-  outline: 3px solid #e6ae2c;
+  outline: 3px solid var(--accent, #d2bf55);
   outline-offset: 3px;
 }
 .payment-card button:disabled {
@@ -51,7 +51,7 @@
 .payment-card textarea,
 .payment-card select {
   padding: 0.65rem;
-  border: 1px solid #aab0bc;
+  border: 1px solid var(--line-strong, #a58a84);
   border-radius: 8px;
   color: inherit;
   background: transparent;
@@ -62,7 +62,7 @@
   margin: 1rem 0;
 }
 .payment-card dt {
-  color: #cbd5e1;
+  color: var(--muted, #76575d);
 }
 .payment-card dl > div {
   display: flex;
@@ -80,7 +80,7 @@
   overflow-wrap: anywhere;
 }
 .payment-dispute {
-  border-top: 1px solid #aab0bc;
+  border-top: 1px solid var(--line-strong, #a58a84);
   margin-top: 1rem;
   padding-top: 0.8rem;
 }
@@ -91,7 +91,7 @@
   margin-top: 1rem;
 }
 .refund-panel {
-  border-top: 1px solid #aab0bc;
+  border-top: 1px solid var(--line-strong, #a58a84);
   margin-top: 1rem;
   padding-top: 0.8rem;
 }
@@ -105,8 +105,8 @@
   flex-shrink: 0;
 }
 .payment-card select {
-  background: var(--bg-secondary, #202533);
-  color: var(--text-primary, #fff);
+  background: var(--surface, #f3e1cc);
+  color: var(--ink, #2b061e);
 }
 @media (max-width: 600px) {
   .payment-card {

@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Menu, X, User } from 'lucide-react';
+import { Menu, X, User, ChevronDown } from 'lucide-react';
 import api from '../api/client';
+import Button from './ui/Button';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -10,6 +11,7 @@ const Navbar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const isActive = (path) => location.pathname === path ? 'active' : '';
@@ -41,82 +43,238 @@ const Navbar = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+    setUserMenuOpen(false);
   };
 
+  const authedDropdown = (
+    <>
+      <Link
+        to="/create-listing"
+        className="dropdown-link"
+        onClick={() => setUserMenuOpen(false)}
+      >
+        Lend an item
+      </Link>
+      <Link
+        to="/create-request"
+        className="dropdown-link"
+        onClick={() => setUserMenuOpen(false)}
+      >
+        Request an item
+      </Link>
+      <Link
+        to="/my-listings"
+        className="dropdown-link"
+        onClick={() => setUserMenuOpen(false)}
+      >
+        My listings
+      </Link>
+      <Link
+        to="/my-borrow-requests"
+        className="dropdown-link"
+        onClick={() => setUserMenuOpen(false)}
+      >
+        My borrow requests
+      </Link>
+      <Link
+        to="/messages"
+        className="dropdown-link"
+        onClick={() => setUserMenuOpen(false)}
+      >
+        Messages
+      </Link>
+      <Link
+        to="/inbox"
+        className={`dropdown-link ${unreadCount > 0 ? 'unread' : ''}`}
+        onClick={() => setUserMenuOpen(false)}
+      >
+        Inbox
+        {unreadCount > 0 && (
+          <span className="dropdown-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+        )}
+      </Link>
+      {user?.is_admin && <Link to="/payment-review" className="dropdown-link" onClick={() => setUserMenuOpen(false)}>Payment review</Link>}
+      <div className="dropdown-divider" />
+      <button
+        className="dropdown-link dropdown-logout"
+        onClick={handleLogout}
+      >
+        Sign out
+      </button>
+    </>
+  );
+
+  const toggleUserMenu = () => setUserMenuOpen(!userMenuOpen);
+
+  // Close dropdowns when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      const nav = document.querySelector('.navbar');
+      if (nav && !nav.contains(e.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
   return (
-    <nav className="navbar glass">
-      <div className="container nav-container">
-        <Link to="/" className="nav-logo gradient-text">
+    <nav className="navbar">
+      <a href="#" className="skip-link visually-hidden" tabIndex={0}>
+        Skip to content
+      </a>
+      <div className="wrap nav-wrap">
+        <Link to="/" className="nav-logo">
           NeighborLend
         </Link>
 
-        <div className="nav-links desktop-only">
-          <Link to="/browse" className={`nav-link ${isActive('/browse')}`}>Browse</Link>
-          {isAuthenticated && (
-            <>
-              <Link to="/create-listing" className={`nav-link ${isActive('/create-listing')}`}>Lend Item</Link>
-              <Link to="/create-request" className={`nav-link ${isActive('/create-request')}`}>Request Item</Link>
-              <Link to="/my-listings" className={`nav-link ${isActive('/my-listings')}`}>My Listings</Link>
-              <Link to="/my-borrow-requests" className={`nav-link ${isActive('/my-borrow-requests')}`}>My Borrow Requests</Link>
-              <Link to="/messages" className={`nav-link ${isActive('/messages')}`}>Messages</Link>
-              {user?.is_admin && <Link to="/payment-review" className="nav-link">Payment review</Link>}
-              <Link to="/inbox" className={`nav-link ${isActive('/inbox')}`}>
-                Inbox{unreadCount > 0 && <span className="unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
-              </Link>
-            </>
-          )}
-        </div>
+        <div className="nav-core">
+          <div className="nav-links desktop-only">
+            <Link
+              to="/browse"
+              className={`nav-link ${isActive('/browse')}`}
+              aria-label="Browse items"
+            >
+              Browse
+            </Link>
+          </div>
 
-        <div className="nav-actions desktop-only">
           {isAuthenticated ? (
-            <div className="user-menu">
-              <div className="user-avatar">
-                <User size={18} />
-              </div>
-              <span className="user-name">{user?.username || 'User'}</span>
-              <button onClick={handleLogout} className="btn-outline logout-btn">Logout</button>
+            <div className="user-area desktop-only">
+              <Button
+                variant="primary"
+                size="sm"
+                className="cta-btn"
+                asChild
+                onClick={() => setUserMenuOpen(false)}
+              >
+                <Link to="/create-listing">List something</Link>
+              </Button>
+              <button
+                className="user-trigger"
+                onClick={toggleUserMenu}
+                aria-expanded={userMenuOpen}
+                aria-label="Account menu"
+              >
+                <div className="user-avatar">
+                  <User size={16} />
+                </div>
+                <ChevronDown size={14} className="trigger-arrow" />
+              </button>
+              {userMenuOpen && (
+                <div className="user-dropdown">
+                  {authedDropdown}
+                </div>
+              )}
             </div>
           ) : (
-            <div className="auth-buttons">
-              <Link to="/login" className="btn-outline">Log in</Link>
-              <Link to="/register" className="btn-primary">Sign up</Link>
+            <div className="auth-actions desktop-only">
+              <Link to="/login">
+                <Button variant="secondary" size="sm">
+                  Log in
+                </Button>
+              </Link>
+              <Link to="/register">
+                <Button variant="primary" size="sm">
+                  Sign up
+                </Button>
+              </Link>
             </div>
           )}
-        </div>
 
-        <button 
-          className="mobile-menu-btn mobile-only" 
-          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        >
-          {mobileMenuOpen ? <X /> : <Menu />}
-        </button>
+          <button
+            className="mobile-menu-btn mobile-only"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            aria-expanded={mobileMenuOpen}
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Menu */}
       {mobileMenuOpen && (
-        <div className="mobile-menu glass">
-          <Link to="/browse" className={`nav-link ${isActive('/browse')}`} onClick={() => setMobileMenuOpen(false)}>Browse</Link>
+        <div className="mobile-menu">
+          <Link
+            to="/browse"
+            className={`mobile-link ${isActive('/browse')}`}
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            Browse
+          </Link>
           {isAuthenticated ? (
             <>
-              <Link to="/create-listing" className={`nav-link ${isActive('/create-listing')}`} onClick={() => setMobileMenuOpen(false)}>Lend Item</Link>
-              <Link to="/create-request" className={`nav-link ${isActive('/create-request')}`} onClick={() => setMobileMenuOpen(false)}>Request Item</Link>
-              <Link to="/my-listings" className={`nav-link ${isActive('/my-listings')}`} onClick={() => setMobileMenuOpen(false)}>My Listings</Link>
-              <Link to="/my-borrow-requests" className={`nav-link ${isActive('/my-borrow-requests')}`} onClick={() => setMobileMenuOpen(false)}>My Borrow Requests</Link>
-              <Link to="/messages" className={`nav-link ${isActive('/messages')}`} onClick={() => setMobileMenuOpen(false)}>Messages</Link>
-              {user?.is_admin && <Link to="/payment-review" className="nav-link" onClick={() => setMobileMenuOpen(false)}>Payment review</Link>}
-              <Link to="/inbox" className={`nav-link ${isActive('/inbox')}`} onClick={() => setMobileMenuOpen(false)}>
-                Inbox{unreadCount > 0 && <span className="unread-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>}
+              <Link
+                to="/create-listing"
+                className="mobile-link"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                List something
               </Link>
-              <div className="mobile-user">
-                <span>{user?.username}</span>
-                <button onClick={() => { handleLogout(); setMobileMenuOpen(false); }} className="btn-outline logout-btn">Logout</button>
-              </div>
+              <Link
+                to="/create-request"
+                className="mobile-link"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Request something
+              </Link>
+              <Link
+                to="/my-listings"
+                className="mobile-link"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                My listings
+              </Link>
+              <Link
+                to="/my-borrow-requests"
+                className="mobile-link"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                My borrow requests
+              </Link>
+              <Link
+                to="/messages"
+                className="mobile-link"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Messages
+              </Link>
+              <Link
+                to="/inbox"
+                className={`mobile-link ${unreadCount > 0 ? 'unread' : ''}`}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Inbox
+                {unreadCount > 0 && (
+                  <span className="mobile-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                )}
+              </Link>
+              {user?.is_admin && <Link to="/payment-review" className="mobile-link" onClick={() => setMobileMenuOpen(false)}>Payment review</Link>}
+              <button
+                className="mobile-link mobile-logout"
+                onClick={() => { handleLogout(); setMobileMenuOpen(false); }}
+              >
+                Sign out
+              </button>
             </>
           ) : (
-            <div className="mobile-auth">
-              <Link to="/login" className="btn-outline" onClick={() => setMobileMenuOpen(false)}>Log in</Link>
-              <Link to="/register" className="btn-primary" onClick={() => setMobileMenuOpen(false)}>Sign up</Link>
-            </div>
+            <>
+              <Link
+                to="/login"
+                className="mobile-link"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Log in
+              </Link>
+              <Link
+                to="/register"
+                className="mobile-link mobile-primary"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Sign up
+              </Link>
+            </>
           )}
         </div>
       )}

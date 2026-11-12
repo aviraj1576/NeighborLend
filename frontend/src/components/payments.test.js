@@ -11,12 +11,246 @@ import {
   uploadRentalEvidence,
   apiErrorMessage,
   returnReviewState,
+  downloadPaymentDocument,
+  handoverGuidance,
+  submitFinancialAction,
+  refundReviewLabel,
 } from './paymentFlow.js';
+import { invalidateSession, watchSessionChanges } from '../context/sessionSync.js';
 import PaymentModal from './PaymentModal.jsx';
 import EscrowStatusCard from './EscrowStatusCard.jsx';
 import DisputeResolutionModal from './DisputeResolutionModal.jsx';
 import RefundPanel from './RefundPanel.jsx';
 import FinancialTimeline from './FinancialTimeline.jsx';
+import PaymentDocuments from './PaymentDocuments.jsx';
+import Button from './ui/Button.jsx';
+import Input from './ui/Input.jsx';
+
+test('only a 401 for the current session clears identity and broadcasts invalidation', () => {
+  let token = 'new-session';
+  const events = [];
+  const browser = {
+    localStorage: {
+      getItem: () => token,
+      removeItem: () => {
+        token = null;
+      },
+    },
+    dispatchEvent: (event) => events.push(event.type),
+  };
+  assert.equal(invalidateSession(browser, 'old-session'), false);
+  assert.equal(invalidateSession(browser, null), false);
+  assert.equal(token, 'new-session');
+  assert.deepEqual(events, []);
+  assert.equal(invalidateSession(browser, 'new-session'), true);
+  assert.equal(token, null);
+  assert.deepEqual(events, ['auth:invalidated']);
+  assert.equal(invalidateSession(browser, 'new-session'), false);
+});
+
+test('admin review distinguishes refund authorization, dispatch and confirmation', () => {
+  assert.match(refundReviewLabel({ status: 'created' }), /authorized.*awaiting dispatch approval/i);
+  assert.match(refundReviewLabel({ status: 'pending' }), /awaiting gateway confirmation/);
+  assert.match(refundReviewLabel({ status: 'unknown' }), /reconcile before retry/);
+  assert.equal(refundReviewLabel({ status: 'processed' }), '');
+  assert.equal(refundReviewLabel(null), '');
+});
+
+test('financial actions refresh saved state after a lost response without retrying dispatch', async () => {
+  const lostResponse = new Error('Synthetic response lost');
+  const requests = [];
+  let booking;
+  let rental;
+  const api = {
+    post: async (path, payload) => {
+      requests.push({ path, payload });
+      throw lostResponse;
+    },
+  };
+  await assert.rejects(
+    submitFinancialAction(
+      api,
+      '/payments/refunds/execute',
+      { booking_id: 'booking', gateway_refund_approved: true },
+      async (options) => {
+        assert.equal(options.strict, true);
+        booking = { refund: { status: 'processed' } };
+      },
+      async (options) => {
+        assert.equal(options.strict, true);
+        rental = { status: 'closed' };
+      },
+    ),
+    (error) => error === lostResponse,
+  );
+  assert.equal(requests.length, 1);
+  assert.equal(booking.refund.status, 'processed');
+  assert.equal(rental.status, 'closed');
+});
+
+test('financial refresh failures remain visible and still refresh the rental', async () => {
+  let rentalRefreshed = false;
+  const unavailable = new Error('Synthetic status unavailable');
+  await assert.rejects(
+    submitFinancialAction(
+      { post: async () => ({ data: {} }) },
+      '/payments/refunds/reconcile',
+      { booking_id: 'booking' },
+      async () => {
+        throw unavailable;
+      },
+      async () => {
+        rentalRefreshed = true;
+      },
+    ),
+    (error) => error === unavailable,
+  );
+  assert.equal(rentalRefreshed, true);
+});
+
+test('other tabs changing the login invalidate account state; unrelated storage does not', () => {
+  const listeners = new Map();
+  const browser = {
+    localStorage: {},
+    addEventListener: (name, fn) => listeners.set(name, fn),
+    removeEventListener: (name, fn) => {
+      assert.equal(listeners.get(name), fn);
+      listeners.delete(name);
+    },
+  };
+  let resets = 0;
+  const stop = watchSessionChanges(browser, () => {
+    resets += 1;
+  });
+  const emit = (key, oldValue, newValue, storageArea = browser.localStorage) =>
+    listeners.get('storage')({ key, oldValue, newValue, storageArea });
+  emit('nl_token', 'synthetic-a', 'synthetic-b');
+  emit('nl_token', 'synthetic-b', null);
+  emit(null, null, null);
+  assert.equal(resets, 3);
+  emit('theme', 'light', 'dark');
+  emit('nl_token', 'same', 'same');
+  emit('nl_token', null, 'synthetic', {});
+  assert.equal(resets, 3);
+  stop();
+  assert.equal(listeners.size, 0);
+});
+
+test('unsent gateway refunds explain dispatch approval and disable premature reconciliation', () => {
+  const markup = renderToStaticMarkup(
+    React.createElement(RefundPanel, {
+      booking: {
+        provider: 'razorpay_test',
+        rental_fee_paise: 50000,
+        refund: {
+          id: 'intent',
+          status: 'created',
+          kind: 'clean_return',
+          amount_paise: 340000,
+          deduction_paise: 0,
+        },
+      },
+      user: { id: 'admin', is_admin: true },
+      allowed: true,
+      busy: false,
+    }),
+  );
+  assert.match(markup, /not yet sent to Razorpay/);
+  assert.match(markup, /<button[^>]*disabled=""[^>]*>Reconcile refund status/);
+  assert.match(markup, /<button[^>]*disabled=""[^>]*>Send approved Test refund/);
+  assert.match(markup, /3,400/);
+  assert.match(markup, /500/);
+});
+
+test('upstream buttons keep labels, icons, submit behavior and native disabled state', () => {
+  const markup = renderToStaticMarkup(
+    React.createElement(
+      Button,
+      { type: 'submit', disabled: true },
+      React.createElement('span', null, 'Confirm handover complete'),
+    ),
+  );
+  assert.match(markup, /type="submit"/);
+  assert.match(markup, /disabled=""/);
+  assert.match(markup, /btn--primary/);
+  assert.match(markup, /Confirm handover complete/);
+  const anchor = renderToStaticMarkup(
+    React.createElement(Button, { href: '/browse' }, 'Browse items'),
+  );
+  assert.match(anchor, /href="\/browse"/);
+  assert.match(anchor, />Browse items<\/a>/);
+});
+
+test('upstream select renders its real category options without crashing', () => {
+  const markup = renderToStaticMarkup(
+    React.createElement(
+      Input,
+      { type: 'select', name: 'category', label: 'Category', defaultValue: 'Tools' },
+      React.createElement('option', { value: 'Tools' }, 'Tools'),
+      React.createElement('option', { value: 'Other' }, 'Other'),
+    ),
+  );
+  assert.match(markup, /<select/);
+  assert.match(markup, /selected="">Tools/);
+  assert.match(markup, />Other<\/option>/);
+});
+
+test('handover explains the actual owner and both confirmation stages', () => {
+  const rental = {
+    listing_id: 'listing',
+    borrower_id: 'aarav',
+    lender_id: 'priya',
+    lender_username: 'priya_sharma',
+    handover_status: 'pending',
+  };
+  const paid = { handover_unlocked: true };
+  assert.match(
+    handoverGuidance(rental, { id: 'aarav' }, paid, true),
+    /Waiting for priya_sharma to upload/,
+  );
+  assert.match(
+    handoverGuidance(rental, { id: 'priya', is_admin: true }, paid, true),
+    /Upload product photos/,
+  );
+  assert.match(
+    handoverGuidance(rental, { id: 'rohan' }, paid, true),
+    /Only this rental's borrower and lender/,
+  );
+  assert.match(
+    handoverGuidance(
+      { ...rental, handover_status: 'photos_uploaded' },
+      { id: 'aarav' },
+      paid,
+      true,
+    ),
+    /confirm receipt/,
+  );
+  assert.match(
+    handoverGuidance(
+      { ...rental, handover_status: 'borrower_confirmed' },
+      { id: 'priya' },
+      paid,
+      true,
+    ),
+    /Confirm the handover/,
+  );
+});
+
+test('handover remains locked when authoritative payment status is unavailable or unverified', () => {
+  const rental = {
+    listing_id: 'listing',
+    borrower_id: 'borrower',
+    lender_id: 'lender',
+    handover_status: 'pending',
+  };
+  for (const [booking, unlocked] of [
+    [null, false],
+    [{ handover_unlocked: false }, false],
+    [{ handover_unlocked: true }, false],
+  ]) {
+    assert.match(handoverGuidance(rental, { id: 'lender' }, booking, unlocked), /stays locked/);
+  }
+});
 
 const base = {
   id: 'booking',
@@ -42,6 +276,65 @@ const testOrder = {
   currency: 'INR',
 };
 
+test('payment documents appear only for capture and confirmed refunds', () => {
+  const render = (booking) =>
+    renderToStaticMarkup(React.createElement(PaymentDocuments, { booking, api: {} }));
+  assert.equal(render(base), '');
+  assert.match(render({ ...base, payment_status: 'captured' }), /Download payment receipt/);
+  assert.doesNotMatch(
+    render({ ...base, payment_status: 'captured', refund: { status: 'pending' } }),
+    /Download refund acknowledgment/,
+  );
+  assert.match(
+    render({ ...base, payment_status: 'captured', refund: { status: 'processed' } }),
+    /Download refund acknowledgment/,
+  );
+});
+
+test('document downloads use authenticated API blob and revoke the object URL', async () => {
+  const previousDocument = globalThis.document;
+  const create = URL.createObjectURL;
+  const revoke = URL.revokeObjectURL;
+  const previousTimer = globalThis.setTimeout;
+  const calls = [];
+  const link = { click: () => calls.push('click'), remove: () => calls.push('remove') };
+  globalThis.document = {
+    createElement: () => link,
+    body: { appendChild: () => calls.push('append') },
+  };
+  URL.createObjectURL = () => 'blob:synthetic';
+  URL.revokeObjectURL = (url) => calls.push(url);
+  globalThis.setTimeout = (callback) => callback();
+  try {
+    const api = {
+      get: async (path, options) => {
+        assert.equal(path, '/payments/bookings/booking/refund-acknowledgment');
+        assert.equal(options.responseType, 'blob');
+        return { data: new Blob(['receipt']) };
+      },
+    };
+    await downloadPaymentDocument(api, 'booking', true);
+    assert.equal(link.download, 'neighborlend-refund-acknowledgment-booking.html');
+    assert.deepEqual(calls, ['append', 'click', 'remove', 'blob:synthetic']);
+    await assert.rejects(
+      downloadPaymentDocument(
+        {
+          get: async () => {
+            throw { response: { data: new Blob(['{"detail":"Not authorized"}']) } };
+          },
+        },
+        'booking',
+      ),
+      (error) => apiErrorMessage(error, '') === 'Not authorized',
+    );
+  } finally {
+    globalThis.document = previousDocument;
+    URL.createObjectURL = create;
+    URL.revokeObjectURL = revoke;
+    globalThis.setTimeout = previousTimer;
+  }
+});
+
 test('exact paise conversion rejects ambiguous/invalid input', () => {
   assert.equal(toPaise('200.05'), 20005);
   assert.equal(toPaise('0'), 0);
@@ -64,7 +357,10 @@ test('mock checkout never loads Razorpay or fabricates a verified callback', asy
   );
   assert.equal(result.mock, true);
   assert.equal(calls.length, 1);
-  assert.deepEqual(calls[0], ['/payments/create-order', { booking_id: 'booking' }]);
+  assert.deepEqual(calls[0], [
+    '/payments/create-order',
+    { booking_id: 'booking', accepted_terms: true },
+  ]);
 });
 
 for (const scenario of ['success', 'failed', 'dismissed', 'unavailable', 'verify-failed']) {
@@ -443,7 +739,11 @@ test('cancelled booking retains eligible refund recovery controls', () => {
     booking_status: 'cancelled',
     refund: { status: 'pending' },
   };
-  const actions = paymentPermissions(row, { id: 'borrower' }, { handover_status: 'pending' });
+  const actions = paymentPermissions(
+    row,
+    { id: 'admin', is_admin: true },
+    { handover_status: 'pending' },
+  );
   assert.equal(actions.checkout, false);
   assert.equal(actions.refund, true);
   assert.equal(paymentLabel(row), 'Refund pending');
@@ -537,7 +837,7 @@ test('refund breakdown uses backend paise and requires distinct gateway approval
             deduction_paise: deduction,
           },
         },
-        user: { id: 'borrower' },
+        user: { id: 'admin', is_admin: true },
         busy: false,
         allowed: true,
         onAction() {},
@@ -567,7 +867,7 @@ test('refund pending, failure, success and outsider states show safe controls', 
           error_code: 'provider_notice',
         },
       },
-      user: { id: 'borrower' },
+      user: { id: 'admin', is_admin: true },
       busy: true,
       allowed: true,
       onAction() {},
@@ -575,13 +875,63 @@ test('refund pending, failure, success and outsider states show safe controls', 
     const html = renderToStaticMarkup(React.createElement(RefundPanel, props));
     assert.match(html, /aria-busy="true"/);
     if (status === 'pending') assert.doesNotMatch(html, /Send approved|Retry same/);
-    if (status === 'failed') assert.match(html, /An administrator must authorize/);
+    if (status === 'failed') assert.match(html, /Administrator: retry confirmed failed/);
     if (status === 'processed') assert.doesNotMatch(html, /<button/);
     const outsider = renderToStaticMarkup(
       React.createElement(RefundPanel, { ...props, allowed: false }),
     );
     assert.doesNotMatch(outsider, /<button|checkbox/);
   }
+});
+
+test('borrowers and lenders can read refund status but cannot operate it even if allowed is stale', () => {
+  const booking = {
+    ...base,
+    operations_enabled: true,
+    refund: { status: 'created', amount_paise: 200000, deduction_paise: 0, kind: 'clean_return' },
+  };
+  for (const id of ['borrower', 'lender']) {
+    assert.equal(paymentPermissions(booking, { id }, {}).refund, false);
+    const html = renderToStaticMarkup(
+      React.createElement(RefundPanel, {
+        booking,
+        user: { id, is_admin: false },
+        allowed: true,
+        busy: false,
+        onAction() {},
+      }),
+    );
+    assert.match(html, /Only an administrator can send or reconcile/);
+    assert.doesNotMatch(html, /<button|checkbox/);
+    assert.match(html, /Authorized refund to borrower/);
+  }
+});
+
+test('pending gateway refund explains provider confirmation and shows its saved reference', () => {
+  const html = renderToStaticMarkup(
+    React.createElement(RefundPanel, {
+      booking: {
+        ...base,
+        provider: 'razorpay_test',
+        refund: {
+          status: 'pending',
+          amount_paise: 200000,
+          deduction_paise: 0,
+          kind: 'clean_return',
+          provider_refund_id: 'rfnd_fixture',
+        },
+      },
+      user: { id: 'admin', is_admin: true },
+      allowed: true,
+      busy: false,
+      onAction() {},
+    }),
+  );
+  assert.match(html, /has not confirmed completion/);
+  assert.match(html, /Do not send another refund/);
+  assert.match(html, /Test Mode does not credit a real bank account/);
+  assert.match(html, /rfnd_fixture/);
+  assert.doesNotMatch(html, /Send approved Test refund/);
 });
 
 test('borrower agreement cannot give either party deduction approval', () => {

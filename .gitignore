@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 .envrc
+test-credentials.txt
 
 # Python
 __pycache__/

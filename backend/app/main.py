@@ -7,18 +7,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from app.config import get_settings
-from app.database import engine, Base, migrate_schema
+from app.database import engine, Base, migrate_schema, require_generic_schema_target_allowed
 from app.routers import auth, listings, ai, uploads, borrow_requests, chat, notifications
 from app.routers import payments, disputes
 
 settings = get_settings()
 
 if settings.app_env.lower() in {"production", "prod"}:
-    if (
-        len(settings.jwt_secret) < 32
-        or settings.jwt_secret == "neighborlend-super-secret-key-2026-prototype"
-    ):
-        raise RuntimeError("Production requires a new JWT_SECRET with at least 32 characters.")
     if not settings.database_url.startswith(("postgresql://", "postgresql+psycopg2://")):
         raise RuntimeError("Production requires a PostgreSQL DATABASE_URL.")
     if not (settings.supabase_url and settings.supabase_service_role_key):
@@ -52,6 +47,7 @@ async def lifespan(app: FastAPI):
     from app.services.razorpay_service import configured_provider
     configured_provider(settings)
     if settings.auto_migrate:
+        require_generic_schema_target_allowed(engine)
         Base.metadata.create_all(bind=engine)
         migrate_schema()
     os.makedirs(settings.upload_dir_abs, exist_ok=True)

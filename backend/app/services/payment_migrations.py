@@ -21,8 +21,8 @@ TABLES = (
 def migrate_payments(engine):
     from app import models  # noqa: F401 - resolve all referenced existing metadata tables.
 
-    Base.metadata.create_all(engine, tables=[Base.metadata.tables[name] for name in TABLES])
     with engine.begin() as c:
+        Base.metadata.create_all(c, tables=[Base.metadata.tables[name] for name in TABLES])
         additions = {
             "payment_transactions": {
                 "razorpay_refund_id": "VARCHAR(128)",
@@ -220,3 +220,116 @@ def migrate_payments(engine):
             c.exec_driver_sql(
                 "CREATE TRIGGER nl_decision_guard BEFORE UPDATE ON rental_disputes FOR EACH ROW EXECUTE FUNCTION nl_decision_guard()"
             )
+        _financial_v3(c)
+
+
+def _financial_v3(c):
+    """Extend the existing migration history; no business record is backfilled."""
+    c.exec_driver_sql("""CREATE UNIQUE INDEX IF NOT EXISTS nl_one_capture_per_booking
+        ON payment_transactions(booking_id) WHERE transaction_type='payment' AND status='captured'""")
+    c.exec_driver_sql("""CREATE UNIQUE INDEX IF NOT EXISTS nl_order_provider_unique
+        ON payment_transactions(razorpay_order_id) WHERE transaction_type='order'""")
+    c.exec_driver_sql("""CREATE INDEX IF NOT EXISTS nl_refund_reconciliation
+        ON refund_intents(status,created_at)""")
+    c.exec_driver_sql("""CREATE INDEX IF NOT EXISTS nl_dispute_review
+        ON rental_disputes(status,created_at)""")
+    if c.dialect.name == "postgresql":
+        c.exec_driver_sql("""CREATE OR REPLACE FUNCTION nl_booking_binding_guard() RETURNS trigger
+            LANGUAGE plpgsql SET search_path FROM CURRENT AS $$ BEGIN
+              IF NEW.duration_days<=0 OR NEW.duration_days>3650 OR NEW.total_amount_paise>1000000000
+                OR NEW.rental_fee_paise!=NEW.daily_rate_paise*NEW.duration_days OR NEW.end_date<NEW.start_date
+                OR NOT EXISTS(SELECT 1 FROM borrow_requests r JOIN listings l ON l.id=r.listing_id
+                  JOIN negotiation_offers o ON o.id=NEW.offer_id
+                  WHERE r.id=NEW.borrow_request_id AND r.borrower_id=NEW.borrower_id
+                    AND l.id=NEW.listing_id AND l.owner_id=NEW.lender_id
+                    AND o.borrow_request_id=r.id AND o.listing_id=l.id AND o.status='accepted'
+                    AND o.borrower_id_snapshot=NEW.borrower_id AND o.lender_id_snapshot=NEW.lender_id
+                    AND o.daily_rate_paise=NEW.daily_rate_paise AND o.rental_fee_paise=NEW.rental_fee_paise
+                    AND o.security_deposit_paise=NEW.security_deposit_paise
+                    AND o.total_amount_paise=NEW.total_amount_paise
+                    AND o.start_date=NEW.start_date AND o.end_date=NEW.end_date)
+              THEN RAISE EXCEPTION 'booking does not match accepted rental'; END IF;
+              RETURN NEW;
+            END; $$""")
+        c.exec_driver_sql("DROP TRIGGER IF EXISTS nl_booking_binding_guard ON rental_bookings")
+        c.exec_driver_sql("""CREATE TRIGGER nl_booking_binding_guard BEFORE INSERT
+            ON rental_bookings FOR EACH ROW EXECUTE FUNCTION nl_booking_binding_guard()""")
+        c.exec_driver_sql("""CREATE OR REPLACE FUNCTION nl_payment_binding_guard() RETURNS trigger
+            LANGUAGE plpgsql SET search_path FROM CURRENT AS $$
+            DECLARE b RECORD;
+            BEGIN
+              SELECT * INTO b FROM rental_bookings WHERE id=NEW.booking_id FOR UPDATE;
+              IF NOT FOUND OR NEW.provider IS DISTINCT FROM b.provider OR NEW.currency IS DISTINCT FROM b.currency
+                OR NEW.amount_paise<=0 OR NEW.transaction_type NOT IN ('order','payment','deposit_refund')
+                OR (NEW.transaction_type IN ('order','payment') AND NEW.amount_paise!=b.total_amount_paise)
+                OR (NEW.transaction_type='deposit_refund' AND NOT EXISTS(
+                  SELECT 1 FROM refund_intents r WHERE r.booking_id=b.id AND r.amount_paise=NEW.amount_paise))
+              THEN RAISE EXCEPTION 'payment does not match authorized booking'; END IF;
+              IF TG_OP='UPDATE' AND (
+                ROW(OLD.booking_id,OLD.provider,OLD.transaction_type,OLD.amount_paise,OLD.currency,OLD.idempotency_key)
+                  IS DISTINCT FROM ROW(NEW.booking_id,NEW.provider,NEW.transaction_type,NEW.amount_paise,NEW.currency,NEW.idempotency_key)
+                OR (OLD.razorpay_order_id IS NOT NULL AND OLD.razorpay_order_id IS DISTINCT FROM NEW.razorpay_order_id)
+                OR (OLD.razorpay_payment_id IS NOT NULL AND OLD.razorpay_payment_id IS DISTINCT FROM NEW.razorpay_payment_id)
+                OR (OLD.status IN ('captured','processed') AND OLD.status IS DISTINCT FROM NEW.status))
+              THEN RAISE EXCEPTION 'immutable verified payment'; END IF;
+              IF NEW.transaction_type='payment' AND NOT EXISTS(
+                SELECT 1 FROM payment_transactions p WHERE p.booking_id=b.id AND p.transaction_type='order'
+                  AND p.razorpay_order_id=NEW.razorpay_order_id AND NEW.razorpay_payment_id IS NOT NULL)
+              THEN RAISE EXCEPTION 'payment order binding missing'; END IF;
+              RETURN NEW;
+            END; $$""")
+        c.exec_driver_sql("DROP TRIGGER IF EXISTS nl_payment_binding_guard ON payment_transactions")
+        c.exec_driver_sql("""CREATE TRIGGER nl_payment_binding_guard BEFORE INSERT OR UPDATE
+            ON payment_transactions FOR EACH ROW EXECUTE FUNCTION nl_payment_binding_guard()""")
+        c.exec_driver_sql("""CREATE OR REPLACE FUNCTION nl_refund_allocation_guard() RETURNS trigger
+            LANGUAGE plpgsql SET search_path FROM CURRENT AS $$
+            DECLARE b RECORD;
+            BEGIN
+              SELECT * INTO b FROM rental_bookings WHERE id=NEW.booking_id FOR UPDATE;
+              IF NOT FOUND OR b.payment_status!='captured'
+                OR NEW.amount_paise<0 OR NEW.deduction_paise<0
+                OR NEW.kind NOT IN ('clean_return','dispute','cancellation')
+                OR (NEW.kind='cancellation' AND (NEW.deduction_paise!=0 OR NEW.amount_paise!=b.total_amount_paise))
+                OR (NEW.kind!='cancellation' AND NEW.amount_paise+NEW.deduction_paise!=b.security_deposit_paise)
+              THEN RAISE EXCEPTION 'refund exceeds authorized allocation'; END IF;
+              RETURN NEW;
+            END; $$""")
+        c.exec_driver_sql("DROP TRIGGER IF EXISTS nl_refund_allocation_guard ON refund_intents")
+        c.exec_driver_sql("""CREATE TRIGGER nl_refund_allocation_guard BEFORE INSERT OR UPDATE
+            ON refund_intents FOR EACH ROW EXECUTE FUNCTION nl_refund_allocation_guard()""")
+        for table in (
+            "payment_transactions",
+            "refund_intents",
+            "rental_disputes",
+            "processed_webhooks",
+        ):
+            c.exec_driver_sql(f"DROP TRIGGER IF EXISTS nl_no_financial_delete ON {table}")
+            c.exec_driver_sql(
+                f"CREATE TRIGGER nl_no_financial_delete BEFORE DELETE ON {table} FOR EACH ROW EXECUTE FUNCTION nl_immutable()"
+            )
+        for table in (*TABLES, "payment_schema_versions"):
+            # App JWT subjects are varchar IDs, not Supabase auth.uid(). Financial
+            # records are served exclusively by the authenticated backend API.
+            c.exec_driver_sql(f"ALTER TABLE {table} ENABLE ROW LEVEL SECURITY")
+            c.exec_driver_sql(f"REVOKE ALL ON TABLE {table} FROM PUBLIC")
+            for role in ("anon", "authenticated"):
+                if c.exec_driver_sql("SELECT 1 FROM pg_roles WHERE rolname=%s", (role,)).scalar():
+                    c.exec_driver_sql(f"REVOKE ALL ON TABLE {table} FROM {role}")
+        # Pin all existing trigger functions to the migration's resolved schema.
+        functions = (
+            c.exec_driver_sql("""SELECT p.proname FROM pg_proc p
+            JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname=current_schema()
+            AND left(p.proname,3)='nl_' AND p.prorettype='trigger'::regtype""")
+            .scalars()
+            .all()
+        )
+        for name in functions:
+            quoted = c.dialect.identifier_preparer.quote(name)
+            c.exec_driver_sql(f"ALTER FUNCTION {quoted}() SET search_path FROM CURRENT")
+            c.exec_driver_sql(f"REVOKE ALL ON FUNCTION {quoted}() FROM PUBLIC")
+            for role in ("anon", "authenticated"):
+                if c.exec_driver_sql("SELECT 1 FROM pg_roles WHERE rolname=%s", (role,)).scalar():
+                    c.exec_driver_sql(f"REVOKE ALL ON FUNCTION {quoted}() FROM {role}")
+    c.exec_driver_sql(
+        "INSERT INTO payment_schema_versions(version) VALUES (3) ON CONFLICT(version) DO NOTHING"
+    )

@@ -76,12 +76,13 @@ def main():
         }
     )
     from app import models, payment_models  # noqa: F401
-    from app.database import Base, engine
+    from app.database import Base, engine, migrate_schema
 
     if Path(engine.url.database).resolve() != database.resolve():
         raise RuntimeError("Database isolation validation failed")
     if not args.reuse_isolated_state:
         Base.metadata.create_all(engine)
+        migrate_schema(engine)
     engine.dispose()
     children, logs = [], []
     state = {

@@ -69,10 +69,22 @@ class OfferCounterIn(BaseModel):
 
 class ConversationCreateIn(BaseModel):
     lender_id: str
+    listing_id: Optional[str] = Field(None, min_length=1)
     initial_message: Optional[str] = Field(None, max_length=1000)
+
+class ConversationListingOut(BaseModel):
+    id: str
+    name: str
+    price_per_day: float
+    min_price_per_day: Optional[float] = None
+    security_deposit: float = 0
+
+    model_config = ConfigDict(from_attributes=True)
 
 class ConversationSummaryOut(BaseModel):
     id: str
+    listing_id: Optional[str] = None
+    listing: Optional[ConversationListingOut] = None
     borrower: ParticipantOut
     lender: ParticipantOut
     other_participant: ParticipantOut
@@ -86,6 +98,8 @@ class ConversationSummaryOut(BaseModel):
 
 class ConversationDetailOut(BaseModel):
     id: str
+    listing_id: Optional[str] = None
+    listing: Optional[ConversationListingOut] = None
     borrower: ParticipantOut
     lender: ParticipantOut
     is_borrower: bool

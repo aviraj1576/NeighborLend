@@ -1,6 +1,7 @@
 """Keep backend tests isolated from any database configured in .env."""
 
 import os
+import secrets
 import sys
 import tempfile
 import uuid
@@ -17,7 +18,8 @@ os.environ["PAYMENT_DEMO_MODE"] = "true"
 os.environ["DEPLOYMENT_EXPOSURE"] = "local"
 os.environ["PUBLIC_BASE_URL"] = "http://localhost:8000"
 os.environ["CORS_ORIGINS"] = "http://127.0.0.1:5173"
-os.environ["JWT_SECRET"] = uuid.uuid4().hex + uuid.uuid4().hex
+os.environ["JWT_SECRET"] = secrets.token_urlsafe(48)
+os.environ["JWT_ALGORITHM"] = "HS256"
 os.environ["AUTO_MIGRATE"] = "false"
 os.environ["RENTAL_EVIDENCE_DIR"] = str(Path(__file__).resolve().parents[1] / ".payment-verification" / "evidence")
 os.environ["SUPABASE_URL"] = ""

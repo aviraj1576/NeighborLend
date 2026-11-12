@@ -14,6 +14,7 @@ export default function RefundPanel({
 }) {
   const [approved, setApproved] = useState(false);
   const refund = booking.refund;
+  const canOperate = allowed && user?.is_admin === true;
   if (!refund)
     return h(
       'p',
@@ -24,7 +25,9 @@ export default function RefundPanel({
     );
   const gateway = booking.provider === 'razorpay_test';
   const labels = {
-    created: 'Requested — awaiting dispatch approval',
+    created: gateway
+      ? 'Authorized — not yet sent to Razorpay; awaiting dispatch approval'
+      : 'Authorized — awaiting simulated settlement',
     dispatching: 'Request in progress',
     unknown: 'Outcome unknown — reconcile before retry',
     pending: 'Pending provider confirmation',
@@ -38,6 +41,23 @@ export default function RefundPanel({
     { className: 'refund-panel', 'aria-label': 'Deposit refund', 'aria-busy': busy },
     h('h3', null, 'Refund & settlement'),
     h('p', { role: 'status' }, labels[refund.status] || 'Reconciliation required'),
+    gateway &&
+      refund.status === 'pending' &&
+      h(
+        'p',
+        { role: 'status' },
+        'Razorpay has accepted this Test refund but has not confirmed completion. Do not send another refund. An administrator can reconcile the saved refund status. Test Mode does not credit a real bank account.',
+      ),
+    gateway &&
+      refund.provider_refund_id &&
+      h('p', null, 'Razorpay refund reference: ', h('code', null, refund.provider_refund_id)),
+    gateway &&
+      refund.status === 'created' &&
+      h(
+        'p',
+        null,
+        'Confirming a clean return authorizes this amount. Sending it to Razorpay requires the separate approval below. Refresh checks the saved status without sending a refund.',
+      ),
     h(
       'dl',
       null,
@@ -66,7 +86,14 @@ export default function RefundPanel({
         `Reconciliation notice: ${refund.error_code}. No refund success is recorded without provider confirmation.`,
       ),
     refund.status !== 'processed' &&
-      allowed &&
+      !user?.is_admin &&
+      h(
+        'p',
+        { role: 'status' },
+        'Only an administrator can send or reconcile this refund. You can view its status here.',
+      ),
+    refund.status !== 'processed' &&
+      canOperate &&
       h(
         'div',
         null,
@@ -87,7 +114,7 @@ export default function RefundPanel({
           'button',
           {
             type: 'button',
-            disabled: busy,
+            disabled: busy || (gateway && refund.status === 'created'),
             onClick: () => onAction('/payments/refunds/reconcile', { demo_outcome: demoOutcome }),
           },
           gateway
@@ -104,6 +131,7 @@ export default function RefundPanel({
               { className: 'refund-approval' },
               h('input', {
                 type: 'checkbox',
+                disabled: busy,
                 checked: approved,
                 onChange: (e) => setApproved(e.target.checked),
               }),

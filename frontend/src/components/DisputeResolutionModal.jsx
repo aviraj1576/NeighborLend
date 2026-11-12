@@ -31,6 +31,8 @@ export default function DisputeResolutionModal({
     ),
   );
   const claim = booking.dispute;
+  const [reviewedVersion, setReviewedVersion] = useState(booking.dispute?.claim_version || 1);
+  const reviewChanged = Boolean(claim && claim.claim_version !== reviewedVersion);
   const lender = user?.id === booking.lender_id;
   const borrower = user?.id === booking.borrower_id;
   const preReceipt =
@@ -254,6 +256,29 @@ export default function DisputeResolutionModal({
         null,
         !returnReady &&
           h('p', { role: 'status' }, 'Physical return evidence is required before settlement.'),
+        reviewChanged &&
+          h(
+            'div',
+            null,
+            h(
+              'p',
+              { role: 'alert' },
+              'The claim changed. Review the updated evidence and enter a new decision reason.',
+            ),
+            h(
+              'button',
+              {
+                type: 'button',
+                disabled: busy,
+                onClick: () => {
+                  setReviewedVersion(claim.claim_version);
+                  setAmount(String(claim.claimed_deduction_paise / 100));
+                  setNotes('');
+                },
+              },
+              'Review updated claim',
+            ),
+          ),
         h(
           'label',
           null,
@@ -277,13 +302,14 @@ export default function DisputeResolutionModal({
         h(
           'button',
           {
-            disabled: busy || !notes.trim() || !returnReady,
+            disabled: busy || !notes.trim() || !returnReady || reviewChanged,
             type: 'button',
             onClick: () => {
               try {
                 action('/disputes/settle', {
                   approved_deduction_paise: toPaise(amount),
                   reason: notes,
+                  claim_version: reviewedVersion,
                 });
               } catch (err) {
                 setError(err.message);
@@ -291,6 +317,20 @@ export default function DisputeResolutionModal({
             },
           },
           'Record administrator settlement decision',
+        ),
+        h(
+          'button',
+          {
+            type: 'button',
+            disabled: busy || !notes.trim() || !returnReady || reviewChanged,
+            onClick: () =>
+              action('/disputes/settle', {
+                approved_deduction_paise: 0,
+                reason: notes,
+                claim_version: reviewedVersion,
+              }),
+          },
+          'Reject damage claim (full deposit refund)',
         ),
       ),
     (borrower || lender) &&

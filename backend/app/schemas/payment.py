@@ -9,6 +9,11 @@ class PaymentInput(BaseModel):
     booking_id: UUID
 
 
+class CheckoutInput(PaymentInput):
+    # None preserves older clients whose consent is the accepted offer.
+    accepted_terms: bool | None = Field(default=None, strict=True)
+
+
 class VerifyPayment(PaymentInput):
     order_id: str = Field(min_length=1, max_length=128)
     payment_id: str = Field(min_length=1, max_length=128)
@@ -43,6 +48,7 @@ class ClaimResponse(PaymentInput):
 class Resolution(PaymentInput):
     approved_deduction_paise: int = Field(strict=True, ge=0, le=1_000_000_000)
     reason: str = Field(default="", max_length=2000)
+    claim_version: int | None = Field(default=None, strict=True, ge=1)
 
 
 class IssueResolution(PaymentInput):

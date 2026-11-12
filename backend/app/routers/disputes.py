@@ -24,10 +24,13 @@ def dispute_queue(user: User = Depends(get_current_user), db: Session = Depends(
             "booking_id": booking.id,
             "borrow_request_id": booking.borrow_request_id,
             "handover_status": request.handover_status,
+            "borrower_id": booking.borrower_id,
+            "lender_id": booking.lender_id,
             "dispute": PaymentService._dispute_view(dispute),
+            "refund": PaymentService._refund_view(refund),
         }
-        for dispute, booking, request in db.execute(
-            select(RentalDispute, RentalBooking, BorrowRequest)
+        for dispute, booking, request, refund in db.execute(
+            select(RentalDispute, RentalBooking, BorrowRequest, RefundIntent)
             .select_from(RentalBooking)
             .join(BorrowRequest, BorrowRequest.id == RentalBooking.borrow_request_id)
             .outerjoin(RentalDispute, RentalDispute.booking_id == RentalBooking.id)
@@ -37,7 +40,7 @@ def dispute_queue(user: User = Depends(get_current_user), db: Session = Depends(
                     RentalDispute.status.in_(["raised", "needs_claim", "escalated"]),
                     (BorrowRequest.handover_status == "issue_reported")
                     & RentalBooking.settlement_kind.is_(None),
-                    RefundIntent.status.in_(["failed", "unknown"]),
+                    RefundIntent.status.in_(["created", "dispatching", "pending", "failed", "unknown"]),
                 )
             )
         ).all()
@@ -97,4 +100,5 @@ def settle(
         data.approved_deduction_paise,
         admin=bool(user.is_admin),
         reason=data.reason,
+        claim_version=data.claim_version,
     )

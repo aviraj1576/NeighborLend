@@ -9,9 +9,9 @@
     "build:web": "node scripts/check-web-env.mjs && vite build",
     "preview": "vite preview",
     "test": "node --import ./scripts/register-payment-tests.mjs --test src/components/payments.test.js src/utils/photoUrl.test.js",
-    "lint:payments": "eslint src/components/{PaymentModal,EscrowStatusCard,RefundPanel,FinancialTimeline,DisputeResolutionModal,PaymentReviewQueue}.jsx src/components/paymentFlow.js src/components/payments.test.js",
-    "format:payments": "prettier --write src/components/{PaymentModal,EscrowStatusCard,RefundPanel,FinancialTimeline,DisputeResolutionModal,PaymentReviewQueue}.jsx src/components/paymentFlow.js src/components/payments.test.js src/components/PaymentModal.css",
-    "format:payments:check": "prettier --check src/components/{PaymentModal,EscrowStatusCard,RefundPanel,FinancialTimeline,DisputeResolutionModal,PaymentReviewQueue}.jsx src/components/paymentFlow.js src/components/payments.test.js src/components/PaymentModal.css"
+    "lint:payments": "eslint src/components/{PaymentModal,EscrowStatusCard,RefundPanel,FinancialTimeline,DisputeResolutionModal,PaymentReviewQueue,PaymentDocuments}.jsx src/components/paymentFlow.js src/components/payments.test.js src/components/ui/*.jsx src/pages/{BorrowRequestDetail,Chat,ListingDetail}.jsx src/App.jsx",
+    "format:payments": "prettier --write src/components/{PaymentModal,EscrowStatusCard,RefundPanel,FinancialTimeline,DisputeResolutionModal,PaymentReviewQueue,PaymentDocuments}.jsx src/components/paymentFlow.js src/components/payments.test.js src/components/PaymentModal.css",
+    "format:payments:check": "prettier --check src/components/{PaymentModal,EscrowStatusCard,RefundPanel,FinancialTimeline,DisputeResolutionModal,PaymentReviewQueue,PaymentDocuments}.jsx src/components/paymentFlow.js src/components/payments.test.js src/components/PaymentModal.css"
   },
   "dependencies": {
     "axios": "^1.7.7",

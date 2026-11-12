@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -169,14 +169,18 @@ class OfferStatus(str, enum.Enum):
 
 class Conversation(Base):
     __tablename__ = "conversations"
+    __table_args__ = (Index("uq_conversations_participants_listing", "borrower_id", "lender_id", "listing_id", unique=True),)
     id = Column(String, primary_key=True, default=_uuid)
     borrower_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     lender_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    # NULL is retained for legacy general/mixed-history conversations.
+    listing_id = Column(String, ForeignKey("listings.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     borrower = relationship("User", foreign_keys=[borrower_id])
     lender = relationship("User", foreign_keys=[lender_id])
+    listing = relationship("Listing", foreign_keys=[listing_id])
     messages = relationship("Message", back_populates="conversation", order_by="Message.created_at", cascade="all, delete-orphan")
     offers = relationship("NegotiationOffer", back_populates="conversation", order_by="NegotiationOffer.created_at", cascade="all, delete-orphan")
 

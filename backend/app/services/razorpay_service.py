@@ -57,13 +57,14 @@ def validate_payment_configuration(settings):
         for url in [settings.public_base_url, *settings.cors_origin_list]:
             if url and urlparse(url).hostname not in {"localhost", "127.0.0.1", "::1"}:
                 raise ProviderError("local_deployment_requires_loopback_urls")
-    if public and (
-        len(settings.jwt_secret) < 32
-        or settings.jwt_secret == "neighborlend-super-secret-key-2026-prototype"
-        or settings.jwt_secret.lower().startswith(("change-me", "changeme", "your-secret"))
-        or len(set(settings.jwt_secret)) < 12
-    ):
-        raise ProviderError("private_strong_jwt_secret_required")
+    # Central policy applies to local, public and test settings alike. Recheck
+    # cached adapter settings so runtime tampering cannot bypass startup checks.
+    from app.config import validate_jwt_secret
+
+    try:
+        validate_jwt_secret(settings.jwt_secret)
+    except (ValueError, AttributeError):
+        raise ProviderError("private_strong_jwt_secret_required") from None
     # Reject live credentials even if the currently selected provider is disabled.
     if settings.razorpay_key_id and (
         not isinstance(settings.razorpay_key_id, str)

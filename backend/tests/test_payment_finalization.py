@@ -90,7 +90,7 @@ def test_realistic_full_and_partial_deposit_lifecycle(flow, deduction, refund, a
             with flow["factory"]() as db:
                 try:
                     return PaymentService(db, flow["provider"]).reconcile_refund(
-                        flow["booking"]["id"], flow["ids"]["borrower"]
+                        flow["booking"]["id"], flow["ids"]["admin"], admin=True
                     )
                 except HTTPException as exc:
                     assert (
@@ -369,8 +369,10 @@ def test_refund_approval_is_explicit_and_reconciliation_never_dispatches(flow):
         call(flow, "payments/refunds/execute", {"gateway_refund_approved": "true"}).status_code
         == 422
     )
-    assert call(flow, "payments/refunds/reconcile").status_code == 503
-    assert all(method == "GET" for method, _ in calls)
+    unsent = call(flow, "payments/refunds/reconcile")
+    assert unsent.status_code == 200
+    assert unsent.json()["refund"]["status"] == "created"
+    assert calls == []  # An unsent authorization has no gateway outcome to reconcile.
     assert (
         call(
             flow, "payments/refunds/execute", {"gateway_refund_approved": True}, "other"

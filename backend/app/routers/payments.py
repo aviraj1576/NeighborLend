@@ -19,8 +19,14 @@ from app.payment_models import (
     RentalBooking,
     RentalEvidence,
 )
-from app.schemas.payment import DemoPayment, PaymentInput, RefundAction, VerifyPayment
-from app.services.auth import get_current_user
+from app.schemas.payment import (
+    CheckoutInput,
+    DemoPayment,
+    PaymentInput,
+    RefundAction,
+    VerifyPayment,
+)
+from app.services.auth import get_current_user, require_admin
 from app.services.payments import PaymentService, audit, authorize, locked
 from app.services.razorpay_service import (
     WEBHOOK_MAX_BODY_BYTES,
@@ -34,6 +40,35 @@ def financial_response_headers(response: Response):
 
 
 router = APIRouter(dependencies=[Depends(financial_response_headers)])
+
+
+@router.get("/bookings/{booking_id}/receipt")
+@router.get("/bookings/{booking_id}/refund-acknowledgment")
+def download_document(
+    booking_id: str,
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    from app.services.payment_documents import payment_document
+
+    content, filename = payment_document(
+        db,
+        booking_id,
+        user.id,
+        admin=bool(user.is_admin),
+        refund=request.url.path.endswith("/refund-acknowledgment"),
+    )
+    return Response(
+        content,
+        media_type="text/html",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-store",
+            "X-Content-Type-Options": "nosniff",
+            "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox",
+        },
+    )
 
 
 def webhook_receipt_payload(event):
@@ -201,12 +236,14 @@ def status(
 
 @router.post("/create-order")
 def create_order(
-    data: PaymentInput,
+    data: CheckoutInput,
     user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
     provider=Depends(payment_provider),
 ):
-    return PaymentService(db, provider).order(str(data.booking_id), user.id)
+    return PaymentService(db, provider).order(
+        str(data.booking_id), user.id, accepted_terms=data.accepted_terms
+    )
 
 
 @router.post("/verify")
@@ -281,13 +318,14 @@ def refund(
     service = PaymentService(db, provider)
     actor, bid = user.id, str(data.booking_id)
     service.clean_return(bid, actor)
-    return service.reconcile_refund(bid, actor)
+    # Compatibility authorization only. Dispatch is a separate admin action.
+    return service.get(bid, actor)
 
 
 @router.post("/refunds/execute")
 def execute_refund(
     data: RefundAction,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_admin),
     db: Session = Depends(get_db),
     provider=Depends(payment_provider),
 ):
@@ -304,7 +342,7 @@ def execute_refund(
 @router.post("/refunds/reconcile")
 def refund_retry(
     data: RefundAction,
-    user: User = Depends(get_current_user),
+    user: User = Depends(require_admin),
     db: Session = Depends(get_db),
     provider=Depends(payment_provider),
 ):

@@ -193,7 +193,11 @@ def flow(tmp_path, monkeypatch, request):
         postgres_root.dispose()
 
 
-def call(flow, path, data=None, role="borrower"):
+def call(flow, path, data=None, role=None):
+    # Positive refund-operation fixtures use the administrator required by policy.
+    # Authorization-denial tests always supply their actor explicitly.
+    if role is None:
+        role = "admin" if path in {"payments/refunds/execute", "payments/refunds/reconcile"} else "borrower"
     if path == "disputes/respond" and "claim_version" not in (data or {}):
         view = (
             flow["client"]
@@ -287,9 +291,11 @@ def test_complete_mock_clean_return_refund(flow):
         .get(f"/api/payments/bookings/{flow['booking']['id']}", headers=flow["headers"]["borrower"])
         .json()
     )
-    assert state["booking_status"] == "completed" and state["deposit_refunded_paise"] == 50000
-    assert state["held_deposit_paise"] == 0 and state["deduction_paise"] == 0
+    assert state["booking_status"] == "settling" and state["deposit_refunded_paise"] == 0
+    assert state["held_deposit_paise"] == 50000 and state["deduction_paise"] == 0
     assert call(flow, "payments/refund-deposit", role="lender").status_code == 200
+    settled = call(flow, "payments/refunds/execute")
+    assert settled.status_code == 200 and settled.json()["deposit_refunded_paise"] == 50000
     assert_balanced(flow)
 
 

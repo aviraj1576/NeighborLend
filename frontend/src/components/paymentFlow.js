@@ -5,8 +5,65 @@ export function toPaise(value) {
   return Number(whole) * 100 + Number(fraction.padEnd(2, '0'));
 }
 
+export function handoverGuidance(request, user, booking, unlocked) {
+  if (!request?.listing_id || request.handover_status === 'not_applicable') return null;
+  const lender = request.lender_username || request.lender_name || 'the listing lender';
+  const borrower = user?.id === request.borrower_id;
+  const isLender = user?.id === request.lender_id;
+  if (!borrower && !isLender)
+    return `Only this rental's borrower and lender (${lender}) can perform the physical handover.`;
+  if (['pending', 'photos_uploaded', 'borrower_confirmed'].includes(request.handover_status)) {
+    if (unlocked !== true || booking?.handover_unlocked !== true)
+      return 'Handover stays locked until the backend confirms verified payment. Refresh payment status if it is unavailable.';
+    if (request.handover_status === 'pending')
+      return isLender
+        ? 'Upload product photos before handing over the item. Borrower receipt and lender confirmation follow.'
+        : `Waiting for ${lender} to upload product photos before you can confirm receipt.`;
+    if (request.handover_status === 'photos_uploaded')
+      return borrower
+        ? 'Review the lender photos, then confirm receipt or report an issue.'
+        : 'Waiting for the borrower to review your photos and confirm receipt.';
+    return isLender
+      ? 'The borrower confirmed receipt. Confirm the handover to start the rental.'
+      : `Waiting for ${lender} to confirm the handover and start the rental.`;
+  }
+  return null;
+}
+
 export const rupees = (value) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(value / 100);
+
+export async function downloadPaymentDocument(api, bookingId, refund = false) {
+  const kind = refund ? 'refund-acknowledgment' : 'receipt';
+  let response;
+  try {
+    response = await api.get(`/payments/bookings/${encodeURIComponent(bookingId)}/${kind}`, {
+      responseType: 'blob',
+      timeout: 15000,
+    });
+  } catch (error) {
+    // Axios returns JSON error responses as blobs when a download was requested.
+    if (error.response?.data instanceof Blob) {
+      try {
+        error.response.data = JSON.parse(await error.response.data.text());
+      } catch {
+        /* Keep the original error. */
+      }
+    }
+    throw error;
+  }
+  const url = URL.createObjectURL(new Blob([response.data], { type: 'text/html;charset=utf-8' }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `neighborlend-${kind}-${bookingId}.html`;
+  document.body.appendChild(link);
+  try {
+    link.click();
+  } finally {
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+}
 
 let checkoutLoading = null;
 
@@ -58,7 +115,10 @@ export function checkout(api, bookingId, loader = loadCheckout) {
 }
 
 async function runCheckout(api, bookingId, loader) {
-  const { data: order } = await api.post('/payments/create-order', { booking_id: bookingId });
+  const { data: order } = await api.post('/payments/create-order', {
+    booking_id: bookingId,
+    accepted_terms: true,
+  });
   if (order.sandbox_only !== true || order.test_mode !== true)
     throw new Error('Backend sandbox-only confirmation is required. Checkout is blocked.');
   if (order.booking_id !== bookingId)
@@ -96,6 +156,11 @@ async function runCheckout(api, bookingId, loader) {
       currency: order.currency,
       name: 'NeighborLend — TEST MODE',
       description: 'Test rental + refundable deposit. Simulated accounting.',
+      prefill: Object.fromEntries(
+        ['name', 'email']
+          .filter((key) => typeof order.prefill?.[key] === 'string')
+          .map((key) => [key, order.prefill[key]]),
+      ),
       handler: async (result) => {
         if (finished || verifying) return;
         verifying = true;
@@ -149,6 +214,18 @@ export async function uploadRentalEvidence(api, bookingId, file, stage) {
   return data.url;
 }
 
+export function refundReviewLabel(refund) {
+  return (
+    {
+      created: 'Refund authorized — awaiting dispatch approval',
+      dispatching: 'Refund dispatch in progress',
+      pending: 'Refund awaiting gateway confirmation',
+      unknown: 'Refund outcome unknown — reconcile before retry',
+      failed: 'Failed refund — administrator review required',
+    }[refund?.status] || ''
+  );
+}
+
 export function paymentPermissions(booking, user, request) {
   const borrower = user?.id === booking.borrower_id;
   const participant = borrower || user?.id === booking.lender_id;
@@ -170,7 +247,7 @@ export function paymentPermissions(booking, user, request) {
       ['awaiting_payment', 'funded'].includes(booking.booking_status),
     refund:
       enabled &&
-      (participant || user?.is_admin) &&
+      user?.is_admin === true &&
       Boolean(booking.refund) &&
       booking.refund.status !== 'processed',
   };
@@ -211,4 +288,21 @@ export function returnReviewState(request, booking) {
           : 'Return reported — condition disputed; independent human review pending'
         : null,
   };
+}
+// A lost mutation response does not establish its financial outcome. Read the
+// authoritative booking and rental after either result; never retry the POST.
+export async function submitFinancialAction(api, path, payload, refresh, onRentalChange) {
+  let requestError;
+  try {
+    await api.post(path, payload);
+  } catch (error) {
+    requestError = error;
+  }
+  const results = await Promise.allSettled([
+    Promise.resolve().then(() => refresh({ strict: true })),
+    Promise.resolve().then(() => onRentalChange?.({ strict: true })),
+  ]);
+  if (requestError) throw requestError;
+  const failed = results.find((result) => result.status === 'rejected');
+  if (failed) throw failed.reason;
 }

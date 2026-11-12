@@ -1,0 +1,2 @@
+# Preserve the exact reviewed migration bytes and checksum on Windows checkouts.
+backend/supabase/migrations/20261112081704_listing_scoped_conversations.sql text eol=lf

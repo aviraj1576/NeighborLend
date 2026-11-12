@@ -1,126 +1,51 @@
-.create-request-page {
-  padding-top: 100px;
-  padding-bottom: 60px;
-  max-width: 650px;
-  margin: 0 auto;
+/*
+  CreateBorrowRequest — single-page form on a soft surface.
+  All field names, validation and the submit handler preserved.
+*/
+
+.create-request-page { display: flex; flex-direction: column; min-height: 0; }
+.request-header { margin-bottom: var(--s-6, 32px); }
+.request-header h2 { margin: 0 0 var(--s-3, 12px) 0; color: #2b061e; letter-spacing: var(--display-tracking, -0.028em); }
+.request-header p { margin: 0; color: #4a3630; font-size: var(--t-lead, 18px); line-height: 1.5; }
+
+.request-card { max-width: 620px; margin: 0 auto; width: 100%; }
+.request-card .form-body { display: flex; flex-direction: column; gap: var(--s-5, 24px); }
+.error-banner {
+  padding: var(--s-3, 12px) var(--s-4, 16px);
+  border-radius: var(--r-md, 12px);
+  border: 1px solid color-mix(in oklab, #ef4444 35%, transparent);
+  background: color-mix(in oklab, #ef4444 10%, var(--card));
+  color: #b3261e;
+  font: 400 var(--t-small, 14px)/1.45 var(--font-text);
 }
 
-.request-card {
-  padding: 36px;
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--bg-glass-border);
-}
-
-.request-card .title {
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.request-card .subtitle {
-  color: var(--text-secondary);
-  font-size: 14px;
-  margin-bottom: 28px;
-}
-
-.request-form {
+.range-input { width: 100%; height: 6px; accent-color: #d2bf55; }
+.radius-markers {
   display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.form-group label {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-primary);
-}
-
-.form-group input,
-.form-group select,
-.form-group textarea {
-  width: 100%;
-  padding: 12px 16px;
-  background: var(--bg-elevated);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  font-family: inherit;
-  font-size: 14px;
-}
-
-.form-group input:focus,
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: var(--accent-primary);
+  justify-content: space-between;
+  margin-top: var(--s-3, 12px);
+  color: #76575d;
+  font: 400 var(--t-small, 14px)/1 var(--font-text);
 }
 
 .location-section {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-top: 10px;
+  gap: var(--s-3, 12px);
+  margin-top: var(--s-2, 8px);
 }
-
-.location-text {
-  font-size: 13px;
-  color: var(--text-muted);
+.use-location-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2, 8px);
 }
+.use-location-btn svg { flex: none; }
+.location-text { color: #4a3630; font-variant-numeric: tabular-nums; }
 
-.btn-primary {
-  padding: 14px 24px;
-  background: var(--accent-gradient);
-  border: none;
-  border-radius: var(--radius-sm);
-  color: #fff;
-  font-weight: 600;
-  font-size: 16px;
-  cursor: pointer;
-  transition: var(--transition);
-}
+.publish-btn { width: 100%; }
 
-.btn-primary:hover {
-  background: var(--accent-gradient-hover);
-  transform: translateY(-2px);
-}
-
-.btn-secondary {
-  padding: 10px 16px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  color: var(--text-primary);
-  cursor: pointer;
-}
-
-.error-banner {
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid var(--danger);
-  color: var(--danger);
-  padding: 12px 16px;
-  border-radius: var(--radius-sm);
-  font-size: 14px;
-  margin-bottom: 20px;
-}
-
-@media (max-width: 600px) {
-  .create-request-page {
-    padding: 32px 16px 48px;
-  }
-
-  .request-card {
-    padding: 24px 20px;
-  }
-
-  .location-section {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
+@media (max-width: 639px) {
+  .request-card { max-width: 100%; }
+  .location-section { flex-direction: column; align-items: stretch; gap: var(--s-3, 12px); }
+  .use-location-btn { justify-content: center; width: 100%; }
 }

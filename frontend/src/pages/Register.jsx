@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Card from '../components/ui/Card';
 import './Register.css';
 
 const Register = () => {
@@ -11,7 +14,7 @@ const Register = () => {
     full_name: '',
     password: '',
     confirm_password: '',
-    captcha_answer: ''
+    captcha_answer: '',
   });
 
   const [captcha, setCaptcha] = useState({ captcha_id: '', question: '' });
@@ -44,7 +47,7 @@ const Register = () => {
     try {
       const res = await api.get('/auth/captcha');
       setCaptcha(res.data);
-      setFormData(prev => ({ ...prev, captcha_answer: '' }));
+      setFormData((prev) => ({ ...prev, captcha_answer: '' }));
     } catch (err) {
       console.error('Failed to fetch captcha', err);
       setError('Failed to load security check.');
@@ -58,7 +61,7 @@ const Register = () => {
   const handleChange = (e) => {
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [e.target.name]: e.target.value,
     });
   };
 
@@ -87,7 +90,7 @@ const Register = () => {
         email: formData.email,
         password: formData.password,
         captcha_id: captcha.captcha_id,
-        captcha_answer: formData.captcha_answer
+        captcha_answer: formData.captcha_answer,
       };
 
       await register(registerData);
@@ -101,134 +104,130 @@ const Register = () => {
   };
 
   return (
-    <div className="register-page">
-      <div className="register-container glass fade-in-up">
-
-        <div className="register-header">
-          <h1 className="gradient-text">Create Account</h1>
-          <p>Join the community and start sharing.</p>
+    <div className="register-page section" style={{ '--h': '1' }}>
+      <div className="wrap grid grid--top">
+        <div className="register-copy span-6">
+          <div className="register-header">
+            <h1 className="t-h1">Create an account.</h1>
+            <p className="t-lead measure">
+              Join the neighborhood and start borrowing and lending with the people around you.
+            </p>
+          </div>
         </div>
 
-        {error && <div className="error-banner">{error}</div>}
+        <div className="register-form-wrap span-5 start-7">
+          <Card variant="default" className="register-card">
+            <div className="form-body">
+              {error && (
+                <div className="error-banner" role="alert">
+                  {error}
+                </div>
+              )}
 
-        <form onSubmit={handleSubmit} className="register-form">
+              <form onSubmit={handleSubmit} className="register-form">
+                <div className="form-row">
+                  <Input
+                    id="full_name"
+                    name="full_name"
+                    label="Full name"
+                    type="text"
+                    placeholder="John Doe"
+                    value={formData.full_name}
+                    onChange={handleChange}
+                    required
+                  />
+                  <Input
+                    id="username"
+                    name="username"
+                    label="Username"
+                    type="text"
+                    placeholder="johndoe"
+                    value={formData.username}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
 
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="full_name">Full Name</label>
-              <input
-                id="full_name"
-                name="full_name"
-                type="text"
-                value={formData.full_name}
-                onChange={handleChange}
-                placeholder="John Doe"
-                required
-              />
+                <Input
+                  id="email"
+                  name="email"
+                  label="Email address"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                />
+
+                <div className="form-row">
+                  <Input
+                    id="password"
+                    name="password"
+                    label="Password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                  />
+                  <Input
+                    id="confirm_password"
+                    name="confirm_password"
+                    label="Confirm password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={formData.confirm_password}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                <div className="captcha-section">
+                  <div className="captcha-question">
+                    <span>Security check</span>
+                    <strong>{captcha.question}</strong>
+                    <button
+                      type="button"
+                      onClick={fetchCaptcha}
+                      className="refresh-captcha"
+                      aria-label="Refresh security question"
+                    >
+                      Refresh
+                    </button>
+                  </div>
+                  <Input
+                    id="captcha_answer"
+                    name="captcha_answer"
+                    label="Your answer"
+                    type="text"
+                    placeholder="Answer"
+                    value={formData.captcha_answer}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={isLoading}
+                  className="register-submit-btn"
+                >
+                  {isLoading ? 'Creating account…' : 'Create account'}
+                </Button>
+              </form>
+
+              <div className="register-footer">
+                <p className="t-body">
+                  Already have an account?{' '}
+                  <Link to="/login" className="auth-link">
+                    Sign in
+                  </Link>
+                </p>
+              </div>
             </div>
-
-            <div className="form-group">
-              <label htmlFor="username">Username</label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                value={formData.username}
-                onChange={handleChange}
-                placeholder="johndoe"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="form-group">
-            <label htmlFor="email">Email Address</label>
-            <input
-              id="email"
-              name="email"
-              type="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="john@example.com"
-              required
-            />
-          </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                required
-              />
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="confirm_password">Confirm Password</label>
-              <input
-                id="confirm_password"
-                name="confirm_password"
-                type="password"
-                value={formData.confirm_password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="captcha-section">
-            <div className="captcha-question">
-              <span>Security Check:</span>
-              <strong>{captcha.question}</strong>
-
-              <button
-                type="button"
-                onClick={fetchCaptcha}
-                className="refresh-captcha"
-              >
-                Refresh
-              </button>
-            </div>
-
-            <input
-              type="text"
-              name="captcha_answer"
-              value={formData.captcha_answer}
-              onChange={handleChange}
-              placeholder="Answer"
-              required
-            />
-          </div>
-
-          <button
-            type="submit"
-            className="btn-primary register-submit-btn"
-            disabled={isLoading}
-          >
-            {isLoading ? (
-              <span className="spinner"></span>
-            ) : (
-              'Create Account'
-            )}
-          </button>
-
-        </form>
-
-        <div className="register-footer">
-          <p>
-            Already have an account?{' '}
-            <Link to="/login" className="auth-link">
-              Log in
-            </Link>
-          </p>
+          </Card>
         </div>
-
       </div>
     </div>
   );

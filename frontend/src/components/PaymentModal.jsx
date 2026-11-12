@@ -8,6 +8,7 @@ export default function PaymentModal({ booking, api, onChange }) {
   const [error, setError] = useState('');
   const [demo, setDemo] = useState(Boolean(booking.pending_payment_id));
   const [pending, setPending] = useState(booking.pending_payment_id || null);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const sandboxConfirmed =
     booking.sandbox_only === true &&
     booking.test_mode === true &&
@@ -48,14 +49,26 @@ export default function PaymentModal({ booking, api, onChange }) {
         'Backend sandbox-only confirmation is required. Checkout is blocked.',
       ),
     h(
+      'label',
+      null,
+      h('input', {
+        type: 'checkbox',
+        checked: acceptedTerms,
+        disabled: busy,
+        onChange: (event) => setAcceptedTerms(event.target.checked),
+      }),
+      'I accept the agreed rental period, rental fee, refundable deposit and human-reviewed dispute terms.',
+    ),
+    h(
       'button',
       {
         type: 'button',
-        disabled: busy || !sandboxConfirmed,
+        disabled: busy || !sandboxConfirmed || !acceptedTerms,
         onClick: () =>
           run(async () => {
             if (!sandboxConfirmed)
               throw new Error('Backend sandbox-only confirmation is required.');
+            if (!acceptedTerms) throw new Error('Accept the rental terms before checkout.');
             const result = await checkout(api, booking.id);
             setDemo(result.mock);
           }),

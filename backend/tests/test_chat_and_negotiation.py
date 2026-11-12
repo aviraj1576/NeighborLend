@@ -99,7 +99,7 @@ class TestChatAndNegotiation(unittest.TestCase):
         self.__class__.conversation_id = conv["id"]
         self.assertEqual(conv["borrower"]["id"], self.borrower.id)
         self.assertEqual(conv["lender"]["id"], self.lender.id)
-        self.assertNotIn("listing_id", conv)
+        self.assertIsNone(conv["listing_id"])  # Legacy general chat binds on its first offer.
         self.assertTrue(conv["is_borrower"])
         self.assertGreaterEqual(len(conv["messages"]), 1)
 

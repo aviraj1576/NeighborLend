@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
+import Footer from './components/Footer';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
 import Register from './pages/Register';
@@ -27,9 +28,10 @@ const MainLayout = ({ children }) => {
   return (
     <>
       <Navbar />
-      <main style={{ paddingTop: '80px', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <main style={{ paddingTop: 'var(--nav, 72px)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         {children}
       </main>
+      <Footer />
     </>
   );
 };

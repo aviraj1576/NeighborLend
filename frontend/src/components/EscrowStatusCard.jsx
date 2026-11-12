@@ -3,7 +3,14 @@ import PaymentModal from './PaymentModal.jsx';
 import DisputeResolutionModal from './DisputeResolutionModal.jsx';
 import RefundPanel from './RefundPanel.jsx';
 import FinancialTimeline from './FinancialTimeline.jsx';
-import { apiErrorMessage, paymentLabel, paymentPermissions, rupees } from './paymentFlow.js';
+import PaymentDocuments from './PaymentDocuments.jsx';
+import {
+  apiErrorMessage,
+  paymentLabel,
+  paymentPermissions,
+  rupees,
+  submitFinancialAction,
+} from './paymentFlow.js';
 
 const h = React.createElement;
 
@@ -20,6 +27,7 @@ export default function EscrowStatusCard({
   const [busy, setBusy] = useState(false);
   const [refundOutcome, setRefundOutcome] = useState('processed');
   const refreshVersion = useRef(0);
+  const actionInFlight = useRef(false);
   const permissions = booking ? paymentPermissions(booking, user, request) : {};
   const refresh = useCallback(
     async ({ strict = false } = {}) => {
@@ -29,7 +37,7 @@ export default function EscrowStatusCard({
         if (version !== refreshVersion.current) return;
         setBooking(data);
         onBooking?.(data);
-        onStatus(Boolean(data.handover_unlocked));
+        onStatus(data.handover_unlocked === true);
         setError('');
       } catch (err) {
         if (version !== refreshVersion.current) {
@@ -50,18 +58,28 @@ export default function EscrowStatusCard({
   useEffect(() => {
     refresh();
     const timer = setInterval(refresh, 15000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      refreshVersion.current += 1;
+    };
   }, [refresh, request.handover_status]);
   async function action(path, extra = {}) {
+    if (actionInFlight.current) return;
+    actionInFlight.current = true;
     setBusy(true);
     setError('');
     try {
-      await api.post(path, { booking_id: booking.id, ...extra });
-      await refresh();
-      await onRentalChange?.();
+      await submitFinancialAction(
+        api,
+        path,
+        { booking_id: booking.id, ...extra },
+        refresh,
+        onRentalChange,
+      );
     } catch (err) {
       setError(apiErrorMessage(err, 'Financial operation pending. Check status before retrying.'));
     } finally {
+      actionInFlight.current = false;
       setBusy(false);
     }
   }
@@ -115,6 +133,14 @@ export default function EscrowStatusCard({
               null,
               `Rental: ${booking.booking_status}. Handover ${booking.handover_unlocked ? 'unlocked' : 'locked'}.`,
             ),
+            booking.lender_settlement &&
+              h(
+                'p',
+                null,
+                `Lender rental earnings payable: ${rupees(booking.lender_settlement.rental_earnings_payable_paise)}. Simulated accounting; no provider transfer.`,
+              ),
+            booking.reconciliation?.balanced === false &&
+              h('p', { role: 'alert' }, 'Financial reconciliation requires administrator review.'),
             permissions.checkout && h(PaymentModal, { booking, api, onChange: refresh }),
             permissions.reconcile &&
               h(
@@ -147,7 +173,7 @@ export default function EscrowStatusCard({
               ),
             }),
             h(RefundPanel, {
-              key: booking.refund?.id,
+              key: `${booking.refund?.id}:${booking.refund?.status}`,
               booking,
               user,
               busy,
@@ -157,6 +183,7 @@ export default function EscrowStatusCard({
               onDemoOutcome: setRefundOutcome,
             }),
             h(FinancialTimeline, { booking }),
+            h(PaymentDocuments, { booking, api }),
           ),
   );
 }

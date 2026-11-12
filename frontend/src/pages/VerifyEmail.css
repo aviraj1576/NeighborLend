@@ -1,20 +1,45 @@
+/*
+  VerifyEmail — soft auth surface, one section per screen, asymmetric layout.
+*/
+
+.verify-page { display: flex; flex-direction: column; min-height: 0; }
+.verify-page .wrap { height: 100%; }
+.verify-copy { display: flex; flex-direction: column; justify-content: center; min-height: 0; }
+.verify-header h1 { margin: 0 0 var(--s-4, 16px) 0; color: #2b061e; letter-spacing: var(--display-tracking, -0.028em); }
+.verify-header p { margin: 0; color: #4a3630; }
+
+.verify-form-wrap { display: flex; align-items: center; justify-content: center; min-height: 0; }
+.verify-card { max-width: 440px; width: 100%; }
+.verify-card .form-body { display: flex; flex-direction: column; gap: var(--s-5, 24px); }
+.error-banner {
+  padding: var(--s-3, 12px) var(--s-4, 16px);
+  border-radius: var(--r-md, 12px);
+  border: 1px solid color-mix(in oklab, #ef4444 35%, transparent);
+  background: color-mix(in oklab, #ef4444 10%, var(--card));
+  color: #b3261e;
+  font: 400 var(--t-small, 14px)/1.45 var(--font-text);
+}
 .verification-message {
-  padding: 12px 16px;
-  margin-bottom: 20px;
-  border: 1px solid rgba(0, 212, 170, 0.25);
-  border-radius: var(--radius-sm);
-  color: var(--accent-primary);
-  font-size: 0.9rem;
+  padding: var(--s-3, 12px) var(--s-4, 16px);
+  border-radius: var(--r-md, 12px);
+  border: 1px solid color-mix(in oklab, #22c55e 30%, transparent);
+  background: color-mix(in oklab, #22c55e 10%, var(--card));
+  color: #15803d;
+  font: 400 var(--t-small, 14px)/1.45 var(--font-text);
+  margin-bottom: var(--s-2, 8px);
 }
+.verify-footer { margin-top: var(--s-2, 8px); }
+.verify-footer p { margin: 0; color: #4a3630; text-align: center; }
+.auth-link { color: #8d5a28; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
 
-.resend-code-button {
-  display: block;
-  margin: 18px auto 0;
-  color: var(--accent-primary);
-  font-weight: 600;
+@media (max-width: 1023px) {
+  .verify-page .wrap { grid-template-columns: 1fr !important; gap: var(--s-6, 32px); }
+  .verify-copy.span-6, .verify-form-wrap.span-5 { grid-column: 1 / -1; }
+  .verify-copy { text-align: center; align-items: center; padding-top: var(--s-6, 32px); }
+  .verify-header p { max-width: none; margin: 0 auto; }
+  .verify-form-wrap { justify-content: center; padding-bottom: var(--s-6, 32px); }
 }
-
-.resend-code-button:disabled {
-  color: var(--text-muted);
-  cursor: not-allowed;
+@media (max-width: 639px) {
+  .verify-header h1 { font-size: 28px; }
+  .verify-card { max-width: 100%; }
 }
