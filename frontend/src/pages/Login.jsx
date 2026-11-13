@@ -74,7 +74,7 @@ const Login = () => {
   };
 
   return (
-    <div className="login-page section" style={{ '--h': '1' }}>
+    <div className="login-page app-page">
       <div className="wrap grid grid--top">
         <div className="login-copy span-6">
           <div className="login-header">
