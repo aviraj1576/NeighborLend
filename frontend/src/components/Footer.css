@@ -3,9 +3,18 @@
   hairline rule, one credit line, equal edges via .wrap.
 */
 
+/* the kit makes footer.closing a full screen tall; the app footer is only as tall as its content */
 .footer.closing {
-  padding-block: var(--padt) calc(var(--padb) + var(--bar));
+  height: auto;
+  min-height: 0;
+  padding-block: var(--s-8, 64px) calc(var(--s-7, 48px) + var(--bar));
   border-top: 1px solid var(--line-strong, color-mix(in oklab, var(--p-inv-ink) 18%, transparent));
+}
+
+.footer-links {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-6, 32px);
 }
 
 .footer-grid {
