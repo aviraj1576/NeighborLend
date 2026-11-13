@@ -4,6 +4,25 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 from app.models import Listing, ListingStatus, NegotiationOffer, OfferStatus, BorrowRequest, BorrowRequestStatus, Conversation
 
+
+def snapshot_offer_terms(offer, listing, conversation):
+    from app.services.escrow_service import paise
+
+    days, _ = calculate_rental_duration_and_cost(offer.daily_price, offer.start_date, offer.end_date)
+    daily = paise(offer.daily_price)
+    deposit = paise(listing.security_deposit or 0)
+    if daily <= 0 or days > 3650 or daily * days + deposit > 1_000_000_000:
+        raise ValueError("Offer amount or duration outside supported limits")
+    offer.borrower_id_snapshot = conversation.borrower_id
+    offer.lender_id_snapshot = listing.owner_id
+    offer.daily_rate_paise = daily
+    offer.rental_fee_paise = daily * days
+    offer.security_deposit_paise = deposit
+    offer.total_amount_paise = daily * days + deposit
+    # Legacy display fields are derived from the authoritative minor-unit terms.
+    offer.daily_price = daily / 100
+    offer.total_cost = offer.rental_fee_paise / 100
+
 def calculate_rental_duration_and_cost(daily_price: float, start_date: datetime, end_date: datetime) -> Tuple[int, float]:
     """
     Consistent rental duration and cost calculation.

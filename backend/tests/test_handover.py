@@ -89,8 +89,19 @@ class TestHandover(unittest.TestCase):
             borrow_request_id=request.id,
         )
         cls.db.add(offer)
+        from app.services.negotiation import snapshot_offer_terms
+        snapshot_offer_terms(offer, cls.listing, conversation)
         cls.db.flush()
-        return request.id
+        # Handover regression fixtures now represent explicitly funded demo rentals.
+        from app.services.payments import PaymentService, snapshot_booking
+        from app.services.razorpay_service import MockPaymentProvider
+        booking = snapshot_booking(cls.db, request, offer, "mock")
+        request_id, booking_id, actor = request.id, booking.id, cls.borrower.id
+        cls.db.commit()
+        payments = PaymentService(cls.db, MockPaymentProvider())
+        payments.order(booking_id, actor)
+        payments.demo_pay(booking_id, actor, "success")
+        return request_id
 
     @classmethod
     def tearDownClass(cls):
@@ -110,6 +121,19 @@ class TestHandover(unittest.TestCase):
         )
         self.assertEqual(forbidden.status_code, 403)
 
+    def _evidence(self, request_id):
+        import io
+        from PIL import Image
+        from app.payment_models import RentalBooking
+        booking = self.db.query(RentalBooking).filter_by(borrow_request_id=request_id).one()
+        stream = io.BytesIO()
+        Image.new("RGB", (8, 8), "white").save(stream, format="PNG")
+        result = self.client.post(f"/api/payments/bookings/{booking.id}/evidence?stage=handover",
+                                  headers=self.headers["lender"],
+                                  files={"file": ("before.png", stream.getvalue(), "image/png")})
+        self.assertEqual(result.status_code, 200, result.text)
+        return result.json()["url"]
+
     def test_new_handover_flow(self):
         """Test the new handover flow: lender uploads photos -> borrower confirms -> lender confirms"""
         request_url = f"/api/borrow-requests/{self.request_id}/handover"
@@ -121,12 +145,12 @@ class TestHandover(unittest.TestCase):
         self.assertEqual(self.client.post(upload_url, headers=self.headers["intruder"], json={"photo_urls": ["x"]}).status_code, 403)
         self.assertEqual(self.client.post(upload_url, headers=self.headers["borrower"], json={"photo_urls": ["x"]}).status_code, 403)
         
-        upload_resp = self.client.post(upload_url, headers=self.headers["lender"], json={"photo_urls": ["http://example.com/photo1.jpg"]})
+        upload_resp = self.client.post(upload_url, headers=self.headers["lender"], json={"photo_urls": [self._evidence(self.request_id)]})
         self.assertEqual(upload_resp.status_code, 200)
         self.assertEqual(upload_resp.json()["handover_status"], "photos_uploaded")
         self.assertEqual(len(upload_resp.json()["handover_photos"]), 1)
 
-        # 2. Borrower confirms receipt (starts rental)
+        # 2. Borrower acknowledges receipt; lender acknowledgement starts rental.
         self.assertEqual(self.client.post(borrower_confirm_url, headers=self.headers["intruder"], json={"photo_urls": []}).status_code, 403)
         self.assertEqual(self.client.post(borrower_confirm_url, headers=self.headers["lender"], json={"photo_urls": []}).status_code, 403)
         
@@ -134,10 +158,10 @@ class TestHandover(unittest.TestCase):
         self.assertEqual(confirm_resp.status_code, 200)
         body = confirm_resp.json()
         self.assertEqual(body["handover_status"], "borrower_confirmed")
-        self.assertEqual(body["status"], "fulfilled")
+        self.assertEqual(body["status"], "open")
         self.assertEqual(body["handover_confirmed_by"], self.borrower.id)
-        self.assertIsNotNone(body["borrowing_started_at"])
-        self.assertIsNotNone(body["return_due_at"])
+        self.assertIsNone(body["borrowing_started_at"])
+        self.assertIsNone(body["return_due_at"])
 
         # 3. Lender confirms handover complete
         self.assertEqual(self.client.post(lender_confirm_url, headers=self.headers["intruder"]).status_code, 403)
@@ -163,7 +187,7 @@ class TestHandover(unittest.TestCase):
         issue_url = f"{request_url}/report-issue"
 
         # Lender uploads photos first
-        self.assertEqual(self.client.post(upload_url, headers=self.headers["lender"], json={"photo_urls": ["http://example.com/photo1.jpg"]}).status_code, 200)
+        self.assertEqual(self.client.post(upload_url, headers=self.headers["lender"], json={"photo_urls": [self._evidence(self.issue_request_id)]}).status_code, 200)
 
         # Borrower reports issue
         self.assertEqual(

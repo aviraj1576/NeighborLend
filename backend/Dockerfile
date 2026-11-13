@@ -26,6 +26,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
 COPY backend/app ./app
+COPY backend/supabase/migrations ./supabase/migrations
 COPY backend/ai_service ./ai_service
 
 RUN mkdir -p uploads

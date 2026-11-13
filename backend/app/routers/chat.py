@@ -16,7 +16,7 @@ from app.schemas.chat import (
 )
 from app.services.auth import get_current_user
 from app.services.notifications import create_notification
-from app.services.negotiation import calculate_rental_duration_and_cost, check_listing_availability
+from app.services.negotiation import calculate_rental_duration_and_cost, check_listing_availability, snapshot_offer_terms
 
 router = APIRouter()
 
@@ -59,6 +59,12 @@ def _format_offer(offer: NegotiationOffer) -> OfferOut:
         start_date=offer.start_date,
         end_date=offer.end_date,
         total_cost=offer.total_cost,
+        borrower_id=offer.borrower_id_snapshot,
+        lender_id=offer.lender_id_snapshot,
+        daily_rate_paise=offer.daily_rate_paise,
+        rental_fee_paise=offer.rental_fee_paise,
+        security_deposit_paise=offer.security_deposit_paise,
+        total_amount_paise=offer.total_amount_paise,
         message=offer.message,
         status=offer.status,
         parent_offer_id=offer.parent_offer_id,
@@ -75,6 +81,26 @@ def _get_active_offer(offers: List[NegotiationOffer]) -> Optional[NegotiationOff
     if offers:
         return offers[-1]
     return None
+
+
+def _bind_listing(db: Session, conv: Conversation, listing_id: str):
+    """Legacy general chats bind once; existing offers can never switch listing."""
+    if conv.listing_id is not None:
+        if conv.listing_id != listing_id:
+            raise HTTPException(409, "This conversation concerns another listing; open the listing's chat")
+        return
+    old_listing_ids = {o.listing_id for o in conv.offers}
+    if old_listing_ids and old_listing_ids != {listing_id}:
+        raise HTTPException(409, "Historical conversation contains other listings; open the listing's chat")
+    existing = db.query(Conversation).filter(
+        Conversation.borrower_id == conv.borrower_id,
+        Conversation.lender_id == conv.lender_id,
+        Conversation.listing_id == listing_id,
+        Conversation.id != conv.id,
+    ).first()
+    if existing:
+        raise HTTPException(409, "A conversation for this listing already exists; open the listing's chat")
+    conv.listing_id = listing_id
 
 # ==================== CONVERSATIONS ====================
 
@@ -104,6 +130,8 @@ def list_conversations(current_user: User = Depends(get_current_user), db: Sessi
 
         results.append(ConversationSummaryOut(
             id=conv.id,
+            listing_id=conv.listing_id,
+            listing=conv.listing,
             borrower=_format_participant(conv.borrower),
             lender=_format_participant(conv.lender),
             other_participant=_format_participant(other_user),
@@ -121,27 +149,54 @@ def create_or_get_conversation(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Create or retrieve a conversation with a lender."""
+    """Return exactly the borrower's listing thread, retaining legacy general chats."""
     lender = db.query(User).filter(User.id == data.lender_id).first()
     if not lender:
         raise HTTPException(status_code=404, detail="User not found")
     if lender.id == current_user.id:
         raise HTTPException(status_code=400, detail="You cannot start a conversation with yourself.")
 
-    # Check existing conversation
+    listing = None
+    if data.listing_id:
+        listing = db.query(Listing).filter(Listing.id == data.listing_id).first()
+        if not listing or listing.owner_id != lender.id:
+            raise HTTPException(404, "Listing not found for this lender")
+
+    # Serialize lookup/adoption/insertion for this borrower on SQLite and PostgreSQL.
+    # The unique index also protects scoped threads from other writers.
+    db.query(User).filter(User.id == current_user.id).update(
+        {User.trust_score: User.trust_score}, synchronize_session=False)
     conv = (
         db.query(Conversation)
         .filter(
             Conversation.borrower_id == current_user.id,
-            Conversation.lender_id == lender.id
+            Conversation.lender_id == lender.id,
+            Conversation.listing_id == data.listing_id,
         )
+        .order_by(Conversation.created_at, Conversation.id)
         .first()
     )
 
+    if not conv and listing:
+        # Reuse an unambiguous historical thread without moving messages/offers.
+        legacy = db.query(Conversation).filter(
+            Conversation.borrower_id == current_user.id,
+            Conversation.lender_id == lender.id,
+            Conversation.listing_id.is_(None),
+        ).order_by(Conversation.created_at, Conversation.id).all()
+        matching = [c for c in legacy if {o.listing_id for o in c.offers} == {listing.id}]
+        empty = [c for c in legacy if not c.offers and listing.status == ListingStatus.published]
+        if matching or empty:
+            conv = (matching or empty)[0]
+            _bind_listing(db, conv, listing.id)
+
     if not conv:
+        if listing and listing.status != ListingStatus.published:
+            raise HTTPException(409, "Listing is not available for a new conversation")
         conv = Conversation(
             borrower_id=current_user.id,
-            lender_id=lender.id
+            lender_id=lender.id,
+            listing_id=data.listing_id,
         )
         db.add(conv)
         db.flush()
@@ -150,7 +205,7 @@ def create_or_get_conversation(
         sys_msg = Message(
             conversation_id=conv.id,
             sender_id=current_user.id,
-            content=f"Conversation started with {lender.name}.",
+            content=f"Conversation started with {lender.name}" + (f" about {listing.name}." if listing else "."),
             is_system=True
         )
         db.add(sys_msg)
@@ -181,6 +236,8 @@ def create_or_get_conversation(
 
     return ConversationDetailOut(
         id=conv.id,
+        listing_id=conv.listing_id,
+        listing=conv.listing,
         borrower=_format_participant(conv.borrower),
         lender=_format_participant(conv.lender),
         is_borrower=is_borrower,
@@ -210,6 +267,8 @@ def get_conversation(
 
     return ConversationDetailOut(
         id=conv.id,
+        listing_id=conv.listing_id,
+        listing=conv.listing,
         borrower=_format_participant(conv.borrower),
         lender=_format_participant(conv.lender),
         is_borrower=is_borrower,
@@ -311,6 +370,11 @@ def create_offer(
     if not listing:
         raise HTTPException(status_code=404, detail="Choose an available listing owned by this conversation's lender")
 
+    db.query(User).filter(User.id == conv.borrower_id).update(
+        {User.trust_score: User.trust_score}, synchronize_session=False)
+    db.refresh(conv)
+    _bind_listing(db, conv, listing.id)
+
     # Date and duration validation
     try:
         days, total_cost = calculate_rental_duration_and_cost(data.daily_price, data.start_date, data.end_date)
@@ -346,6 +410,10 @@ def create_offer(
         message=data.message,
         status=OfferStatus.pending
     )
+    try:
+        snapshot_offer_terms(offer, listing, conv)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
     db.add(offer)
     db.flush()
 
@@ -403,6 +471,21 @@ def accept_offer(
     if offer.status != OfferStatus.pending:
         raise HTTPException(status_code=400, detail=f"Offer cannot be accepted because it is already '{offer.status.value}'.")
 
+    db.query(User).filter(User.id == conv.borrower_id).update(
+        {User.trust_score: User.trust_score}, synchronize_session=False)
+    db.refresh(conv)
+    _bind_listing(db, conv, offer.listing_id)
+    if not offer.listing or offer.listing.owner_id != conv.lender_id:
+        raise HTTPException(409, "Offer listing does not belong to this lender")
+
+    # Serialize acceptance per listing on SQLite and PostgreSQL before overlap checks.
+    db.query(Listing).filter(Listing.id == offer.listing_id).update(
+        {Listing.updated_at: Listing.updated_at}, synchronize_session=False)
+    db.refresh(offer)
+    if offer.status != OfferStatus.pending:
+        raise HTTPException(status_code=409, detail="Offer was already accepted")
+    if offer.total_amount_paise is None:
+        raise HTTPException(409, "Historical offer lacks agreed deposit terms; submit a new offer")
     # Recheck item availability
     is_avail, reason = check_listing_availability(db, offer.listing_id, offer.start_date, offer.end_date, exclude_offer_id=offer.id)
     if not is_avail:
@@ -438,6 +521,16 @@ def accept_offer(
     db.add(borrow_req)
     db.flush()
     offer.borrow_request_id = borrow_req.id
+    from app.config import get_settings
+    from app.services.payments import snapshot_booking
+    from app.services.razorpay_service import configured_provider, ProviderError
+    try:
+        provider = configured_provider(get_settings())
+    except ProviderError as exc:
+        raise HTTPException(503, exc.code) from None
+    if provider.kind == "disabled":
+        raise HTTPException(503, "Payments disabled; new booking acceptance is unavailable")
+    snapshot_booking(db, borrow_req, offer, provider.kind, actor=current_user.id)
 
     # Post system message into conversation
     date_range = f"{offer.start_date.strftime('%b %d, %Y')} - {offer.end_date.strftime('%b %d, %Y')}"
@@ -489,6 +582,14 @@ def counter_offer(
     if parent_offer.status != OfferStatus.pending:
         raise HTTPException(status_code=400, detail=f"Cannot counter offer because it is already '{parent_offer.status.value}'.")
 
+    db.query(User).filter(User.id == conv.borrower_id).update(
+        {User.trust_score: User.trust_score}, synchronize_session=False)
+    db.refresh(conv)
+    _bind_listing(db, conv, parent_offer.listing_id)
+    db.refresh(parent_offer)
+    if parent_offer.status != OfferStatus.pending:
+        raise HTTPException(409, "Offer is no longer pending")
+
     # Calculate duration and cost
     try:
         days, total_cost = calculate_rental_duration_and_cost(data.daily_price, data.start_date, data.end_date)
@@ -526,6 +627,10 @@ def counter_offer(
         status=OfferStatus.pending,
         parent_offer_id=parent_offer.id
     )
+    try:
+        snapshot_offer_terms(new_offer, listing, conv)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from None
     db.add(new_offer)
     db.flush()
 

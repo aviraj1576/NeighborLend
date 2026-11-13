@@ -1,4 +1,4 @@
-from sqlalchemy import create_engine, inspect, text
+from sqlalchemy import create_engine, inspect, text, event
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.config import get_settings
 
@@ -17,6 +17,12 @@ engine = create_engine(
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
 Base = declarative_base()
 
+if settings.database_url.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def configure_sqlite(connection, record):
+        connection.execute("PRAGMA foreign_keys=ON")
+        connection.execute("PRAGMA busy_timeout=15000")
+
 def get_db():
     db = SessionLocal()
     try:
@@ -25,9 +31,31 @@ def get_db():
         db.close()
 
 
+def require_generic_schema_target_allowed(target_engine):
+    """Hosted Supabase DDL must use separately reviewed SQL, never initialization."""
+    if target_engine.dialect.name != "postgresql":
+        return
+    url = target_engine.url
+    query_hosts = url.query.get("host", ())
+    if isinstance(query_hosts, str):
+        query_hosts = (query_hosts,)
+    # libpq host overrides/multi-host URLs can replace the URL's apparent host.
+    for hosts in (url.host or "", *query_hosts):
+        for host in hosts.split(","):
+            hostname = host.strip().lower().split(":", 1)[0].rstrip(".")
+            if hostname.endswith((".supabase.co", ".supabase.com")):
+                raise RuntimeError(
+                    "Generic schema initialization is disabled for hosted Supabase. "
+                    "Use separately reviewed and explicitly authorized migration SQL."
+                )
+
+
 def migrate_schema(target_engine=None):
     """Apply additive schema changes needed by existing installations."""
     target_engine = target_engine or engine
+    require_generic_schema_target_allowed(target_engine)
+    from app.services.payment_migrations import migrate_payments
+    migrate_payments(target_engine)
     additions = {
         "users": {
             "is_verified": "BOOLEAN NOT NULL DEFAULT TRUE",
@@ -85,55 +113,6 @@ def migrate_schema(target_engine=None):
                 "ON users (google_sub)"
             ))
 
-        # Move the old conversation-level listing association onto historical
-        # offers before removing it. This keeps existing negotiations intact.
-        inspector = inspect(connection)
-        tables = set(inspector.get_table_names())
-        if "conversations" in tables and "negotiation_offers" in tables:
-            conversation_columns = {c["name"] for c in inspector.get_columns("conversations")}
-            offer_columns = {c["name"] for c in inspector.get_columns("negotiation_offers")}
-            if "listing_id" in conversation_columns:
-                if "listing_id" not in offer_columns:
-                    connection.execute(text("ALTER TABLE negotiation_offers ADD COLUMN listing_id VARCHAR"))
-                connection.execute(text(
-                    "UPDATE negotiation_offers SET listing_id = "
-                    "(SELECT conversations.listing_id FROM conversations "
-                    "WHERE conversations.id = negotiation_offers.conversation_id) "
-                    "WHERE listing_id IS NULL"
-                ))
-
-                quote = connection.dialect.identifier_preparer.quote
-                if connection.dialect.name == "postgresql":
-                    has_listing_fk = any(
-                        "listing_id" in fk.get("constrained_columns", [])
-                        for fk in inspector.get_foreign_keys("negotiation_offers")
-                    )
-                    if not has_listing_fk:
-                        connection.execute(text(
-                            "ALTER TABLE negotiation_offers ADD CONSTRAINT "
-                            "fk_negotiation_offers_listing_id_listings "
-                            "FOREIGN KEY (listing_id) REFERENCES listings (id)"
-                        ))
-                    has_listing_index = any(
-                        "listing_id" in (idx.get("column_names") or [])
-                        for idx in inspector.get_indexes("negotiation_offers")
-                    )
-                    if not has_listing_index:
-                        connection.execute(text(
-                            "CREATE INDEX ix_negotiation_offers_listing_id "
-                            "ON negotiation_offers (listing_id)"
-                        ))
-                if connection.dialect.name == "postgresql":
-                    for foreign_key in inspector.get_foreign_keys("conversations"):
-                        if "listing_id" in foreign_key.get("constrained_columns", []):
-                            name = foreign_key.get("name")
-                            if name:
-                                connection.execute(text(
-                                    f"ALTER TABLE conversations DROP CONSTRAINT {quote(name)}"
-                                ))
-                for index in inspector.get_indexes("conversations"):
-                    if "listing_id" in (index.get("column_names") or []):
-                        connection.execute(text(
-                            f"DROP INDEX IF EXISTS {quote(index['name'])}"
-                        ))
-                connection.execute(text("ALTER TABLE conversations DROP COLUMN listing_id"))
+    # Explicit migration only; AUTO_MIGRATE remains disabled by default.
+    from app.services.conversation_migrations import migrate_conversations
+    migrate_conversations(target_engine)

@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -126,6 +126,8 @@ class BorrowRequest(Base):
     handover_issue_reported_at = Column(DateTime, nullable=True)
     handover_photos = Column(Text, nullable=True)           # JSON array of photo URLs (lender uploads)
     handover_confirmed_photos = Column(Text, nullable=True) # JSON array of photo URLs (borrower confirms)
+    handover_condition_note = Column(Text, nullable=True)
+    return_condition_note = Column(Text, nullable=True)
     return_photos = Column(Text, nullable=True)             # JSON array of photo URLs (borrower uploads on return)
     return_confirmed_at = Column(DateTime, nullable=True)
     return_confirmed_by = Column(String, nullable=True)
@@ -167,14 +169,18 @@ class OfferStatus(str, enum.Enum):
 
 class Conversation(Base):
     __tablename__ = "conversations"
+    __table_args__ = (Index("uq_conversations_participants_listing", "borrower_id", "lender_id", "listing_id", unique=True),)
     id = Column(String, primary_key=True, default=_uuid)
     borrower_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     lender_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    # NULL is retained for legacy general/mixed-history conversations.
+    listing_id = Column(String, ForeignKey("listings.id"), nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     borrower = relationship("User", foreign_keys=[borrower_id])
     lender = relationship("User", foreign_keys=[lender_id])
+    listing = relationship("Listing", foreign_keys=[listing_id])
     messages = relationship("Message", back_populates="conversation", order_by="Message.created_at", cascade="all, delete-orphan")
     offers = relationship("NegotiationOffer", back_populates="conversation", order_by="NegotiationOffer.created_at", cascade="all, delete-orphan")
 
@@ -200,6 +206,12 @@ class NegotiationOffer(Base):
     start_date = Column(DateTime, nullable=False)
     end_date = Column(DateTime, nullable=False)
     total_cost = Column(Float, nullable=False)
+    borrower_id_snapshot = Column(String, nullable=True)
+    lender_id_snapshot = Column(String, nullable=True)
+    daily_rate_paise = Column(BigInteger, nullable=True)
+    rental_fee_paise = Column(BigInteger, nullable=True)
+    security_deposit_paise = Column(BigInteger, nullable=True)
+    total_amount_paise = Column(BigInteger, nullable=True)
     message = Column(Text, nullable=True)
     status = Column(Enum(OfferStatus), default=OfferStatus.pending, index=True)
     parent_offer_id = Column(String, ForeignKey("negotiation_offers.id"), nullable=True)
@@ -211,3 +223,9 @@ class NegotiationOffer(Base):
     sender = relationship("User")
     borrow_request = relationship("BorrowRequest", back_populates="negotiation_offers")
     listing = relationship("Listing")
+
+# Additive financial entities share the existing metadata/migration lifecycle.
+from app.payment_models import (  # noqa: E402,F401
+    EscrowLedgerEntry, FinancialAudit, JournalTransaction, PaymentTransaction,
+    ProcessedWebhook, RefundAttempt, RefundIntent, RentalBooking, RentalDispute,
+)

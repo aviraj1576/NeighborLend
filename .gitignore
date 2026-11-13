@@ -83,6 +83,10 @@ keystore.properties
 .DS_Store
 Thumbs.db
 Desktop.ini
+backend/.payment-test-artifacts/
+backend/.payment-demo/
+backend/.payment-verification/
+backend/private-rental-evidence/
 
 # Design-taste skill metadata (not part of the shipped app)
 .agents/
