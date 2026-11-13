@@ -253,7 +253,7 @@
 .wizard-actions > .btn { flex: 1; }
 @media (max-width: 639px) {
   .wizard-actions { flex-direction: column; }
-  .wizard-actions > .btn { width: 100%; }
+  .wizard-actions > .btn { width: 100%; flex: none; }
   .dropzone { padding: var(--s-5, 24px) var(--s-4, 16px); }
   .image-preview { aspect-ratio: 1 / 1; }
 }
