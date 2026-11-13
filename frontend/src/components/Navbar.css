@@ -206,8 +206,8 @@
 .mobile-menu-btn {
   display: grid;
   place-items: center;
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border-radius: var(--r-md, 12px);
   border: 1px solid color-mix(in oklab, var(--p-ink) 14%, transparent);
   background: var(--p-surface);
@@ -217,14 +217,17 @@
 }
 .mobile-menu-btn svg { width: 20px; height: 20px; flex: none; }
 
-/* mobile menu overlay */
+/* mobile menu overlay: opens BELOW the bar so the close (X) button stays visible.
+   (.mobile-menu sits inside .navbar, so a z-index on .navbar cannot lift the bar above it.) */
 .mobile-menu {
   position: fixed;
-  inset: 0 0 auto 0;
+  inset: var(--nav, 72px) 0 auto 0;
   z-index: 45;
+  max-height: calc(100dvh - var(--nav, 72px));
+  overflow-y: auto;
   background: var(--p-inv-bg);
   border-bottom: 1px solid var(--p-inv-surface);
-  padding: calc(var(--nav, 72px) + var(--s-4, 16px)) var(--gut, 80px) var(--s-7, 48px);
+  padding: var(--s-4, 16px) var(--gut, 80px) var(--s-7, 48px);
   display: flex;
   flex-direction: column;
   gap: var(--s-5, 24px);
@@ -235,7 +238,7 @@
   to { opacity: 1; transform: none; }
 }
 @media (max-width: 639px) {
-  .mobile-menu { padding: calc(var(--nav, 56px) + var(--s-3, 12px)) var(--s-5, 24px) var(--s-6, 32px); }
+  .mobile-menu { padding: var(--s-3, 12px) var(--s-5, 24px) var(--s-6, 32px); }
 }
 .mobile-link {
   display: flex;
