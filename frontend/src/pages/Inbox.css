@@ -4,7 +4,7 @@
 
 .inbox-page { display: flex; flex-direction: column; min-height: 0; }
 .inbox-header { margin-bottom: var(--s-7, 48px); }
-.inbox-header h2 { margin: 0 0 var(--s-3, 12px) 0; color: var(--p-ink); letter-spacing: var(--display-tracking, -0.028em); }
+.inbox-header h1 { margin: 0 0 var(--s-3, 12px) 0; color: var(--p-ink); letter-spacing: var(--display-tracking, -0.028em); }
 .inbox-header p { margin: 0; color: var(--p-ink-soft); }
 
 .inbox-loading {
