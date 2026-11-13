@@ -4,8 +4,16 @@
 
 .my-borrow-requests-page { display: flex; flex-direction: column; min-height: 0; }
 .page-header { margin-bottom: var(--s-7, 48px); }
-.page-header h2 { margin: 0 0 var(--s-3, 12px) 0; color: var(--p-ink); letter-spacing: var(--display-tracking, -0.028em); }
+.page-header h1 { margin: 0 0 var(--s-3, 12px) 0; color: var(--p-ink); letter-spacing: var(--display-tracking, -0.028em); }
 .page-header p { margin: 0; color: var(--p-ink-soft); }
+/* the kit's .section-head--split > div is a grid; keep the tabs in one row */
+.page-header .tab-buttons { display: flex; flex-direction: row; align-items: center; }
+/* beats the kit's tonal .btn--secondary background */
+.page-header .tab-buttons .tab-btn.active,
+.page-header .tab-buttons .tab-btn.active:hover {
+  background: var(--p-action);
+  color: var(--p-action-ink);
+}
 
 .tab-buttons {
   display: flex;
