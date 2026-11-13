@@ -137,6 +137,18 @@
   border-color: var(--line-strong);
 }
 
+/* ---------------------------------------------------------------- buttons */
+.btn:disabled,
+.btn.btn--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.btn:disabled:active,
+.btn.btn--disabled:active { transform: none; }
+.btn--primary:disabled:hover,
+.btn--primary.btn--disabled:hover { background: var(--action); }
+
 /* ---------------------------------------------------------------- modal */
 .modal-overlay {
   position: fixed;
