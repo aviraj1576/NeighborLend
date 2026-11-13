@@ -53,7 +53,7 @@ const Inbox = () => {
   const unreadCount = notifications.filter((notification) => !notification.is_read).length;
 
   return (
-    <div className="inbox-page section" style={{ '--h': '2' }}>
+    <div className="inbox-page app-page">
       <div className="wrap">
         <div className="inbox-header section-head--split">
           <div>
