@@ -94,9 +94,11 @@ const MyBorrowRequests = () => {
               >
                 <Link to={`/borrow-requests/${request.id}`} className="request-link">
                   <div className="request-head">
-                    <div className={`status-badge status-${request.status}`}>{request.status}</div>
+                    <div className={`status-badge status-${request.status}`}>
+                      {STATUS_LABELS[request.status] || request.status}
+                    </div>
                     <Badge variant="outline" className="handover-badge">
-                      {request.handover_status || 'Not applicable'}
+                      {HANDOVER_LABELS[request.handover_status] || 'No handover yet'}
                     </Badge>
                   </div>
                   <div className="request-body">
