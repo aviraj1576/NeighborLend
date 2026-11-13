@@ -59,9 +59,6 @@ const ListingDetail = () => {
 
   return (
     <div className="listing-detail-page">
-      <a href="#content" className="skip-link visually-hidden" tabIndex={0}>
-        Skip to content
-      </a>
 
       {/* ===== Hero: full-bleed photograph + info card overlay ===== */}
       <section className="detail-hero section" style={{ '--h': '1' }} id="content">
