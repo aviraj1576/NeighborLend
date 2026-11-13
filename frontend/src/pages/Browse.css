@@ -4,7 +4,7 @@
   linked cards that lift, photographs that zoom inside their wrap.
 */
 
-.browse-page { display: flex; flex-direction: column; min-height: 0; }
+.browse-page { display: flex; flex-direction: column; min-height: 0; padding-top: var(--nav, 72px); }
 
 /* ---------------------------------------------------------------- masthead */
 .browse-masthead {
