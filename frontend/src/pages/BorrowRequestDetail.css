@@ -15,9 +15,9 @@
 .rental-detail-card { max-width: 720px; margin: 0 auto; width: 100%; gap: var(--s-6, 32px); }
 .rental-head {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-4, 16px);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3, 12px);
   margin-bottom: var(--s-2, 8px);
 }
 .rental-category { font-size: 11px; }
