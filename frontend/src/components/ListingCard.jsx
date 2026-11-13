@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star } from 'lucide-react';
+import { MapPin, Star, Package } from 'lucide-react';
 import { resolvePhotoUrl } from '../utils/photoUrl';
 import Card from './ui/Card';
 import Badge from './ui/Badge';
