@@ -91,6 +91,17 @@ ul, ol {
   padding-block: var(--padt) calc(var(--padb) + var(--bar));
 }
 
+/* stacked forms: one even gap between fields, rows and the submit button,
+   and the submit button spans the form instead of floating at its left */
+.login-form,
+.register-form,
+.verify-form,
+.request-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4, 16px);
+}
+
 /* visually-hidden helper */
 .visually-hidden {
   position: absolute;
