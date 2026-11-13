@@ -105,6 +105,7 @@ const Browse = () => {
                 id="search"
                 name="q"
                 type="text"
+                aria-label="Search items"
                 placeholder="What do you need?"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
