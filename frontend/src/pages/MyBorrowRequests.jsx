@@ -74,6 +74,7 @@ const MyBorrowRequests = () => {
                 variant="secondary"
                 size="sm"
                 className={`tab-btn ${activeTab === t.key ? 'active' : ''}`}
+                aria-pressed={activeTab === t.key}
                 onClick={() => setActiveTab(t.key)}
               >
                 {t.label}
