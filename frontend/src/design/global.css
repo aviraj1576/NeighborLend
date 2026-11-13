@@ -80,7 +80,15 @@ ul, ol {
 }
 .skip-link:focus {
   top: var(--s-4);
+  transform: none;
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--action) 40%, transparent);
+}
+
+/* App pages (every page except the landing page): normal document flow under the
+   fixed navbar. Do NOT give app pages the kit's .section class: the kit turns any
+   main > .section into a fixed one- or two-screen marketing panel. */
+.app-page {
+  padding-block: var(--padt) calc(var(--padb) + var(--bar));
 }
 
 /* visually-hidden helper */
