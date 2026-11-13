@@ -260,12 +260,15 @@
   color: var(--p-inv-accent);
 }
 .mobile-link.mobile-primary {
+  justify-content: center;
+  padding: var(--s-3, 12px) var(--s-4, 16px);
   background: var(--p-accent);
   color: var(--p-accent-ink);
   font-weight: 600;
 }
 .mobile-link.mobile-primary:hover {
-  background: color-mix(in oklab, var(--p-accent) 85%, transparent);
+  background: color-mix(in oklab, var(--p-accent) 85%, var(--p-ink));
+  color: var(--p-accent-ink);
 }
 .mobile-badge {
   font: 600 10px/1 var(--font-mono);
