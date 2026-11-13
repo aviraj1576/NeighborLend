@@ -86,7 +86,7 @@ export default function CreateBorrowRequest() {
   };
 
   return (
-    <div className="create-request-page section" style={{ '--h': '2' }}>
+    <div className="create-request-page app-page">
       <div className="wrap">
         <div className="request-header">
           <h2 className="t-h2">Post an item request</h2>
