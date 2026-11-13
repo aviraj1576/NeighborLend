@@ -86,7 +86,7 @@ const MyListings = () => {
   };
 
   return (
-    <div className="my-listings-page section" style={{ '--h': '2' }}>
+    <div className="my-listings-page app-page">
       <div className="wrap">
         <div className="page-header section-head--split">
           <div>
