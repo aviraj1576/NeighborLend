@@ -56,7 +56,7 @@ const VerifyEmail = () => {
   };
 
   return (
-    <div className="verify-page section" style={{ '--h': '1' }}>
+    <div className="verify-page app-page">
       <div className="wrap grid grid--top">
         <div className="verify-copy span-6">
           <div className="verify-header">
