@@ -337,10 +337,10 @@ const Chat = () => {
         <aside className={`conversations-sidebar ${conversationId ? 'hidden-mobile' : ''}`}>
           <div className="conversations-header">
             <div className="conversations-title-row">
-              <h2 className="conversations-title">
+              <h1 className="conversations-title">
                 <MessageSquare size={22} className="text-accent" />
                 Messages
-              </h2>
+              </h1>
               <span className="conversations-count-badge">{conversations.length}</span>
             </div>
             <div className="conversations-search">
