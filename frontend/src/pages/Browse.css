@@ -35,21 +35,28 @@
 .browse-search { padding: var(--s-7, 48px) 0; }
 .search-form { margin-bottom: var(--s-6, 32px); }
 .search-input-group {
+  position: relative;
   display: flex;
   gap: var(--s-3, 12px);
   max-width: 560px;
   align-items: stretch;
 }
-.search-icon {
+.search-input-group > .input-wrap { flex: 1; }
+/* the magnifier sits inside the input's left edge (Chat.css also defines a global .search-icon) */
+.search-input-group .search-icon {
+  position: absolute;
+  left: 14px;
+  top: 25px;
+  transform: translateY(-50%);
+  z-index: 1;
   color: var(--p-muted);
-  flex: none;
-  margin-top: 2px;
+  pointer-events: none;
 }
-.search-input-group .input { flex: 1; }
-.search-input-group .btn { flex: none; min-width: 110px; }
+.search-input-group .input { padding-left: 42px; }
+.search-input-group .btn { flex: none; min-width: 110px; height: auto; }
 @media (max-width: 639px) {
   .search-input-group { flex-direction: column; }
-  .search-input-group .btn { width: 100%; min-width: 0; }
+  .search-input-group .btn { width: 100%; min-width: 0; height: var(--btn-h); }
 }
 
 .filters-row {
