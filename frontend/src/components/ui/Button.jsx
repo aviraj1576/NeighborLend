@@ -27,6 +27,7 @@ export default function Button({
   asChild = false,
   className = '',
   loading = false,
+  ...rest
 }) {
   const btnCls = [
     'btn',
@@ -38,6 +39,7 @@ export default function Button({
 
   const style = loading ? { opacity: 0.7, pointerEvents: 'none' } : undefined;
   const common = {
+    ...rest,
     className: btnCls,
     style,
     'aria-busy': loading || undefined,
@@ -45,7 +47,7 @@ export default function Button({
   };
 
   if (href) {
-    return <a href={href} {...common} />;
+    return <a href={href} {...common}>{children}</a>;
   }
 
   if (asChild && React.isValidElement(children)) {
@@ -61,7 +63,7 @@ export default function Button({
     });
   }
 
-  return <button type={type} disabled={disabled} {...common} />;
+  return <button type={type} disabled={disabled} {...common}>{children}</button>;
 }
 
 Button.displayName = 'Button';
