@@ -202,9 +202,9 @@ const MyListings = () => {
               <h3 className="t-card">You haven&rsquo;t listed anything yet</h3>
               <p className="t-body">Turn your unused items into extra cash today.</p>
               <div className="empty-actions" style={{ marginTop: 'var(--s-5)' }}>
-                <Link to="/create-listing">
-                  <Button variant="primary">List an item</Button>
-                </Link>
+                <Button variant="primary" asChild>
+                  <Link to="/create-listing">List an item</Link>
+                </Button>
               </div>
             </div>
           </Card>
