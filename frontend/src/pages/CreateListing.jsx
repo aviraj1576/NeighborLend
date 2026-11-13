@@ -222,7 +222,7 @@ const CreateListing = () => {
   const isNextDisabled = !previews.length || isLoading || Boolean(uploadError) || uploadedUrls.length !== files.length;
 
   return (
-    <div className="create-listing-page section" style={{ '--h': '2' }}>
+    <div className="create-listing-page app-page">
       <div className="wrap">
         <div className="wizard-header">
           <h2 className="t-h2">List your item</h2>
