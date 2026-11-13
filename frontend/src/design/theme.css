@@ -128,9 +128,9 @@
   border-color: transparent;
 }
 .badge--success {
-  background: color-mix(in oklab, #22c55e 12%, var(--card));
-  color: #16a34a;
-  border-color: color-mix(in oklab, #22c55e 35%, transparent);
+  background: color-mix(in oklab, var(--p-success) 10%, var(--card));
+  color: var(--p-success);
+  border-color: color-mix(in oklab, var(--p-success) 35%, transparent);
 }
 .badge--outline {
   background: transparent;
