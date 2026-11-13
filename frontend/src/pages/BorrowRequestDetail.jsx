@@ -314,7 +314,7 @@ const BorrowRequestDetail = () => {
   );
 
   return (
-    <div className="rental-detail-page section" style={{ '--h': '2' }}>
+    <div className="rental-detail-page app-page">
       <div className="wrap">
         <section className="rental-detail-card card">
           <div className="rental-head">
