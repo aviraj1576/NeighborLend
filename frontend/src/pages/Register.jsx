@@ -104,7 +104,7 @@ const Register = () => {
   };
 
   return (
-    <div className="register-page section" style={{ '--h': '1' }}>
+    <div className="register-page app-page">
       <div className="wrap grid grid--top">
         <div className="register-copy span-6">
           <div className="register-header">
