@@ -57,7 +57,7 @@ const Inbox = () => {
       <div className="wrap">
         <div className="inbox-header section-head--split">
           <div>
-            <h2 className="t-h2">Inbox</h2>
+            <h1 className="t-h2">Inbox</h1>
             <p className="t-lead measure">
               {unreadCount
                 ? `${unreadCount} unread notification${unreadCount === 1 ? '' : 's'}`
