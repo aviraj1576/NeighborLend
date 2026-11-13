@@ -1,12 +1,9 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { MessageCircle, Star, Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
-import RentalEvidenceImage from '../components/RentalEvidenceImage.jsx';
-import EscrowStatusCard from '../components/EscrowStatusCard.jsx';
-import { apiErrorMessage, handoverGuidance, returnReviewState, uploadRentalEvidence } from '../components/paymentFlow.js';
-import '../components/PaymentModal.css';
+import { resolvePhotoUrl } from '../utils/photoUrl';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
@@ -25,14 +22,10 @@ const HANDOVER_LABELS = {
 
 const formatDateTime = (value) => (value ? new Date(value).toLocaleString() : '—');
 
-const RentalDetail = () => {
+const BorrowRequestDetail = () => {
   const { id } = useParams();
   const { user } = useAuth();
   const [request, setRequest] = useState(null);
-  const [paymentUnlocked, setPaymentUnlocked] = useState(false);
-  const [paymentBooking, setPaymentBooking] = useState(null);
-  const [conditionNote, setConditionNote] = useState('');
-  const requestVersion = useRef(0);
   const [disputeDescription, setDisputeDescription] = useState('');
   const [issueDescription, setIssueDescription] = useState('');
   const [issueFormOpen, setIssueFormOpen] = useState(false);
@@ -42,6 +35,8 @@ const RentalDetail = () => {
 
   const [handoverPhotos, setHandoverPhotos] = useState([]);
   const [handoverPreviews, setHandoverPreviews] = useState([]);
+  const [confirmPhotos, setConfirmPhotos] = useState([]);
+  const [confirmPreviews, setConfirmPreviews] = useState([]);
   const [returnPhotos, setReturnPhotos] = useState([]);
   const [returnPreviews, setReturnPreviews] = useState([]);
 
@@ -51,30 +46,19 @@ const RentalDetail = () => {
   const [borrowerRatingComment, setBorrowerRatingComment] = useState('');
   const [ratingFormOpen, setRatingFormOpen] = useState(false);
 
-  const fetchRequest = useCallback(async ({ strict = false } = {}) => {
-    const version = ++requestVersion.current;
+  const fetchRequest = useCallback(async () => {
     try {
-      let response;
-      if (user) {
-        try { response = await api.get(`/payments/requests/${id}/rental`, { timeout: 15000 }); }
-        catch (err) {
-          if (err.response?.status !== 403 && err.response?.status !== 404) throw err;
-          response = await api.get(`/borrow-requests/${id}`, { timeout: 15000 });
-        }
-      } else response = await api.get(`/borrow-requests/${id}`, { timeout: 15000 });
+      const response = await api.get(`/borrow-requests/${id}`);
       let nextRequest = response.data;
       const isParticipant = user && [nextRequest.borrower_id, nextRequest.lender_id].includes(user.id);
       if (isParticipant && nextRequest.listing_id && nextRequest.handover_status !== 'not_applicable') {
-        const handover = await api.get(`/borrow-requests/${id}/handover`, { timeout: 15000 });
+        const handover = await api.get(`/borrow-requests/${id}/handover`);
         nextRequest = { ...nextRequest, ...handover.data };
       }
-      if (version !== requestVersion.current) return;
       setRequest(nextRequest);
       setError('');
     } catch (err) {
-      if (version !== requestVersion.current) { if (strict) throw err; return; }
-      setError(apiErrorMessage(err, 'Could not load this borrowing request.'));
-      if (strict) throw err;
+      setError(err.response?.data?.detail || 'Could not load this borrowing request.');
     } finally {
       setLoading(false);
     }
@@ -82,21 +66,18 @@ const RentalDetail = () => {
 
   useEffect(() => {
     fetchRequest();
-    return () => { requestVersion.current += 1; };
   }, [fetchRequest]);
 
   useEffect(() => {
-    if (!request) return undefined;
+    if (!request || !['pending', 'photos_uploaded', 'borrower_confirmed'].includes(request.handover_status)) return undefined;
     const isParticipant = user && [request.borrower_id, request.lender_id].includes(user.id);
-    if (!isParticipant && !user?.is_admin) return undefined;
+    if (!isParticipant) return undefined;
     const timer = window.setInterval(async () => {
-      const version = ++requestVersion.current;
       try {
-        const response = await api.get(`/payments/requests/${id}/rental`, { timeout: 15000 });
-        if (version !== requestVersion.current) return;
-        setRequest((current) => current ? { ...current, ...response.data } : current);
+        const response = await api.get(`/borrow-requests/${id}/handover`);
+        setRequest((current) => (current ? { ...current, ...response.data } : current));
       } catch {
-        // Keep the current request visible if a quiet background refresh fails.
+        // Keep current request visible if a quiet background refresh fails.
       }
     }, 15000);
     return () => window.clearInterval(timer);
@@ -123,6 +104,12 @@ const RentalDetail = () => {
     setHandoverPhotos(files);
     setHandoverPreviews(files.map((f) => URL.createObjectURL(f)));
   };
+  const handleConfirmPhotos = (e) => {
+    const files = Array.from(e.target.files);
+    if (files.length > 10) { alert('Maximum 10 photos'); return; }
+    setConfirmPhotos(files);
+    setConfirmPreviews(files.map((f) => URL.createObjectURL(f)));
+  };
   const handleReturnPhotos = (e) => {
     const files = Array.from(e.target.files);
     if (files.length > 10) { alert('Maximum 10 photos'); return; }
@@ -137,7 +124,10 @@ const RentalDetail = () => {
     try {
       const urls = [];
       for (const file of handoverPhotos) {
-        urls.push(await uploadRentalEvidence(api, paymentBooking?.id, file, 'handover'));
+        const form = new FormData();
+        form.append('file', file);
+        const res = await api.post('/upload', form);
+        urls.push(res.data.url);
       }
       await api.post(`/borrow-requests/${id}/handover/upload-photos`, { photo_urls: urls });
       setHandoverPhotos([]);
@@ -151,11 +141,20 @@ const RentalDetail = () => {
     }
   };
 
-  const confirmHandover = async () => {
+  const confirmHandoverWithPhotos = async () => {
     setSubmitting(true);
     setError('');
     try {
-      await api.post(`/borrow-requests/${id}/handover/borrower-confirm`, { photo_urls: [], condition_note: conditionNote });
+      const urls = [];
+      for (const file of confirmPhotos) {
+        const form = new FormData();
+        form.append('file', file);
+        const res = await api.post('/upload', form);
+        urls.push(res.data.url);
+      }
+      await api.post(`/borrow-requests/${id}/handover/borrower-confirm`, { photo_urls: urls });
+      setConfirmPhotos([]);
+      setConfirmPreviews([]);
       await fetchRequest();
       window.dispatchEvent(new Event('notifications:updated'));
     } catch (err) {
@@ -172,7 +171,10 @@ const RentalDetail = () => {
     try {
       const urls = [];
       for (const file of returnPhotos) {
-        urls.push(await uploadRentalEvidence(api, paymentBooking?.id, file, 'return'));
+        const form = new FormData();
+        form.append('file', file);
+        const res = await api.post('/upload', form);
+        urls.push(res.data.url);
       }
       await api.post(`/borrow-requests/${id}/return/upload-photos`, { photo_urls: urls });
       setReturnPhotos([]);
@@ -190,7 +192,7 @@ const RentalDetail = () => {
     setSubmitting(true);
     setError('');
     try {
-      await api.post(`/borrow-requests/${id}/return/confirm`, { approved, condition_note: conditionNote });
+      await api.post(`/borrow-requests/${id}/return/confirm`, { approved });
       await fetchRequest();
       window.dispatchEvent(new Event('notifications:updated'));
     } catch (err) {
@@ -292,8 +294,6 @@ const RentalDetail = () => {
   const handoverManaged = request.handover_status && request.handover_status !== 'not_applicable';
   const isLender = user?.id === request.lender_id;
   const isBorrower = user?.id === request.borrower_id;
-  const returnReview = returnReviewState(request, paymentBooking);
-  const guidance = handoverGuidance(request, user, paymentBooking, paymentUnlocked);
   const canUseReturnActions = canManageRental
     && (!handoverManaged || request.handover_status === 'lender_confirmed');
 
@@ -314,7 +314,7 @@ const RentalDetail = () => {
   );
 
   return (
-    <div className="rental-detail-page section" style={{ '--h': '2' }}>
+    <div className="rental-detail-page app-page">
       <div className="wrap">
         <section className="rental-detail-card card">
           <div className="rental-head">
@@ -326,9 +326,6 @@ const RentalDetail = () => {
           </p>
 
           <dl className="rental-meta">
-            {request.lender_username && <div className="meta-row">
-              <dt>Lender</dt><dd>{request.lender_username}</dd>
-            </div>}
             <div className="meta-row">
               <dt>Requested by</dt>
               <dd>{request.borrower_name}</dd>
@@ -351,23 +348,12 @@ const RentalDetail = () => {
             <div className="error-banner" role="alert">{error}</div>
           )}
 
-          {(canManageRental || user?.is_admin) && <>
-            <div className="photo-previews">
-              {[...(request.handover_photos || []), ...(request.handover_confirmed_photos || []), ...(request.return_photos || [])].map((reference, i) =>
-                <RentalEvidenceImage key={reference} reference={reference} api={api} alt={`Rental condition evidence ${i + 1}`} className="photo-preview" />)}
-            </div>
-            <p className="t-small muted">{request.handover_condition_note} {request.return_condition_note}</p>
-            <EscrowStatusCard request={request} user={user} api={api} onStatus={setPaymentUnlocked} onBooking={setPaymentBooking} onRentalChange={fetchRequest} />
-          </>}
-          {canManageRental && <Input id="condition-note" label="Condition note" type="textarea" rows="3" maxLength={2000} value={conditionNote} onChange={e => setConditionNote(e.target.value)} />}
-
           {handoverManaged && (
             <div className="rental-lifecycle handover-panel">
               <h2 className="t-h2">Product handover</h2>
               <p className={['handover-status', `status-${request.handover_status}`].join(' ')}>
-                {returnReview.label || HANDOVER_LABELS[request.handover_status] || request.handover_status}
+                {HANDOVER_LABELS[request.handover_status] || request.handover_status}
               </p>
-              {guidance && <p className="t-body" role="status">{guidance}</p>}
               {request.handover_marked_at && (
                 <p className="handover-meta t-small muted">
                   Marked handed over: {formatDateTime(request.handover_marked_at)}
@@ -375,7 +361,7 @@ const RentalDetail = () => {
               )}
 
               {/* Step 1: Lender uploads photos */}
-              {request.handover_status === 'pending' && isLender && paymentUnlocked && (
+              {request.handover_status === 'pending' && isLender && (
                 <div className="handover-step">
                   <h3 className="t-card">Step 1: Upload product photos</h3>
                   <p className="t-body">Upload photos of the item before handing it over.</p>
@@ -407,30 +393,45 @@ const RentalDetail = () => {
               )}
 
               {/* Step 2: Borrower confirms receipt */}
-              {request.handover_status === 'photos_uploaded' && isBorrower && paymentUnlocked && (
+              {request.handover_status === 'photos_uploaded' && isBorrower && (
                 <div className="handover-step">
                   <h3 className="t-card">Step 2: Confirm you received the item</h3>
                   <p className="t-body">
                     Review the lender&rsquo;s photos above. If the item looks correct, confirm you received it.
-                    {' '}No receipt photos are required. You must upload condition photos when returning the item.
                   </p>
                   {request.handover_photos && request.handover_photos.length > 0 && (
                     <div className="photo-previews lender-photos">
                       {request.handover_photos.map((url, i) => (
-                        <RentalEvidenceImage
+                        <img
                           key={i}
-                          reference={url}
-                          api={api}
+                          src={resolvePhotoUrl(url)}
                           alt={`Lender Photo ${i + 1}`}
                           className="photo-preview"
                         />
                       ))}
                     </div>
                   )}
+                  <div className="photo-input">
+                    <input
+                      id="confirm-photos"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleConfirmPhotos}
+                      disabled={submitting}
+                    />
+                  </div>
+                  {confirmPreviews.length && (
+                    <div className="photo-previews">
+                      {confirmPreviews.map((preview, i) => (
+                        <img key={i} src={preview} alt={`Confirm ${i + 1}`} className="photo-preview" />
+                      ))}
+                    </div>
+                  )}
                   <Button
                     variant="primary"
                     disabled={submitting}
-                    onClick={confirmHandover}
+                    onClick={confirmHandoverWithPhotos}
                   >
                     {submitting ? 'Confirming…' : 'I received this item'}
                   </Button>
@@ -465,7 +466,7 @@ const RentalDetail = () => {
               )}
 
               {/* Step 3: Lender confirms handover complete */}
-              {request.handover_status === 'borrower_confirmed' && isLender && paymentUnlocked && (
+              {request.handover_status === 'borrower_confirmed' && isLender && (
                 <div className="handover-step">
                   <h3 className="t-card">Step 3: Confirm handover complete</h3>
                   <p className="t-body">
@@ -539,7 +540,7 @@ const RentalDetail = () => {
               )}
 
               {/* Step 5: Lender confirms return */}
-              {returnReview.awaitingDecision && isLender && (
+              {request.handover_status === 'return_photos_uploaded' && isLender && (
                 <div className="handover-step return-section">
                   <h3 className="t-card">Step 5: Confirm return</h3>
                   <p className="t-body">
@@ -554,14 +555,8 @@ const RentalDetail = () => {
                 </div>
               )}
 
-              {returnReview.disputed && request.returned_at && (
-                <p role="status">{returnReview.reviewed
-                  ? 'Human review is recorded. Follow the authorized settlement status above; lender allocations remain simulated.'
-                  : 'Return condition is disputed. The deposit stays frozen until independent human review. Review the saved claim above; clean-return confirmation is unavailable.'}</p>
-              )}
-
               {/* Step 6: Ratings after return confirmed */}
-              {(paymentBooking?.rating_eligible === true || (paymentBooking?.legacy && request.handover_status === 'return_confirmed' && !request.disputed_at)) && (
+              {request.handover_status === 'return_confirmed' && !request.disputed_at && (
                 <div className="handover-step rating-section">
                   <h3 className="t-card">Step 6: Rate each other</h3>
                   {isBorrower && !request.lender_rating && (
@@ -666,8 +661,4 @@ const RentalDetail = () => {
   );
 };
 
-export default function BorrowRequestDetail() {
-  const { id } = useParams();
-  const { user } = useAuth();
-  return <RentalDetail key={`${id}:${user?.id || 'public'}`} />;
-}
+export default BorrowRequestDetail;

@@ -10,14 +10,13 @@ import React, { useEffect } from 'react';
  * Props: isOpen, onClose, children, title, className.
  */
 export default function Modal({ isOpen, onClose, children, title, className = '' }) {
+  if (!isOpen) return null;
+
   useEffect(() => {
-    if (!isOpen) return undefined;
     const onEsc = (e) => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', onEsc);
     return () => document.removeEventListener('keydown', onEsc);
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
+  }, [onClose]);
 
   const stop = (e) => e.stopPropagation();
 

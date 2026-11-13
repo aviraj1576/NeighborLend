@@ -1,5 +1,5 @@
-import React, { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { MapPin, Star, Send, ShieldCheck, Smartphone, Clock } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
@@ -67,14 +67,19 @@ const steps = [
   },
 ];
 
+const TABS = ['Details', 'Reviews', 'Owner'];
+
 const Landing = () => {
+  const navigate = useNavigate();
+  const [tab, setTab] = useState('Details');
+
   useEffect(() => {
     const els = document.querySelectorAll('[data-enter]');
     els.forEach((el) => el.classList.add('entered'));
   }, []);
 
   return (
-    <div className="landing-page">
+    <>
       {/* ===== 1. Hero — asymmetric split: words left, product mockup right ===== */}
       <section className="hero section" style={{ '--h': '1' }} data-enter>
         <div className="wrap">
@@ -134,16 +139,63 @@ const Landing = () => {
                             <span className="app-rate">₹180</span>
                             <span className="app-per">/ day</span>
                           </div>
-                          <Button variant="primary" size="sm" className="app-borrow-btn">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            className="app-borrow-btn"
+                            onClick={() => navigate('/browse')}
+                          >
                             Borrow
                           </Button>
                         </div>
                       </div>
-                      <div className="app-tabs">
-                        <span className="app-tab active">Details</span>
-                        <span className="app-tab">Reviews</span>
-                        <span className="app-tab">Owner</span>
+                      <div className="app-tabs" role="tablist" aria-label="Listing preview">
+                        {TABS.map((name) => (
+                          <button
+                            key={name}
+                            type="button"
+                            role="tab"
+                            aria-selected={tab === name}
+                            className={tab === name ? 'app-tab active' : 'app-tab'}
+                            onClick={() => setTab(name)}
+                          >
+                            {name}
+                          </button>
+                        ))}
                       </div>
+                      {tab === 'Details' && (
+                        <div className="app-panel" role="tabpanel">
+                          <ul className="app-spec">
+                            <li>Drill body, 2 batteries and a 40-bit set</li>
+                            <li>Pickup near Connaught Place metro</li>
+                            <li>Owner verifies ID before handover</li>
+                          </ul>
+                        </div>
+                      )}
+                      {tab === 'Reviews' && (
+                        <div className="app-panel" role="tabpanel">
+                          <div className="app-review">
+                            <span className="app-stars">★★★★★</span>
+                            <p>“Returned it charged and cleaned. Seamless.”</p>
+                            <span className="app-who">Rohan · 2 blocks away</span>
+                          </div>
+                          <div className="app-review">
+                            <span className="app-stars">★★★★★</span>
+                            <p>“Cheaper than buying for a one-day job.”</p>
+                            <span className="app-who">Meera · 0.8 km away</span>
+                          </div>
+                        </div>
+                      )}
+                      {tab === 'Owner' && (
+                        <div className="app-panel app-owner" role="tabpanel">
+                          <span className="app-avatar" aria-hidden="true">P</span>
+                          <div className="app-owner-meta">
+                            <b>Priya S.</b>
+                            <span>4.9 ★ · 23 loans · 1.2 km away</span>
+                          </div>
+                          <span className="app-ghost">Message</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div className="phone__glow" aria-hidden="true"></div>
@@ -162,7 +214,7 @@ const Landing = () => {
             <p>Everything about NeighborLend is designed to keep lending local, safe and effortless.</p>
           </div>
           <div className="span-7 start-6">
-            <div className="grid grid--bento">
+            <div className="grid--bento">
               {features.map((f, i) => (
                 <Card key={f.title} variant="default">
                   <div className="feature-head">
@@ -236,7 +288,9 @@ const Landing = () => {
             <h2 className="t-h2">Ready to list your first item?</h2>
             <p>Publish in under a minute and start earning from things already in your home.</p>
             <div className="btn-row" style={{ marginTop: 'var(--s-6)' }}>
-              <Button variant="primary">List an item to lend</Button>
+              <Button variant="primary" asChild>
+                <Link to="/create-listing">List an item to lend</Link>
+              </Button>
               <Button variant="secondary" asChild style={{ marginLeft: 'var(--s-3)' }}>
                 <Link to="/browse">Browse what is available</Link>
               </Button>
@@ -244,7 +298,7 @@ const Landing = () => {
           </div>
         </div>
       </section>
-    </div>
+    </>
   );
 };
 

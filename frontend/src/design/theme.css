@@ -1,19 +1,30 @@
 /*
   NeighborLend design layer — extends the taste-skill kit (system.css, cards.css,
   motion.css, backgrounds.css, layout.css, icon.css) imported in main.jsx.
-  Brand tokens (start.mjs brand): cream #FFEED6 ground, ink #2B061E,
-  gold #D2BF55 accent, Instrument Sans + DM Mono, soft radius, tonal buttons.
+  Palette (kept): cream #FFEED6 ground, plum ink #2B061E, gold #D2BF55 accent,
+  Instrument Sans + DM Mono, soft radius, tonal buttons.
+  Gold is for FILLS only (badges, avatars, the inverse button, active underlines).
+  Text and icons that need the accent hue use --p-accent-text (a brown that passes
+  WCAG AA on every cream surface). Every colour in the app must come from these tokens.
 */
 
 :root {
   --p-bg: #ffeed6;
   --p-surface: #f3e1cc;
   --p-ink: #2b061e;
+  --p-ink-soft: #4a3630;
   --p-muted: #76575d;
   --p-accent: #d2bf55;
   --p-accent-ink: #111111;
+  --p-accent-text: #7d4f22;
   --p-action: #2b061e;
   --p-action-ink: #ffeed6;
+  --p-tint: #fbbfca;
+  --p-tint-soft: #e8dcc8;
+  --p-highlight: #fff8e7;
+  --p-border: #8e7275;
+  --p-danger: #b3261e;
+  --p-success: #166534;
   --p-inv-bg: #2b061e;
   --p-inv-surface: #381429;
   --p-inv-ink: #ffeed6;
@@ -72,30 +83,30 @@
 .input {
   width: 100%;
   background: var(--bg);
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--p-border);
   color: var(--ink);
   border-radius: var(--r-md);
   padding: 12px 16px;
   font: 400 var(--t-body)/1.5 var(--font-text);
   transition: border-color var(--dur) var(--ease), box-shadow var(--dur) var(--ease), background var(--dur) var(--ease);
 }
-.input::placeholder { color: var(--muted); opacity: 0.7; }
+.input::placeholder { color: var(--muted); opacity: 1; }
 .input:focus {
   border-color: var(--action);
   box-shadow: 0 0 0 3px color-mix(in oklab, var(--action) 35%, transparent);
   background: var(--surface);
 }
 .input--error {
-  border-color: color-mix(in oklab, #ef4444 45%, transparent);
+  border-color: var(--p-danger);
 }
 .input--error:focus {
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px color-mix(in oklab, #ef4444 30%, transparent);
+  border-color: var(--p-danger);
+  box-shadow: 0 0 0 3px color-mix(in oklab, var(--p-danger) 30%, transparent);
 }
 .input-error {
   margin: 0;
   font: 400 var(--t-small)/1.4 var(--font-text);
-  color: #ef4444;
+  color: var(--p-danger);
 }
 
 /* ---------------------------------------------------------------- badge */
@@ -117,14 +128,26 @@
   border-color: transparent;
 }
 .badge--success {
-  background: color-mix(in oklab, #22c55e 12%, var(--card));
-  color: #16a34a;
-  border-color: color-mix(in oklab, #22c55e 35%, transparent);
+  background: color-mix(in oklab, var(--p-success) 10%, var(--card));
+  color: var(--p-success);
+  border-color: color-mix(in oklab, var(--p-success) 35%, transparent);
 }
 .badge--outline {
   background: transparent;
   border-color: var(--line-strong);
 }
+
+/* ---------------------------------------------------------------- buttons */
+.btn:disabled,
+.btn.btn--disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+.btn:disabled:active,
+.btn.btn--disabled:active { transform: none; }
+.btn--primary:disabled:hover,
+.btn--primary.btn--disabled:hover { background: var(--action); }
 
 /* ---------------------------------------------------------------- modal */
 .modal-overlay {

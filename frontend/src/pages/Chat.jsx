@@ -38,8 +38,7 @@ const Chat = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingConversations, setLoadingConversations] = useState(true);
 
-  const [loadedConv, setActiveConv] = useState(null);
-  const activeConv = loadedConv?.id === conversationId ? loadedConv : null;
+  const [activeConv, setActiveConv] = useState(null);
   const [messages, setMessages] = useState([]);
   const [offers, setOffers] = useState([]);
   const [loadingActive, setLoadingActive] = useState(false);
@@ -94,19 +93,11 @@ const Chat = () => {
   }, []);
 
   useEffect(() => {
-    if (activeConv?.listing) {
-      setLenderListings([activeConv.listing]);
-      return;
-    }
     if (!activeConv?.lender?.id) return;
-    let cancelled = false;
     api.get('/listings/search?radius_km=500')
-      .then((res) => {
-        if (!cancelled) setLenderListings(res.data.filter((item) => item.owner_id === activeConv.lender.id));
-      })
+      .then((res) => setLenderListings(res.data.filter((item) => item.owner_id === activeConv.lender.id)))
       .catch((err) => console.error('Failed to load lender listings:', err));
-    return () => { cancelled = true; };
-  }, [activeConv?.id, activeConv?.listing, activeConv?.lender?.id]);
+  }, [activeConv?.lender?.id]);
 
   const fetchActiveConversation = (convId, silent = false) => {
     if (!convId) return Promise.resolve();
@@ -152,23 +143,6 @@ const Chat = () => {
   };
 
   useEffect(() => {
-    setActiveConv(null);
-    setMessages([]);
-    setOffers([]);
-    setLenderListings([]);
-    setNewMessage('');
-    setSendingMessage(false);
-    setOfferSubmitting(false);
-    setNegotiationMode(null);
-    setCounterTargetOffer(null);
-    setShowHistory(false);
-    setFormListingId('');
-    setFormDailyPrice('');
-    setFormStartDate('');
-    setFormEndDate('');
-    setFormNote('');
-    setOfferError('');
-    loadedConversationIdRef.current = null;
     if (conversationId) fetchActiveConversation(conversationId);
   }, [conversationId]);
 
@@ -220,17 +194,13 @@ const Chat = () => {
 
     try {
       const res = await api.post(`/conversations/${activeConv.id}/messages`, { content });
-      if (currentConversationIdRef.current === optimisticMsg.conversation_id) {
-        setMessages((prev) => prev.map((m) => (m.id === tempId ? res.data : m)));
-      }
+      setMessages((prev) => prev.map((m) => (m.id === tempId ? res.data : m)));
       fetchConversations(true);
     } catch (err) {
       console.error('Failed to send message:', err);
-      if (currentConversationIdRef.current === optimisticMsg.conversation_id) {
-        setMessages((prev) => prev.filter((m) => m.id !== tempId));
-      }
+      setMessages((prev) => prev.filter((m) => m.id !== tempId));
     } finally {
-      if (currentConversationIdRef.current === optimisticMsg.conversation_id) setSendingMessage(false);
+      setSendingMessage(false);
     }
   };
 
@@ -276,8 +246,6 @@ const Chat = () => {
 
   const handleSubmitOffer = async (e) => {
     e.preventDefault();
-    if (!activeConv || offerSubmitting) return;
-    const submittedConversationId = activeConv.id;
     setOfferError('');
     const calcs = getOfferCalculations();
     if (!calcs.isValid) {
@@ -312,28 +280,23 @@ const Chat = () => {
         await api.post(`/conversations/${activeConv.id}/offers`, payload);
       }
 
-      if (currentConversationIdRef.current !== submittedConversationId) return;
       setNegotiationMode(null);
       setCounterTargetOffer(null);
       await fetchActiveConversation(activeConv.id, true);
       fetchConversations(true);
     } catch (err) {
       console.error('Failed to submit offer:', err);
-      if (currentConversationIdRef.current !== submittedConversationId) return;
       const detail = err.response?.data?.detail;
       setOfferError(typeof detail === 'string' ? detail : 'Failed to submit offer. Please try again.');
     } finally {
-      if (currentConversationIdRef.current === submittedConversationId) setOfferSubmitting(false);
+      setOfferSubmitting(false);
     }
   };
 
   const handleAcceptOffer = async (offerId) => {
-    if (!activeConv) return;
-    const submittedConversationId = activeConv.id;
     if (!window.confirm('Accept this rental offer? This will initiate the borrow booking request.')) return;
     try {
       const response = await api.post(`/offers/${offerId}/accept`);
-      if (currentConversationIdRef.current !== submittedConversationId) return;
       const borrowRequestId = response.data?.borrow_request_id;
       await fetchActiveConversation(activeConv.id, true);
       fetchConversations(true);
@@ -347,12 +310,9 @@ const Chat = () => {
   };
 
   const handleRejectOffer = async (offerId) => {
-    if (!activeConv) return;
-    const submittedConversationId = activeConv.id;
     if (!window.confirm('Are you sure you want to decline this offer?')) return;
     try {
       await api.post(`/offers/${offerId}/reject`);
-      if (currentConversationIdRef.current !== submittedConversationId) return;
       await fetchActiveConversation(activeConv.id, true);
       fetchConversations(true);
     } catch (err) {
@@ -365,22 +325,22 @@ const Chat = () => {
     const term = searchQuery.toLowerCase();
     const oName = (c.other_participant?.name || '').toLowerCase();
     const uName = (c.other_participant?.username || '').toLowerCase();
-    return oName.includes(term) || uName.includes(term) || (c.listing?.name || '').toLowerCase().includes(term);
+    return oName.includes(term) || uName.includes(term);
   });
 
-  const latestOffer = activeConv?.active_offer || null;
+  const latestOffer = activeConv?.active_offer || (offers.length > 0 ? offers[offers.length - 1] : null);
   const isOfferRecipient = latestOffer && user && latestOffer.sender_id !== user.id;
 
   return (
-    <div className="chat-page section" style={{ '--h': '2' }}>
+    <div className="chat-page app-page">
       <div className="wrap">
         <aside className={`conversations-sidebar ${conversationId ? 'hidden-mobile' : ''}`}>
           <div className="conversations-header">
             <div className="conversations-title-row">
-              <h2 className="conversations-title">
+              <h1 className="conversations-title">
                 <MessageSquare size={22} className="text-accent" />
                 Messages
-              </h2>
+              </h1>
               <span className="conversations-count-badge">{conversations.length}</span>
             </div>
             <div className="conversations-search">
@@ -406,9 +366,9 @@ const Chat = () => {
               <div className="sidebar-empty-state">
                 <MessageSquare size={36} className="text-muted" />
                 <p>No conversations found.</p>
-                <Link to="/browse">
-                  <Button variant="secondary" size="sm">Browse items</Button>
-                </Link>
+                <Button variant="secondary" size="sm" asChild>
+                  <Link to="/browse">Browse items</Link>
+                </Button>
               </div>
             ) : (
               filteredConversations.map((conv) => {
@@ -431,8 +391,8 @@ const Chat = () => {
 
                     <div className="conversation-content">
                       <div className="conversation-top-row">
-                        <span className="listing-name" title={conv.listing?.name || other.name}>
-                          {conv.listing?.name || other.name}
+                        <span className="listing-name" title={other.name}>
+                          {other.name}
                         </span>
                         <span className="timestamp-text">
                           {formatTimestamp(conv.last_message?.created_at || conv.updated_at)}
@@ -500,7 +460,7 @@ const Chat = () => {
                         {activeConv.is_borrower ? activeConv.lender.name : activeConv.borrower.name}
                       </h3>
                       <div className="chat-listing-pricing">
-                        <span>{activeConv.listing?.name || 'Historical conversation'}</span>
+                        <span>Conversation</span>
                       </div>
                     </div>
                   </div>
@@ -519,7 +479,7 @@ const Chat = () => {
             </header>
 
             <div className="messages-container">
-              {(loadingActive || !activeConv) && !errorMsg ? (
+              {loadingActive ? (
                 <div className="messages-empty-state">
                   <RefreshCw className="animate-spin text-accent" size={28} />
                   <p>Loading messages…</p>
@@ -605,9 +565,9 @@ const Chat = () => {
             <MessageSquare size={60} className="text-muted" />
             <h3 className="t-card">Select a conversation</h3>
             <p>Choose a chat from the sidebar or browse items to start negotiating.</p>
-            <Link to="/browse">
-              <Button variant="primary">Browse marketplace</Button>
-            </Link>
+            <Button variant="primary" asChild>
+              <Link to="/browse">Browse marketplace</Link>
+            </Button>
           </section>
         )}
 
@@ -653,15 +613,7 @@ const Chat = () => {
                       <span className="detail-val text-accent">₹{latestOffer.total_cost}</span>
                     </div>
                     <div className="offer-detail-item">
-                      <span className="detail-label">Agreed refundable deposit</span>
-                        <span className="detail-val">{latestOffer.security_deposit_paise == null ? 'New offer required to confirm deposit' : `₹${(latestOffer.security_deposit_paise / 100).toFixed(2)}`}</span>
-                      </div>
-                      <div className="offer-detail-item">
-                        <span className="detail-label">Test payment total: rent + deposit</span>
-                        <span className="detail-val">{latestOffer.total_amount_paise == null ? 'Not agreed' : `₹${(latestOffer.total_amount_paise / 100).toFixed(2)}`}</span>
-                      </div>
-                      <div className="offer-detail-item">
-                        <span className="detail-label">Proposed by</span>
+                      <span className="detail-label">Proposed by</span>
                       <span className="detail-val">
                         {user && latestOffer.sender_id === user.id ? 'You' : latestOffer.sender_name}
                       </span>
@@ -681,7 +633,7 @@ const Chat = () => {
                   {latestOffer.status === 'pending' && (
                     isOfferRecipient ? (
                       <div className="offer-actions-group">
-                        <Button variant="primary" disabled={latestOffer.total_amount_paise == null} onClick={() => handleAcceptOffer(latestOffer.id)}>
+                        <Button variant="primary" onClick={() => handleAcceptOffer(latestOffer.id)}>
                           <Check size={18} />
                           <span style={{ marginLeft: 'var(--s-2)' }}>Accept offer (₹{latestOffer.total_cost})</span>
                         </Button>
@@ -708,11 +660,8 @@ const Chat = () => {
                       <div>
                         <strong>Agreement confirmed!</strong>
                         <div style={{ fontSize: '0.8rem', opacity: 0.9 }}>
-                            Open rental details for verified payment and product handover.
+                          Borrow request generated for handover and final approval.
                         </div>
-                          {latestOffer.borrow_request_id && <Button variant="secondary" size="sm" asChild>
-                            <Link to={`/borrow-requests/${latestOffer.borrow_request_id}`}>Open rental &amp; payment</Link>
-                          </Button>}
                       </div>
                     </div>
                   )}
@@ -724,9 +673,9 @@ const Chat = () => {
                     <span className="offer-status-tag status-pending">Base rate</span>
                   </div>
                   <div className="offer-price-highlight">
-                    <span className="offer-rate-large">{activeConv.listing ? `₹${activeConv.listing.price_per_day}` : '—'}</span>
+                    <span className="offer-rate-large">—</span>
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: '#76575d' }}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--p-muted)' }}>
                     No negotiation offer has been made yet. You can submit an offer for specific dates.
                   </p>
                   <Button variant="primary" onClick={startMakeOffer}>
@@ -749,7 +698,7 @@ const Chat = () => {
                       label="Listing"
                       type="select"
                       value={formListingId}
-                      disabled={Boolean(activeConv.listing_id) || negotiationMode === 'counter'}
+                      disabled={negotiationMode === 'counter'}
                       onChange={(e) => {
                         const selected = lenderListings.find((item) => item.id === e.target.value);
                         setFormListingId(e.target.value);
@@ -775,7 +724,7 @@ const Chat = () => {
                       onChange={(e) => setFormDailyPrice(e.target.value)}
                     />
                     {lenderListings.find((item) => item.id === formListingId)?.min_price_per_day && (
-                      <span style={{ fontSize: '0.75rem', color: '#76575d' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--p-muted)' }}>
                         Minimum accepted price: ₹{lenderListings.find((item) => item.id === formListingId).min_price_per_day}/day
                       </span>
                     )}
@@ -813,7 +762,7 @@ const Chat = () => {
                       <div className="calculation-preview-box">
                         <div className="calc-label">
                           <span>Duration: <strong>{calcs.days} day{calcs.days > 1 ? 's' : ''}</strong></span>
-                          <div style={{ fontSize: '0.75rem', color: '#76575d' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--p-muted)' }}>
                             ₹{formDailyPrice} × {calcs.days}
                           </div>
                         </div>
@@ -853,7 +802,7 @@ const Chat = () => {
                 </form>
               )}
 
-              {!negotiationMode && latestOffer?.status !== 'pending' && latestOffer?.status !== 'accepted' && (
+              {!negotiationMode && latestOffer && latestOffer.status !== 'pending' && latestOffer.status !== 'accepted' && (
                 <Button variant="primary" onClick={startMakeOffer}>
                   Make new offer
                 </Button>
@@ -879,10 +828,10 @@ const Chat = () => {
                               {off.status}
                             </span>
                           </div>
-                          <div style={{ color: '#76575d', fontSize: '0.75rem' }}>
+                          <div style={{ color: 'var(--p-muted)', fontSize: '0.75rem' }}>
                             Total: ₹{off.total_cost} ({formatDate(off.start_date)} - {formatDate(off.end_date)})
                           </div>
-                          <div style={{ color: '#76575d', fontSize: '0.75rem' }}>
+                          <div style={{ color: 'var(--p-muted)', fontSize: '0.75rem' }}>
                             By {user && off.sender_id === user.id ? 'You' : off.sender_name} on {formatTimestamp(off.created_at)}
                           </div>
                         </div>

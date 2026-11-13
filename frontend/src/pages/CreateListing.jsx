@@ -222,10 +222,10 @@ const CreateListing = () => {
   const isNextDisabled = !previews.length || isLoading || Boolean(uploadError) || uploadedUrls.length !== files.length;
 
   return (
-    <div className="create-listing-page section" style={{ '--h': '2' }}>
+    <div className="create-listing-page app-page">
       <div className="wrap">
         <div className="wizard-header">
-          <h2 className="t-h2">List your item</h2>
+          <h1 className="t-h2">List your item</h1>
           <p className="t-lead measure">Upload photos, set the details, and publish to neighbors nearby.</p>
         </div>
 

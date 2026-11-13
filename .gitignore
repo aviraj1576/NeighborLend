@@ -3,7 +3,6 @@
 .env.*
 !.env.example
 .envrc
-test-credentials.txt
 
 # Python
 __pycache__/
@@ -84,23 +83,15 @@ keystore.properties
 .DS_Store
 Thumbs.db
 Desktop.ini
-backend/.test-tools/
 backend/.payment-test-artifacts/
-backend/.pytest_cache/
 backend/.payment-demo/
 backend/.payment-verification/
 backend/private-rental-evidence/
 
-# Machine learning weights and checkpoints
-*.pt
-*.pth
-*.onnx
-*.engine
-*.safetensors
-!backend/ai_service/best_model.pt
-!backend/ai_service/models/neighborlend_yoloe_best.pt
+# Design-taste skill metadata (not part of the shipped app)
+.agents/
+skills-lock.json
+.taste-skill/
 
-# EP engine runtime, artifacts, and private test images
-ep/.runtime/
-ep/.test-artifacts/
-ep/test_images/
+# Third-party design kit (not app source; kept out of the repo for a clean GitHub)
+frontend/public/assets/

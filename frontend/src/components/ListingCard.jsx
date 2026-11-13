@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapPin, Star } from 'lucide-react';
+import { MapPin, Star, Package } from 'lucide-react';
 import { resolvePhotoUrl } from '../utils/photoUrl';
 import Card from './ui/Card';
 import Badge from './ui/Badge';
@@ -40,8 +40,8 @@ const ListingCard = ({ listing }) => {
         {imageUrl ? (
           <img src={imageUrl} alt={titleText} className="listing-photo" loading="lazy" />
         ) : (
-          <div className="listing-photo-placeholder">
-            <span className="photo-initial">{ownerInitial}</span>
+          <div className="listing-photo-placeholder" role="img" aria-label="No photo yet">
+            <Package size={32} aria-hidden="true" />
           </div>
         )}
         <div className="listing-overlay">

@@ -27,6 +27,7 @@ export default function Button({
   asChild = false,
   className = '',
   loading = false,
+  ...rest
 }) {
   const btnCls = [
     'btn',
@@ -38,6 +39,7 @@ export default function Button({
 
   const style = loading ? { opacity: 0.7, pointerEvents: 'none' } : undefined;
   const common = {
+    ...rest,
     className: btnCls,
     style,
     'aria-busy': loading || undefined,

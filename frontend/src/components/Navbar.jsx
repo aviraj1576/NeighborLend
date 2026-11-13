@@ -93,7 +93,6 @@ const Navbar = () => {
           <span className="dropdown-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
         )}
       </Link>
-      {user?.is_admin && <Link to="/payment-review" className="dropdown-link" onClick={() => setUserMenuOpen(false)}>Payment review</Link>}
       <div className="dropdown-divider" />
       <button
         className="dropdown-link dropdown-logout"
@@ -118,9 +117,21 @@ const Navbar = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Close the account dropdown and the mobile menu with Escape
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setUserMenuOpen(false);
+        setMobileMenuOpen(false);
+      }
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   return (
     <nav className="navbar">
-      <a href="#" className="skip-link visually-hidden" tabIndex={0}>
+      <a href="#main-content" className="skip-link">
         Skip to content
       </a>
       <div className="wrap nav-wrap">
@@ -134,6 +145,7 @@ const Navbar = () => {
               to="/browse"
               className={`nav-link ${isActive('/browse')}`}
               aria-label="Browse items"
+              aria-current={location.pathname === '/browse' ? 'page' : undefined}
             >
               Browse
             </Link>
@@ -169,16 +181,12 @@ const Navbar = () => {
             </div>
           ) : (
             <div className="auth-actions desktop-only">
-              <Link to="/login">
-                <Button variant="secondary" size="sm">
-                  Log in
-                </Button>
-              </Link>
-              <Link to="/register">
-                <Button variant="primary" size="sm">
-                  Sign up
-                </Button>
-              </Link>
+              <Button variant="secondary" size="sm" asChild>
+                <Link to="/login">Log in</Link>
+              </Button>
+              <Button variant="primary" size="sm" asChild>
+                <Link to="/register">Sign up</Link>
+              </Button>
             </div>
           )}
 
@@ -250,7 +258,6 @@ const Navbar = () => {
                   <span className="mobile-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
                 )}
               </Link>
-              {user?.is_admin && <Link to="/payment-review" className="mobile-link" onClick={() => setMobileMenuOpen(false)}>Payment review</Link>}
               <button
                 className="mobile-link mobile-logout"
                 onClick={() => { handleLogout(); setMobileMenuOpen(false); }}

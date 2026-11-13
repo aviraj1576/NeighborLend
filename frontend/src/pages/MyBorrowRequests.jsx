@@ -8,6 +8,24 @@ import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import './MyBorrowRequests.css';
 
+const STATUS_LABELS = {
+  open: 'Open',
+  fulfilled: 'Fulfilled',
+  closed: 'Closed',
+  cancelled: 'Cancelled',
+};
+
+const HANDOVER_LABELS = {
+  not_applicable: 'No handover yet',
+  pending: 'Handover pending',
+  photos_uploaded: 'Photos uploaded',
+  borrower_confirmed: 'Item received',
+  lender_confirmed: 'Handover confirmed',
+  issue_reported: 'Issue reported',
+  return_photos_uploaded: 'Return photos uploaded',
+  return_confirmed: 'Returned',
+};
+
 const MyBorrowRequests = () => {
   const { user } = useAuth();
   const [requests, setRequests] = useState([]);
@@ -42,11 +60,11 @@ const MyBorrowRequests = () => {
   ];
 
   return (
-    <div className="my-borrow-requests-page section" style={{ '--h': '2' }}>
+    <div className="my-borrow-requests-page app-page">
       <div className="wrap">
         <div className="page-header section-head--split">
           <div>
-            <h2 className="t-h2">My borrow requests</h2>
+            <h1 className="t-h2">My borrow requests</h1>
             <p className="t-lead measure">Track rentals you&rsquo;ve requested and offers made to you.</p>
           </div>
           <div className="tab-buttons">
@@ -56,6 +74,7 @@ const MyBorrowRequests = () => {
                 variant="secondary"
                 size="sm"
                 className={`tab-btn ${activeTab === t.key ? 'active' : ''}`}
+                aria-pressed={activeTab === t.key}
                 onClick={() => setActiveTab(t.key)}
               >
                 {t.label}
@@ -76,9 +95,11 @@ const MyBorrowRequests = () => {
               >
                 <Link to={`/borrow-requests/${request.id}`} className="request-link">
                   <div className="request-head">
-                    <div className={`status-badge status-${request.status}`}>{request.status}</div>
+                    <div className={`status-badge status-${request.status}`}>
+                      {STATUS_LABELS[request.status] || request.status}
+                    </div>
                     <Badge variant="outline" className="handover-badge">
-                      {request.handover_status || 'Not applicable'}
+                      {HANDOVER_LABELS[request.handover_status] || 'No handover yet'}
                     </Badge>
                   </div>
                   <div className="request-body">
@@ -115,9 +136,9 @@ const MyBorrowRequests = () => {
                 Start a conversation and make an offer to create a rental request.
               </p>
               <div className="empty-actions" style={{ marginTop: 'var(--s-5)' }}>
-                <Link to="/browse">
-                  <Button variant="primary">Browse items</Button>
-                </Link>
+                <Button variant="primary" asChild>
+                  <Link to="/browse">Browse items</Link>
+                </Button>
               </div>
             </div>
           </Card>

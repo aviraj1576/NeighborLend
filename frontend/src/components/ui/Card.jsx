@@ -24,7 +24,19 @@ export default function Card({
   ].filter(Boolean).join(' ');
 
   const onClickHandler = onClick
-    ? { onClick, role: 'button', tabIndex: 0, style: { cursor: 'pointer' } }
+    ? {
+        onClick,
+        onKeyDown: (e) => {
+          if (e.target !== e.currentTarget) return;
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick(e);
+          }
+        },
+        role: 'button',
+        tabIndex: 0,
+        style: { cursor: 'pointer' },
+      }
     : {};
 
   return (

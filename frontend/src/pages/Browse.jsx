@@ -81,7 +81,7 @@ const Browse = () => {
       <header className="browse-masthead">
         <div className="wrap">
           <div className="masthead-copy">
-            <h2 className="masthead-title">Borrow what you need, from neighbors nearby.</h2>
+            <h1 className="masthead-title">Borrow what you need, from neighbors nearby.</h1>
             <p className="masthead-lead">
               Listings within {radius >= 100 ? 'all distances' : `${radius} km`} of
               <strong>{locationName}</strong>. Rates set by owners, no platform fees.
@@ -105,6 +105,7 @@ const Browse = () => {
                 id="search"
                 name="q"
                 type="text"
+                aria-label="Search items"
                 placeholder="What do you need?"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -192,6 +193,8 @@ const Browse = () => {
                   onChange={(e) => setRadius(Number(e.target.value))}
                   className="radius-slider"
                   title={`Filter items within ${radius >= 100 ? 'all distances' : `${radius} km`}`}
+                  aria-label="Search radius"
+                  aria-valuetext={radius >= 100 ? 'Any distance' : `${radius} kilometres`}
                 />
 
                 <div className="radius-preset-pills">
@@ -232,13 +235,13 @@ const Browse = () => {
           </div>
 
           {loading ? (
-            <div className="listings-grid grid--bento" aria-label="Loading">
+            <div className="listings-grid" aria-busy="true" aria-label="Loading listings">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="skeleton-card" />
               ))}
             </div>
           ) : listings.length > 0 ? (
-            <div className="listings-grid grid--bento">
+            <div className="listings-grid">
               {listings.map((listing) => (
                 <ListingCard key={listing.id} listing={listing} />
               ))}

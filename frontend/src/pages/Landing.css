@@ -4,15 +4,30 @@
   the product mockup, bento grid, proof strip and CTA band.
 */
 
+/* ---------------------------------------------------------------- hero notice */
+/* the kit colours the notice with --accent (gold = 1.6:1 on cream); text uses the accessible accent brown */
+.hero-notice b { color: var(--p-accent-text); }
+/* the hero glows extend past the mockup frame; clip them at the screen edge so phones never scroll sideways
+   (needed since T08: the frame no longer clips them) */
+.hero { overflow-x: clip; }
+/* stacked (1023px and below) the phone mockup is 560px tall: the frame grows to fit it instead of
+   shrinking to what is left of the screen (the phone was clipped, and since T08 it spills over the buttons) */
+@media (max-width: 1023px) {
+  .hero-split > .hero-visual { flex: none; height: auto; }
+  .hero-frame.frame--fill { height: auto; }
+}
+/* the mockup's "For rent" pill stays on one line (since T08 its own smaller size applies) */
+.app-pill { white-space: nowrap; }
+
 /* ---------------------------------------------------------------- hero visual: product mockup */
 .hero-frame {
   position: relative;
   isolation: isolate;
   overflow: visible;
   border-radius: var(--r-lg, 20px);
-  background: var(--surface, #f3e1cc);
-  box-shadow: 0 30px 60px -12px color-mix(in oklab, var(--ink, #2b061e) 22%, transparent),
-    0 0 0 1px color-mix(in oklab, var(--ink, #2b061e) 10%, transparent);
+  background: var(--surface);
+  box-shadow: 0 30px 60px -12px color-mix(in oklab, var(--ink) 22%, transparent),
+    0 0 0 1px color-mix(in oklab, var(--ink) 10%, transparent);
 }
 
 /* subtle top-glow behind the hero visual (the dealt 'topglow' ground) */
@@ -23,7 +38,7 @@
   z-index: 0;
   height: 600px;
   background: radial-gradient(600px 420px at 50% -10%,
-      color-mix(in oklab, var(--p-accent, #d2bf55) 38%, transparent), transparent 65%);
+      color-mix(in oklab, var(--p-accent) 38%, transparent), transparent 65%);
   filter: blur(44px);
   animation: glow-pulse 6s ease-in-out infinite alternate;
 }
@@ -47,11 +62,11 @@
   position: relative;
   width: min(340px, 88vw);
   height: min(640px, 90vh);
-  background: #1a1218;
-  border: 14px solid #241820;
+  background: var(--p-ink);
+  border: 14px solid var(--p-ink);
   border-radius: 60px;
-  box-shadow: 0 32px 64px -12px color-mix(in oklab, var(--ink, #2b061e) 35%, transparent);
-  overflow: visible;
+  box-shadow: 0 32px 64px -12px color-mix(in oklab, var(--ink) 35%, transparent);
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
@@ -61,11 +76,14 @@
 
 .phone__screen {
   flex: 1;
-  background: #fbf7f0;
-  overflow: visible;
+  min-height: 0;
+  background: var(--p-highlight);
+  overflow: hidden;
   position: relative;
   border-radius: 46px;
   border: 1px solid color-mix(in oklab, #000 8%, transparent);
+  display: flex;
+  flex-direction: column;
 }
 @media (max-width: 1023px) {
   .phone__screen { border-radius: 42px; }
@@ -77,9 +95,30 @@
   z-index: -1;
   height: 320px;
   background: radial-gradient(520px 360px at 50% -12%,
-      color-mix(in oklab, var(--p-accent, #d2bf55) 45%, transparent), transparent 60%);
+      color-mix(in oklab, var(--p-accent) 45%, transparent), transparent 60%);
   filter: blur(32px);
   opacity: 0.5;
+}
+
+/* hero split on desktop: the kit stacks .hero-split only ≤1023px — desktop gets its two columns here */
+@media (min-width: 1024px) {
+  .hero-text.hero-split {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    column-gap: var(--s-7, 48px);
+    align-items: start;
+  }
+  .hero-split > .hero-visual { height: auto; }
+  /* the frame's ratio spacer sets the visual's height; 130% of the visual column fits the phone */
+  .hero-frame.frame--split { --ratio: 130%; }
+}
+@media (min-width: 640px) and (max-width: 1023px) {
+  /* stacked: let the hero grow instead of clipping the frame (the kit does the same on phones) */
+  main > .hero { height: auto; min-height: 100svh; }
+  .hero-frame.frame--split { --ratio: 96%; }
+}
+@media (max-width: 639px) {
+  .hero-frame.frame--split { --ratio: 172%; }
 }
 
 /* ----- app UI inside the phone ----- */
@@ -98,16 +137,16 @@
   width: 30px;
   height: 30px;
   border-radius: 10px;
-  background: linear-gradient(135deg, var(--p-accent, #d2bf55), #fbbfca);
-  color: #111;
+  background: linear-gradient(135deg, var(--p-accent), var(--p-tint));
+  color: var(--p-accent-ink);
   display: grid;
   place-items: center;
   font: 700 14px/1 var(--font-display);
-  box-shadow: 0 2px 6px color-mix(in oklab, var(--p-accent, #d2bf55) 40%, transparent);
+  box-shadow: 0 2px 6px color-mix(in oklab, var(--p-accent) 40%, transparent);
 }
 .app-bar__title {
   font: 600 17px/1 var(--font-display);
-  color: #1f1320;
+  color: var(--p-ink);
   letter-spacing: -0.02em;
 }
 .app-bar__right {
@@ -119,9 +158,9 @@
   height: 22px;
   padding: 0 9px;
   border-radius: 11px;
-  background: #fff5e6;
-  border: 1px solid color-mix(in oklab, var(--p-accent, #d2bf55) 35%, transparent);
-  color: #6b4f22;
+  background: var(--p-highlight);
+  border: 1px solid color-mix(in oklab, var(--p-accent) 35%, transparent);
+  color: var(--p-muted);
   font: 500 12px/1 var(--font-text);
 }
 
@@ -135,7 +174,7 @@
   width: 100px;
   height: 100px;
   border-radius: 24px;
-  background: linear-gradient(135deg, #e8dcc8 0%, #f3e9d2 100%);
+  background: linear-gradient(135deg, var(--p-tint-soft) 0%, var(--p-highlight) 100%);
   position: relative;
   overflow: visible;
   box-shadow: 0 10px 20px -4px color-mix(in oklab, #000 12%, transparent);
@@ -146,12 +185,12 @@
   position: absolute;
   inset: 0;
   border-radius: 24px;
-  border: 1px solid color-mix(in oklab, var(--p-accent, #d2bf55) 30%, transparent);
+  border: 1px solid color-mix(in oklab, var(--p-accent) 30%, transparent);
 }
 .app-info { flex: 1; min-width: 0; }
 .app-title {
   font: 600 17px/1.25 var(--font-display);
-  color: #1f1320;
+  color: var(--p-ink);
   margin: 0 0 6px;
   letter-spacing: -0.01em;
 }
@@ -159,11 +198,11 @@
   display: flex;
   align-items: center;
   gap: 7px;
-  color: #76575d;
+  color: var(--p-muted);
   font: 500 13px/1.4 var(--font-text);
   margin-bottom: 8px;
 }
-.app-icon { color: #d2bf55; width: 13px; height: 13px; flex: none; }
+.app-icon { color: var(--p-accent-text); width: 13px; height: 13px; flex: none; }
 .app-price {
   display: flex;
   align-items: baseline;
@@ -172,12 +211,12 @@
 }
 .app-rate {
   font: 700 19px/1 var(--font-display);
-  color: #2b061e;
+  color: var(--p-ink);
   letter-spacing: -0.02em;
 }
 .app-per {
   font: 500 13px/1 var(--font-text);
-  color: #76575d;
+  color: var(--p-muted);
 }
 .app-borrow-btn {
   height: auto;
@@ -190,35 +229,101 @@
 
 .app-tabs {
   display: flex;
-  padding: 6px 20px 14px;
-  gap: 3px;
+  align-items: flex-end;
+  padding: 6px 20px 0;
+  gap: 14px;
   border-top: 1px solid color-mix(in oklab, #000 6%, transparent);
 }
 .app-tab {
-  font: 500 13px/1 var(--font-text);
-  color: #76575d;
-  padding-bottom: 7px;
+  appearance: none;
+  background: none;
+  border: 0;
   border-bottom: 2px solid transparent;
+  cursor: pointer;
+  font: 500 13px/1 var(--font-text);
+  color: var(--p-muted);
+  padding: 0 0 9px;
   white-space: nowrap;
 }
+.app-tab:hover { color: var(--p-ink); }
 .app-tab.active {
-  color: #2b061e;
-  border-bottom-color: #d2bf55;
+  color: var(--p-ink);
+  border-bottom-color: var(--p-accent);
+}
+
+/* ----- tab panels inside the phone ----- */
+.app-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 20px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.app-spec { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 10px; }
+.app-spec li {
+  position: relative;
+  padding-left: 18px;
+  font: 400 13.5px/1.5 var(--font-text);
+  color: var(--p-ink-soft);
+}
+.app-spec li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 8px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--p-accent);
+}
+.app-review {
+  border: 1px solid color-mix(in oklab, #000 8%, transparent);
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.app-stars { color: var(--p-accent-text); font-size: 12px; letter-spacing: 2px; }
+.app-review p { margin: 0; font: 500 13px/1.5 var(--font-text); color: var(--p-ink); }
+.app-who { font: 400 12px/1.4 var(--font-text); color: var(--p-muted); }
+.app-owner { flex-direction: row; align-items: center; gap: 12px; }
+.app-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--p-accent), var(--p-tint));
+  color: var(--p-accent-ink);
+  display: grid;
+  place-items: center;
+  font: 700 16px/1 var(--font-display);
+  flex: none;
+}
+.app-owner-meta b { display: block; font: 600 15px/1.3 var(--font-display); color: var(--p-ink); }
+.app-owner-meta span { font: 400 12px/1.4 var(--font-text); color: var(--p-muted); }
+.app-ghost {
+  margin-left: auto;
+  font: 600 12px/1 var(--font-text);
+  color: var(--p-accent-text);
+  border: 1px solid color-mix(in oklab, var(--p-accent) 45%, transparent);
+  border-radius: 999px;
+  padding: 8px 12px;
+  background: #fff;
+  flex: none;
 }
 
 /* ---------------------------------------------------------------- bento feature grid */
 .grid--bento {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--card-gap, 24px);
 }
 .grid--bento > .card { align-self: stretch; }
-@media (min-width: 1024px) {
-  .grid--bento { grid-template-columns: repeat(4, 1fr); }
-  .grid--bento > .card:nth-child(1) { grid-column: span 2; }
-}
-@media (max-width: 1023px) {
-  .grid--bento { grid-template-columns: 1fr; }
+@media (max-width: 639px) {
+  .grid--bento { grid-template-columns: minmax(0, 1fr); }
 }
 .feature-head {
   display: flex;
@@ -230,9 +335,9 @@
   width: 36px;
   height: 36px;
   border-radius: var(--r-md, 12px);
-  border: 1px solid color-mix(in oklab, var(--ink, #2b061e) 12%, transparent);
-  background: color-mix(in oklab, var(--p-accent, #d2bf55) 12%, var(--card));
-  color: #8d5a28;
+  border: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
+  background: color-mix(in oklab, var(--p-accent) 12%, var(--card));
+  color: var(--p-accent-text);
   display: grid;
   place-items: center;
   flex: none;
@@ -242,7 +347,7 @@
   font: 600 var(--t-label, 13px)/1 var(--font-text);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #8d5a28;
+  color: var(--p-accent-text);
 }
 
 /* ---------------------------------------------------------------- social proof strip */
@@ -260,25 +365,25 @@
 }
 .strip-words { flex: 1 1 340px; max-width: 42ch; }
 .strip-words h2 { margin: 0 0 var(--s-4, 16px) 0; }
-.strip-words p { color: var(--ink, #2b061e); font-size: var(--t-lead, 18px); line-height: 1.5; }
+.strip-words p { color: var(--ink); font-size: var(--t-lead, 18px); line-height: 1.5; }
 .strip-proof {
   display: flex;
   gap: var(--s-6, 32px);
   align-items: flex-start;
   flex-wrap: wrap;
-  border-left: 1px solid color-mix(in oklab, var(--ink, #2b061e) 14%, transparent);
+  border-left: 1px solid color-mix(in oklab, var(--ink) 14%, transparent);
   padding-left: var(--s-7, 48px);
 }
 @media (max-width: 1023px) {
   .strip-proof { border-left: none; padding-left: 0; justify-content: center; width: 100%; }
 }
 .proof-item { display: flex; flex-direction: column; gap: var(--s-1, 4px); min-width: 150px; }
-.proof-number { font: 700 var(--t-stat, clamp(28px, .952vw + 24.29px, 38px))/1 var(--font-display); color: #2b061e; letter-spacing: -0.02em; }
-.proof-label { font: 500 var(--t-small, 14px)/1.4 var(--font-text); color: #76575d; }
+.proof-number { font: 700 var(--t-stat, clamp(28px, .952vw + 24.29px, 38px))/1 var(--font-display); color: var(--p-ink); letter-spacing: -0.02em; }
+.proof-label { font: 500 var(--t-small, 14px)/1.4 var(--font-text); color: var(--p-muted); }
 .proof-divider {
   width: 1px;
   height: 120px;
-  background: color-mix(in oklab, var(--ink, #2b061e) 14%, transparent);
+  background: color-mix(in oklab, var(--ink) 14%, transparent);
   margin: 0 var(--s-4, 16px);
   flex: none;
   align-self: stretch;
@@ -292,6 +397,9 @@
   margin-top: var(--s-6, 32px);
 }
 .step-card { flex: 1; min-width: 0; }
+@media (max-width: 767px) {
+  .steps-row { flex-direction: column; }
+}
 .step-head {
   display: flex;
   align-items: flex-start;
@@ -302,8 +410,8 @@
   width: 40px;
   height: 40px;
   border-radius: 12px;
-  background: #e8dcc8;
-  color: #8d5a28;
+  background: var(--p-tint-soft);
+  color: var(--p-accent-text);
   display: grid;
   place-items: center;
   font: 700 17px/1 var(--font-display);
@@ -316,9 +424,9 @@
 .section--cta .wrap { display: flex; flex-direction: column; gap: var(--s-6, 32px); }
 .frame--cta {
   border-radius: var(--r-lg, 20px);
-  border: 1px solid color-mix(in oklab, var(--ink, #2b061e) 12%, transparent);
-  background: linear-gradient(135deg, #f3e1cc 0%, #ffe9c4 55%, #ffe6d4 100%);
-  color: #2b061e;
+  border: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
+  background: linear-gradient(135deg, var(--p-surface) 0%, var(--p-highlight) 55%, var(--p-highlight) 100%);
+  color: var(--p-ink);
   overflow: clip;
   position: relative;
 }
@@ -329,7 +437,7 @@
   z-index: 0;
   height: 360px;
   background: radial-gradient(700px 400px at 80% -15%,
-      color-mix(in oklab, var(--p-accent, #d2bf55) 30%, transparent), transparent 60%);
+      color-mix(in oklab, var(--p-accent) 30%, transparent), transparent 60%);
   filter: blur(48px);
 }
 .cta-copy {
@@ -339,7 +447,7 @@
   max-width: 62ch;
 }
 .cta-copy h2 { margin: 0 0 var(--s-4, 16px) 0; }
-.cta-copy p { color: #4a3630; font-size: var(--t-lead, 18px); line-height: 1.55; margin: 0; }
+.cta-copy p { color: var(--p-ink-soft); font-size: var(--t-lead, 18px); line-height: 1.55; margin: 0; }
 @media (max-width: 1023px) {
   .cta-copy { padding: var(--s-7, 48px) var(--s-6, 32px); text-align: center; }
   .cta-copy .btn-row { justify-content: center; flex-direction: column; align-items: stretch; width: 100%; }

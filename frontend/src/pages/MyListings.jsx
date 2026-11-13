@@ -86,19 +86,19 @@ const MyListings = () => {
   };
 
   return (
-    <div className="my-listings-page section" style={{ '--h': '2' }}>
+    <div className="my-listings-page app-page">
       <div className="wrap">
         <div className="page-header section-head--split">
           <div>
-            <h2 className="t-h2">My listings</h2>
+            <h1 className="t-h2">My listings</h1>
             <p className="t-lead measure">Manage the items you share with neighbors.</p>
           </div>
-          <Link to="/create-listing">
-            <Button variant="primary" className="add-listing-btn">
+          <Button variant="primary" className="add-listing-btn" asChild>
+            <Link to="/create-listing">
               <Plus size={18} />
               <span style={{ marginLeft: 'var(--s-2)' }}>List something</span>
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
 
         {loading ? (
@@ -202,9 +202,9 @@ const MyListings = () => {
               <h3 className="t-card">You haven&rsquo;t listed anything yet</h3>
               <p className="t-body">Turn your unused items into extra cash today.</p>
               <div className="empty-actions" style={{ marginTop: 'var(--s-5)' }}>
-                <Link to="/create-listing">
-                  <Button variant="primary">List an item</Button>
-                </Link>
+                <Button variant="primary" asChild>
+                  <Link to="/create-listing">List an item</Link>
+                </Button>
               </div>
             </div>
           </Card>

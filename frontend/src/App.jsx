@@ -15,11 +15,11 @@ import CreateBorrowRequest from './pages/CreateBorrowRequest';
 import ListingDetail from './pages/ListingDetail';
 import MyListings from './pages/MyListings';
 import Chat from './pages/Chat';
-import PaymentReviewQueue from './components/PaymentReviewQueue';
+import NotFound from './pages/NotFound';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  if (loading) return <div style={{ color: 'white', padding: '100px', textAlign: 'center' }}>Loading...</div>;
+  if (loading) return <div style={{ color: 'var(--ink)', padding: '100px', textAlign: 'center' }}>Loading...</div>;
   if (!isAuthenticated) return <Navigate to="/login" />;
   return children;
 };
@@ -28,7 +28,7 @@ const MainLayout = ({ children }) => {
   return (
     <>
       <Navbar />
-      <main style={{ paddingTop: 'var(--nav, 72px)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <main id="main-content" tabIndex={-1} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', outline: 'none' }}>
         {children}
       </main>
       <Footer />
@@ -42,7 +42,6 @@ function App() {
       <AuthProvider>
         <MainLayout>
           <Routes>
-            <Route path="/payment-review" element={<ProtectedRoute><PaymentReviewQueue /></ProtectedRoute>} />
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
@@ -85,6 +84,7 @@ function App() {
                 <Chat />
               </ProtectedRoute>
             } />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </MainLayout>
       </AuthProvider>

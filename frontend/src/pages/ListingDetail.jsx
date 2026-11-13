@@ -44,10 +44,10 @@ const ListingDetail = () => {
       navigate('/login');
       return;
     }
-    if (isOwner || startingChat) return;
+    if (isOwner) return;
     setStartingChat(true);
     try {
-      const res = await api.post('/conversations', { lender_id: listing.owner_id, listing_id: listing.id });
+      const res = await api.post('/conversations', { lender_id: listing.owner_id });
       navigate(`/messages/${res.data.id}`);
     } catch (err) {
       console.error('Failed to open chat:', err);
@@ -59,9 +59,6 @@ const ListingDetail = () => {
 
   return (
     <div className="listing-detail-page">
-      <a href="#content" className="skip-link visually-hidden" tabIndex={0}>
-        Skip to content
-      </a>
 
       {/* ===== Hero: full-bleed photograph + info card overlay ===== */}
       <section className="detail-hero section" style={{ '--h': '1' }} id="content">
@@ -117,7 +114,7 @@ const ListingDetail = () => {
                 </div>
                 <div className="deposit-row">
                   <Shield size={14} className="deposit-icon" />
-                  <span>Refundable deposit ₹{listing.security_deposit ?? 0} · Test booking only; total is confirmed server-side before payment.</span>
+                  <span>Refundable deposit ₹{listing.security_deposit ?? 0}</span>
                 </div>
                 <div className="location-row">
                   <MapPin size={14} className="location-icon" />
@@ -145,7 +142,9 @@ const ListingDetail = () => {
           <div className="detail-main span-8">
             <section className="detail-section">
               <h2 className="t-h2">Description</h2>
-              <p className="description-text measure">{listing.description}</p>
+              <p className="description-text measure">
+                {listing.description || 'The owner has not added a description yet.'}
+              </p>
             </section>
 
             {listing.ai_label && (
@@ -171,7 +170,9 @@ const ListingDetail = () => {
                 <span>{listing.address || 'Neighborhood location'}</span>
               </div>
               <div className="map-placeholder entered">
-                Map view — {listing.lat}, {listing.lon}
+                {listing.latitude != null && listing.longitude != null
+                  ? `Approximate location: ${listing.latitude.toFixed(3)}, ${listing.longitude.toFixed(3)}`
+                  : 'Exact pickup point is shared in chat after you agree on a rental.'}
               </div>
             </section>
           </div>
@@ -204,20 +205,14 @@ const ListingDetail = () => {
             <Card variant="default" className="actions-card">
               {isOwner ? (
                 <div className="owner-actions">
-                  <Button variant="secondary" onClick={() => navigate(`/listing/${id}/edit`)}>
-                    Edit listing
-                  </Button>
-                  <Button variant="secondary" className="delete-btn" onClick={() => {}}>
-                    Delete listing
+                  <Button variant="secondary" onClick={() => navigate('/my-listings')}>
+                    Manage in My listings
                   </Button>
                 </div>
               ) : (
                 <div className="borrower-actions">
-                  <Button variant="primary" onClick={handleChatWithOwner} disabled={startingChat}>
-                    {startingChat ? 'Connecting…' : 'Chat with owner'}
-                  </Button>
-                  <Button variant="secondary" onClick={handleChatWithOwner}>
-                    Negotiate price
+                  <Button variant="secondary" onClick={handleChatWithOwner} disabled={startingChat}>
+                    {startingChat ? 'Connecting…' : 'Negotiate price in chat'}
                   </Button>
                 </div>
               )}

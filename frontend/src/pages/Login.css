@@ -6,8 +6,8 @@
 .login-page { display: flex; flex-direction: column; min-height: 0; }
 .login-page .wrap { height: 100%; }
 .login-copy { display: flex; flex-direction: column; justify-content: center; min-height: 0; }
-.login-header h1 { margin: 0 0 var(--s-4, 16px) 0; color: #2b061e; letter-spacing: var(--display-tracking, -0.028em); }
-.login-header p { margin: 0; color: #4a3630; }
+.login-header h1 { margin: 0 0 var(--s-4, 16px) 0; color: var(--p-ink); letter-spacing: var(--display-tracking, -0.028em); }
+.login-header p { margin: 0; color: var(--p-ink-soft); }
 
 .login-form-wrap { display: flex; align-items: center; justify-content: center; min-height: 0; }
 .login-card { max-width: 420px; width: 100%; }
@@ -15,39 +15,47 @@
 .error-banner {
   padding: var(--s-3, 12px) var(--s-4, 16px);
   border-radius: var(--r-md, 12px);
-  border: 1px solid color-mix(in oklab, #ef4444 35%, transparent);
-  background: color-mix(in oklab, #ef4444 10%, var(--card));
-  color: #b3261e;
+  border: 1px solid color-mix(in oklab, var(--p-danger) 35%, transparent);
+  background: color-mix(in oklab, var(--p-danger) 10%, var(--card));
+  color: var(--p-danger);
   font: 400 var(--t-small, 14px)/1.45 var(--font-text);
 }
 .password-group { position: relative; }
+.password-group .input { padding-right: 72px; }
+/* sits inside the input's right edge (the group also holds the label, so no top: 50%) */
 .toggle-password {
   position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
+  right: 4px;
+  bottom: 3px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  height: 44px;
+  padding: 0 var(--s-3, 12px);
   background: none;
   border: none;
-  color: #76575d;
-  font: 500 var(--t-small, 14px)/1 var(--font-text);
+  color: var(--p-action);
+  font: 600 var(--t-small, 14px)/1 var(--font-text);
   cursor: pointer;
-  padding: 0;
 }
 .login-divider {
   display: flex;
   align-items: center;
   gap: var(--s-4, 16px);
-  color: #76575d;
+  color: var(--p-muted);
   font: 400 var(--t-small, 14px)/1.4 var(--font-text);
 }
-.login-divider span {
+.login-divider::before,
+.login-divider::after {
+  content: "";
   flex: 1;
-  border-top: 1px solid color-mix(in oklab, var(--ink, #2b061e) 14%, transparent);
+  border-top: 1px solid color-mix(in oklab, var(--ink) 14%, transparent);
 }
 .google-signin-button { width: 100%; justify-content: center; }
 .login-footer { margin-top: var(--s-2, 8px); }
-.login-footer p { margin: 0; color: #4a3630; text-align: center; }
-.auth-link { color: #8d5a28; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+.login-footer p { margin: 0; color: var(--p-ink-soft); text-align: center; }
+.auth-link { color: var(--p-accent-text); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
 
 @media (max-width: 1023px) {
   .login-page .wrap { grid-template-columns: 1fr !important; gap: var(--s-6, 32px); }
