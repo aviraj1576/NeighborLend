@@ -39,11 +39,12 @@
 }
 .edit-head h3 { margin: 0; color: var(--p-ink); }
 .cancel-edit { padding-inline: var(--s-2); }
-.form-row {
+/* scoped to the edit form (its flex gap already spaces the rows); a bare .form-row with a
+   margin here leaked into the register form and doubled its gaps */
+.edit-form .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--s-4, 16px);
-  margin-bottom: var(--s-4, 16px);
 }
 @media (max-width: 639px) { .form-row { grid-template-columns: 1fr; } }
 .edit-form { display: flex; flex-direction: column; gap: var(--s-4, 16px); margin-bottom: var(--s-5, 24px); }
