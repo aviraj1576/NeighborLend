@@ -81,7 +81,7 @@ const Browse = () => {
       <header className="browse-masthead">
         <div className="wrap">
           <div className="masthead-copy">
-            <h2 className="masthead-title">Borrow what you need, from neighbors nearby.</h2>
+            <h1 className="masthead-title">Borrow what you need, from neighbors nearby.</h1>
             <p className="masthead-lead">
               Listings within {radius >= 100 ? 'all distances' : `${radius} km`} of
               <strong>{locationName}</strong>. Rates set by owners, no platform fees.
