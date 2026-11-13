@@ -42,7 +42,7 @@ const Login = () => {
         size: 'large',
         shape: 'rectangular',
         text: 'signin_with',
-        width: 320,
+        width: Math.min(320, googleButtonRef.current.offsetWidth || 320),
       });
       return true;
     };
