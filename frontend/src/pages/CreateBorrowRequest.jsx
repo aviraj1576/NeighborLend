@@ -89,7 +89,7 @@ export default function CreateBorrowRequest() {
     <div className="create-request-page app-page">
       <div className="wrap">
         <div className="request-header">
-          <h2 className="t-h2">Post an item request</h2>
+          <h1 className="t-h2">Post an item request</h1>
           <p className="t-lead measure">
             Can&rsquo;t find what you need? Post a request and nearby lenders will reach out to you.
           </p>
