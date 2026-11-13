@@ -5,7 +5,7 @@
 
 .my-listings-page { display: flex; flex-direction: column; min-height: 0; }
 .page-header { margin-bottom: var(--s-7, 48px); }
-.page-header h2 { margin: 0 0 var(--s-3, 12px) 0; color: var(--p-ink); letter-spacing: var(--display-tracking, -0.028em); }
+.page-header h1 { margin: 0 0 var(--s-3, 12px) 0; color: var(--p-ink); letter-spacing: var(--display-tracking, -0.028em); }
 .page-header p { margin: 0; color: var(--p-ink-soft); }
 
 .dashboard-loading {
