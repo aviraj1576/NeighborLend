@@ -235,13 +235,13 @@ const Browse = () => {
           </div>
 
           {loading ? (
-            <div className="listings-grid grid--bento" aria-label="Loading">
+            <div className="listings-grid" aria-busy="true" aria-label="Loading listings">
               {[1, 2, 3, 4, 5, 6].map((i) => (
                 <div key={i} className="skeleton-card" />
               ))}
             </div>
           ) : listings.length > 0 ? (
-            <div className="listings-grid grid--bento">
+            <div className="listings-grid">
               {listings.map((listing) => (
                 <ListingCard key={listing.id} listing={listing} />
               ))}
