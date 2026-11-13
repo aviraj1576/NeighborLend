@@ -15,6 +15,7 @@ import CreateBorrowRequest from './pages/CreateBorrowRequest';
 import ListingDetail from './pages/ListingDetail';
 import MyListings from './pages/MyListings';
 import Chat from './pages/Chat';
+import NotFound from './pages/NotFound';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -83,6 +84,7 @@ function App() {
                 <Chat />
               </ProtectedRoute>
             } />
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </MainLayout>
       </AuthProvider>
