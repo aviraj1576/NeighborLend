@@ -366,9 +366,9 @@ const Chat = () => {
               <div className="sidebar-empty-state">
                 <MessageSquare size={36} className="text-muted" />
                 <p>No conversations found.</p>
-                <Link to="/browse">
-                  <Button variant="secondary" size="sm">Browse items</Button>
-                </Link>
+                <Button variant="secondary" size="sm" asChild>
+                  <Link to="/browse">Browse items</Link>
+                </Button>
               </div>
             ) : (
               filteredConversations.map((conv) => {
