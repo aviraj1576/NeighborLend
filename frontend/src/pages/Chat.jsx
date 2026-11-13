@@ -565,9 +565,9 @@ const Chat = () => {
             <MessageSquare size={60} className="text-muted" />
             <h3 className="t-card">Select a conversation</h3>
             <p>Choose a chat from the sidebar or browse items to start negotiating.</p>
-            <Link to="/browse">
-              <Button variant="primary">Browse marketplace</Button>
-            </Link>
+            <Button variant="primary" asChild>
+              <Link to="/browse">Browse marketplace</Link>
+            </Button>
           </section>
         )}
 
