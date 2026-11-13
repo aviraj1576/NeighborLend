@@ -27,7 +27,7 @@ const MainLayout = ({ children }) => {
   return (
     <>
       <Navbar />
-      <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <main id="main-content" tabIndex={-1} style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', outline: 'none' }}>
         {children}
       </main>
       <Footer />
