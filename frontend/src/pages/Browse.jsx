@@ -193,6 +193,8 @@ const Browse = () => {
                   onChange={(e) => setRadius(Number(e.target.value))}
                   className="radius-slider"
                   title={`Filter items within ${radius >= 100 ? 'all distances' : `${radius} km`}`}
+                  aria-label="Search radius"
+                  aria-valuetext={radius >= 100 ? 'Any distance' : `${radius} kilometres`}
                 />
 
                 <div className="radius-preset-pills">
