@@ -40,8 +40,8 @@ const ListingCard = ({ listing }) => {
         {imageUrl ? (
           <img src={imageUrl} alt={titleText} className="listing-photo" loading="lazy" />
         ) : (
-          <div className="listing-photo-placeholder">
-            <span className="photo-initial">{ownerInitial}</span>
+          <div className="listing-photo-placeholder" role="img" aria-label="No photo yet">
+            <Package size={32} aria-hidden="true" />
           </div>
         )}
         <div className="listing-overlay">
