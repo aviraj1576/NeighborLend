@@ -802,7 +802,7 @@ const Chat = () => {
                 </form>
               )}
 
-              {!negotiationMode && latestOffer?.status !== 'pending' && latestOffer?.status !== 'accepted' && (
+              {!negotiationMode && latestOffer && latestOffer.status !== 'pending' && latestOffer.status !== 'accepted' && (
                 <Button variant="primary" onClick={startMakeOffer}>
                   Make new offer
                 </Button>
