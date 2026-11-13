@@ -9,8 +9,8 @@
   inset: 0 0 auto 0;
   z-index: 40;
   height: var(--nav, 72px);
-  background: color-mix(in oklab, var(--p-bg, #ffeed6) 82%, white);
-  border-bottom: 1px solid color-mix(in oklab, var(--p-ink, #2b061e) 14%, transparent);
+  background: color-mix(in oklab, var(--p-bg) 82%, white);
+  border-bottom: 1px solid color-mix(in oklab, var(--p-ink) 14%, transparent);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
 }
@@ -35,7 +35,7 @@
 .nav-logo {
   font: 500 clamp(18px, 1vw + 14px, 22px)/1 var(--font-display, "Instrument Sans");
   letter-spacing: var(--display-tracking, -0.028em);
-  color: var(--p-ink, #2b061e);
+  color: var(--p-ink);
   text-decoration: none;
   flex: none;
 }
@@ -57,7 +57,7 @@
 }
 .nav-link {
   font: 500 var(--t-small, 14px)/1 var(--font-text);
-  color: var(--p-muted, #76575d);
+  color: var(--p-muted);
   text-decoration: none;
   padding: var(--s-2, 8px) 0;
   border-bottom: 2px solid transparent;
@@ -67,10 +67,12 @@
 }
 .nav-link:hover,
 .nav-link.active {
-  color: var(--p-ink, #2b061e);
-  border-bottom-color: var(--p-accent, #d2bf55);
+  color: var(--p-ink);
+  border-bottom-color: var(--p-accent);
 }
 
+/* cta-btn merges onto the Link via asChild, so it is the .btn itself (no descendant) */
+.btn.cta-btn,
 .cta-btn .btn {
   height: auto;
   min-height: 34px;
@@ -92,31 +94,31 @@
   gap: var(--s-2, 8px);
   padding: var(--s-2, 8px);
   border-radius: var(--r-md, 12px);
-  border: 1px solid color-mix(in oklab, var(--p-ink, #2b061e) 14%, transparent);
-  background: var(--p-surface, #f3e1cc);
-  color: var(--p-ink, #2b061e);
+  border: 1px solid color-mix(in oklab, var(--p-ink) 14%, transparent);
+  background: var(--p-surface);
+  color: var(--p-ink);
   cursor: pointer;
   transition: border-color var(--m-out, 120ms) var(--m-ease, cubic-bezier(.2,.8,.2,1)),
     background var(--m-out, 120ms) var(--m-ease, cubic-bezier(.2,.8,.2,1));
 }
 .user-trigger:hover {
-  border-color: var(--p-accent, #d2bf55);
-  background: color-mix(in oklab, var(--p-accent, #d2bf55) 8%, var(--p-surface));
+  border-color: var(--p-accent);
+  background: color-mix(in oklab, var(--p-accent) 8%, var(--p-surface));
 }
 .user-avatar {
   display: grid;
   place-items: center;
   width: 32px;
   height: 32px;
-  background: var(--p-accent, #d2bf55);
-  color: #111;
+  background: var(--p-accent);
+  color: var(--p-accent-ink);
   border-radius: 50%;
   font: 600 13px/1 var(--font-display);
   flex: none;
   border: none;
 }
 .trigger-arrow {
-  color: #76575d;
+  color: var(--p-muted);
   flex: none;
   transition: transform var(--m-out, 120ms) var(--m-ease, cubic-bezier(.2,.8,.2,1));
 }
@@ -133,10 +135,10 @@
   min-width: 200px;
   padding: var(--s-5, 24px);
   border-radius: var(--r-lg, 20px);
-  border: 1px solid color-mix(in oklab, var(--p-ink, #2b061e) 12%, transparent);
-  background: var(--p-inv-bg, #2b061e);
-  box-shadow: 0 24px 48px -10px color-mix(in oklab, var(--p-ink, #2b061e) 30%, transparent);
-  color: var(--p-inv-ink, #ffeed6);
+  border: 1px solid color-mix(in oklab, var(--p-ink) 12%, transparent);
+  background: var(--p-inv-bg);
+  box-shadow: 0 24px 48px -10px color-mix(in oklab, var(--p-ink) 30%, transparent);
+  color: var(--p-inv-ink);
   animation: dropdown-in var(--m-panel, 200ms) var(--m-ease, cubic-bezier(.2,.8,.2,1));
 }
 @keyframes dropdown-in {
@@ -153,7 +155,7 @@
   border-radius: var(--r-md, 12px);
   border: none;
   background: transparent;
-  color: color-mix(in oklab, var(--p-inv-ink, #ffeed6) 85%, transparent);
+  color: color-mix(in oklab, var(--p-inv-ink) 85%, transparent);
   font: 400 var(--t-body, 16px)/1.4 var(--font-text);
   cursor: pointer;
   text-align: left;
@@ -161,19 +163,19 @@
 }
 .dropdown-link:hover,
 .dropdown-link.unread {
-  background: color-mix(in oklab, var(--p-accent, #d2bf55) 15%, var(--p-inv-surface));
-  color: var(--p-inv-ink, #ffeed6);
+  background: color-mix(in oklab, var(--p-accent) 15%, var(--p-inv-surface));
+  color: var(--p-inv-ink);
 }
 .dropdown-divider {
   height: 1px;
-  background: color-mix(in oklab, var(--p-inv-ink, #ffeed6) 12%, transparent);
+  background: color-mix(in oklab, var(--p-inv-ink) 12%, transparent);
   margin: var(--s-3, 12px) 0;
 }
 .dropdown-logout {
-  color: color-mix(in oklab, var(--p-inv-ink, #ffeed6) 60%, transparent);
+  color: color-mix(in oklab, var(--p-inv-ink) 60%, transparent);
 }
 .dropdown-logout:hover {
-  color: #fbbfca;
+  color: var(--p-tint);
   background: transparent;
 }
 .dropdown-badge {
@@ -181,8 +183,8 @@
   font: 600 10px/1 var(--font-mono);
   padding: 2px 6px;
   border-radius: 6px;
-  background: var(--p-accent, #d2bf55);
-  color: #111;
+  background: var(--p-accent);
+  color: var(--p-accent-ink);
 }
 
 /* desktop auth actions (logged out) */
@@ -196,8 +198,10 @@
 /* mobile-only / desktop-only */
 .desktop-only { display: none; }
 .mobile-only { display: block; }
+/* desktop-only: every element carrying it in this navbar is a flex row
+   (nav-links, user-area, auth-actions) — block would break their layout */
 @media (min-width: 640px) {
-  .desktop-only { display: block; }
+  .desktop-only { display: flex; }
   .mobile-only { display: none !important; }
   .nav-core { justify-content: flex-end; }
 }
@@ -209,9 +213,9 @@
   width: 36px;
   height: 36px;
   border-radius: var(--r-md, 12px);
-  border: 1px solid color-mix(in oklab, var(--p-ink, #2b061e) 14%, transparent);
-  background: var(--p-surface, #f3e1cc);
-  color: var(--p-ink, #2b061e);
+  border: 1px solid color-mix(in oklab, var(--p-ink) 14%, transparent);
+  background: var(--p-surface);
+  color: var(--p-ink);
   line-height: 1;
   cursor: pointer;
 }
@@ -222,8 +226,8 @@
   position: fixed;
   inset: 0 0 auto 0;
   z-index: 45;
-  background: var(--p-inv-bg, #2b061e);
-  border-bottom: 1px solid var(--p-inv-surface, #381429);
+  background: var(--p-inv-bg);
+  border-bottom: 1px solid var(--p-inv-surface);
   padding: calc(var(--nav, 72px) + var(--s-4, 16px)) var(--gut, 80px) var(--s-7, 48px);
   display: flex;
   flex-direction: column;
@@ -247,33 +251,33 @@
   border-radius: var(--r-md, 12px);
   border: none;
   background: transparent;
-  color: var(--p-inv-ink, #ffeed6);
+  color: var(--p-inv-ink);
   font: 400 var(--t-body, 16px)/1.4 var(--font-text);
   cursor: pointer;
   text-align: left;
   text-decoration: none;
 }
 .mobile-link:hover {
-  color: var(--p-inv-accent, #d2bf55);
+  color: var(--p-inv-accent);
 }
 .mobile-link.mobile-primary {
-  background: var(--p-accent, #d2bf55);
-  color: #111;
+  background: var(--p-accent);
+  color: var(--p-accent-ink);
   font-weight: 600;
 }
 .mobile-link.mobile-primary:hover {
-  background: color-mix(in oklab, var(--p-accent, #d2bf55) 85%, transparent);
+  background: color-mix(in oklab, var(--p-accent) 85%, transparent);
 }
 .mobile-badge {
   font: 600 10px/1 var(--font-mono);
   padding: 2px 6px;
   border-radius: 6px;
-  background: var(--p-accent, #d2bf55);
-  color: #111;
+  background: var(--p-accent);
+  color: var(--p-accent-ink);
 }
 .mobile-logout {
-  color: color-mix(in oklab, var(--p-inv-ink, #ffeed6) 60%, transparent);
+  color: color-mix(in oklab, var(--p-inv-ink) 60%, transparent);
 }
 .mobile-logout:hover {
-  color: #fbbfca;
+  color: var(--p-tint);
 }

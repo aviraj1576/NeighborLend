@@ -675,7 +675,7 @@ const Chat = () => {
                   <div className="offer-price-highlight">
                     <span className="offer-rate-large">—</span>
                   </div>
-                  <p style={{ fontSize: '0.85rem', color: '#76575d' }}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--p-muted)' }}>
                     No negotiation offer has been made yet. You can submit an offer for specific dates.
                   </p>
                   <Button variant="primary" onClick={startMakeOffer}>
@@ -724,7 +724,7 @@ const Chat = () => {
                       onChange={(e) => setFormDailyPrice(e.target.value)}
                     />
                     {lenderListings.find((item) => item.id === formListingId)?.min_price_per_day && (
-                      <span style={{ fontSize: '0.75rem', color: '#76575d' }}>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--p-muted)' }}>
                         Minimum accepted price: ₹{lenderListings.find((item) => item.id === formListingId).min_price_per_day}/day
                       </span>
                     )}
@@ -762,7 +762,7 @@ const Chat = () => {
                       <div className="calculation-preview-box">
                         <div className="calc-label">
                           <span>Duration: <strong>{calcs.days} day{calcs.days > 1 ? 's' : ''}</strong></span>
-                          <div style={{ fontSize: '0.75rem', color: '#76575d' }}>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--p-muted)' }}>
                             ₹{formDailyPrice} × {calcs.days}
                           </div>
                         </div>
@@ -828,10 +828,10 @@ const Chat = () => {
                               {off.status}
                             </span>
                           </div>
-                          <div style={{ color: '#76575d', fontSize: '0.75rem' }}>
+                          <div style={{ color: 'var(--p-muted)', fontSize: '0.75rem' }}>
                             Total: ₹{off.total_cost} ({formatDate(off.start_date)} - {formatDate(off.end_date)})
                           </div>
-                          <div style={{ color: '#76575d', fontSize: '0.75rem' }}>
+                          <div style={{ color: 'var(--p-muted)', fontSize: '0.75rem' }}>
                             By {user && off.sender_id === user.id ? 'You' : off.sender_name} on {formatTimestamp(off.created_at)}
                           </div>
                         </div>

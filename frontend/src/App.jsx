@@ -18,7 +18,7 @@ import Chat from './pages/Chat';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
-  if (loading) return <div style={{ color: 'white', padding: '100px', textAlign: 'center' }}>Loading...</div>;
+  if (loading) return <div style={{ color: 'var(--ink)', padding: '100px', textAlign: 'center' }}>Loading...</div>;
   if (!isAuthenticated) return <Navigate to="/login" />;
   return children;
 };
@@ -27,7 +27,7 @@ const MainLayout = ({ children }) => {
   return (
     <>
       <Navbar />
-      <main style={{ paddingTop: 'var(--nav, 72px)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
+      <main style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
         {children}
       </main>
       <Footer />

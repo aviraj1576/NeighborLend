@@ -1,6 +1,6 @@
 /*
   Browse page — medium-high density bento marketplace. Built on the taste-skill kit.
-  Layered surfaces (#F3E1CC via --p-surface), hairline borders, soft radius,
+  Layered surfaces (var(--p-surface) via --p-surface), hairline borders, soft radius,
   linked cards that lift, photographs that zoom inside their wrap.
 */
 
@@ -8,8 +8,8 @@
 
 /* ---------------------------------------------------------------- masthead */
 .browse-masthead {
-  border-bottom: 1px solid color-mix(in oklab, var(--ink, #2b061e) 16%, transparent);
-  background: color-mix(in oklab, var(--p-bg, #ffeed6) 85%, white);
+  border-bottom: 1px solid color-mix(in oklab, var(--ink) 16%, transparent);
+  background: color-mix(in oklab, var(--p-bg) 85%, white);
   padding: var(--s-8, 64px) 0 var(--s-7, 48px);
 }
 .browse-masthead .wrap { display: flex; align-items: center; justify-content: space-between; gap: var(--s-6, 48px); }
@@ -20,13 +20,13 @@
 }
 .masthead-title {
   font: 600 clamp(24px, 1.6vw + 18px, 34px)/1.15 var(--font-display);
-  color: #2b061e;
+  color: var(--p-ink);
   margin: 0 0 var(--s-3, 12px) 0;
   letter-spacing: var(--display-tracking, -0.028em);
 }
 .masthead-lead {
   font: 400 var(--t-body, 16px)/1.5 var(--font-text);
-  color: #76575d;
+  color: var(--p-muted);
   margin: 0;
   max-width: 46ch;
 }
@@ -41,7 +41,7 @@
   align-items: stretch;
 }
 .search-icon {
-  color: #76575d;
+  color: var(--p-muted);
   flex: none;
   margin-top: 2px;
 }
@@ -68,12 +68,12 @@
   flex: 0 0 auto;
   border-radius: 10px;
   padding: 3px;
-  background: color-mix(in oklab, var(--ink, #2b061e) 6%, var(--card));
-  border: 1px solid color-mix(in oklab, var(--ink, #2b061e) 12%, transparent);
+  background: color-mix(in oklab, var(--ink) 6%, var(--card));
+  border: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
 }
 .category-pill.active {
-  background: var(--p-accent, #d2bf55);
-  color: #111;
+  background: var(--p-accent);
+  color: var(--p-accent-ink);
   border-color: transparent;
 }
 
@@ -99,25 +99,25 @@
   cursor: pointer;
   padding: var(--s-3, 12px) var(--s-4, 16px);
   border-radius: var(--r-md, 12px);
-  border: 1px solid color-mix(in oklab, var(--ink, #2b061e) 14%, transparent);
-  background: var(--p-surface, #f3e1cc);
-  color: #2b061e;
+  border: 1px solid color-mix(in oklab, var(--ink) 14%, transparent);
+  background: var(--p-surface);
+  color: var(--p-ink);
   font: 500 var(--t-body, 16px)/1.3 var(--font-text);
 }
-.location-icon { color: #d2bf55; width: 15px; height: 15px; flex: none; }
+.location-icon { color: var(--p-accent-text); width: 15px; height: 15px; flex: none; }
 .location-name { flex: 1; min-width: 0; }
-.dropdown-arrow { color: #8d5a28; flex: none; transition: transform 200ms ease; }
+.dropdown-arrow { color: var(--p-accent-text); flex: none; transition: transform 200ms ease; }
 .location-dropdown {
   position: absolute;
   z-index: 20;
   margin-top: var(--s-2, 8px);
   padding: var(--s-5, 24px);
   min-width: 220px;
-  background: var(--p-inv-bg, #2b061e);
-  border: 1px solid var(--p-inv-surface, #381429);
+  background: var(--p-inv-bg);
+  border: 1px solid var(--p-inv-surface);
   border-radius: var(--r-lg, 20px);
-  box-shadow: 0 24px 48px -10px color-mix(in oklab, var(--ink, #2b061e) 30%, transparent);
-  color: var(--p-inv-ink, #ffeed6);
+  box-shadow: 0 24px 48px -10px color-mix(in oklab, var(--ink) 30%, transparent);
+  color: var(--p-inv-ink);
   animation: menu-open var(--m-panel, 200ms) var(--m-ease, cubic-bezier(.2,.8,.2,1));
 }
 @keyframes menu-open {
@@ -128,7 +128,7 @@
   font: 500 var(--t-label, 13px)/1 var(--font-text);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #aa8e8a;
+  color: var(--p-inv-muted);
   margin-bottom: var(--s-3, 12px);
 }
 .dropdown-item {
@@ -138,18 +138,18 @@
   border-radius: var(--r-md, 12px);
   border: none;
   background: transparent;
-  color: var(--p-inv-ink, #ffeed6);
+  color: var(--p-inv-ink);
   font: 400 var(--t-body, 16px)/1.4 var(--font-text);
   cursor: pointer;
   display: flex;
   align-items: center;
   gap: var(--s-3, 12px);
 }
-.dropdown-item.active { background: var(--p-accent, #d2bf55); color: #111; font-weight: 600; }
-.dropdown-item.gps-item { color: #fbbfca; }
+.dropdown-item.active { background: var(--p-accent); color: var(--p-accent-ink); font-weight: 600; }
+.dropdown-item.gps-item { color: var(--p-tint); }
 .dropdown-divider {
   height: 1px;
-  background: var(--p-inv-surface, #381429);
+  background: var(--p-inv-surface);
   border: none;
   margin: var(--s-3, 12px) 0;
 }
@@ -159,9 +159,9 @@
   gap: var(--s-3, 12px);
   padding: var(--s-3, 12px) var(--s-4, 16px);
   border-radius: var(--r-md, 12px);
-  border: 1px solid color-mix(in oklab, var(--ink, #2b061e) 14%, transparent);
-  background: var(--p-surface, #f3e1cc);
-  color: #2b061e;
+  border: 1px solid color-mix(in oklab, var(--ink) 14%, transparent);
+  background: var(--p-surface);
+  color: var(--p-ink);
   font: 500 var(--t-body, 16px)/1.3 var(--font-text);
   cursor: pointer;
   flex: 1;
@@ -175,8 +175,8 @@
   flex: 1;
   padding: var(--s-5, 24px);
   border-radius: var(--r-lg, 20px);
-  border: 1px solid color-mix(in oklab, var(--ink, #2b061e) 14%, transparent);
-  background: var(--p-surface, #f3e1cc);
+  border: 1px solid color-mix(in oklab, var(--ink) 14%, transparent);
+  background: var(--p-surface);
 }
 .radius-top-bar {
   display: flex;
@@ -188,22 +188,22 @@
   align-items: center;
   gap: var(--s-3, 12px);
   font: 500 var(--t-small, 14px)/1 var(--font-text);
-  color: #2b061e;
+  color: var(--p-ink);
 }
 .radius-value-highlight {
   font: 700 var(--t-body, 16px)/1 var(--font-display);
-  color: #8d5a28;
+  color: var(--p-accent-text);
   margin-left: var(--s-2, 8px);
 }
-.radius-slider { width: 100%; height: 6px; accent-color: #d2bf55; }
+.radius-slider { width: 100%; height: 6px; accent-color: var(--p-accent); }
 .radius-preset-pills {
   display: flex;
   gap: var(--s-3, 12px);
   flex-wrap: wrap;
 }
 .radius-pill.active {
-  background: var(--p-accent, #d2bf55);
-  color: #111;
+  background: var(--p-accent);
+  color: var(--p-accent-ink);
   border-color: transparent;
 }
 
@@ -222,22 +222,22 @@
 }
 .results-title {
   font: 600 clamp(22px, 1.4vw + 16px, 28px)/1.2 var(--font-display);
-  color: #2b061e;
+  color: var(--p-ink);
   margin: 0;
   letter-spacing: -0.02em;
 }
 .search-summary-text {
   font: 400 var(--t-small, 14px)/1.5 var(--font-text);
-  color: #76575d;
+  color: var(--p-muted);
   margin: 0;
 }
 .results-count {
   font: 600 var(--t-body, 16px)/1 var(--font-text);
-  color: #2b061e;
+  color: var(--p-ink);
   padding: var(--s-2, 8px) var(--s-4, 16px);
   border-radius: var(--r-md, 12px);
-  border: 1px solid color-mix(in oklab, var(--ink, #2b061e) 14%, transparent);
-  background: var(--p-surface, #f3e1cc);
+  border: 1px solid color-mix(in oklab, var(--ink) 14%, transparent);
+  background: var(--p-surface);
   flex: none;
 }
 
@@ -258,7 +258,7 @@
 .skeleton-card {
   height: 420px;
   border-radius: var(--r-lg, 20px);
-  background: #e8dcc8;
+  background: var(--p-tint-soft);
   position: relative;
   overflow: clip;
 }
@@ -266,7 +266,7 @@
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(90px, #e8dcc8 25%, #f3e1cc 50%, #e8dcc8 75%);
+  background: linear-gradient(90px, var(--p-tint-soft) 25%, var(--p-surface) 50%, var(--p-tint-soft) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
 }
@@ -281,8 +281,8 @@
   padding: var(--s-8, 64px) var(--s-6, 32px);
   text-align: center;
   border-radius: var(--r-lg, 20px);
-  border: 1px solid color-mix(in oklab, var(--ink, #2b061e) 12%, transparent);
-  background: var(--p-surface, #f3e1cc);
+  border: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
+  background: var(--p-surface);
   max-width: 460px;
   margin: 0 auto;
 }
@@ -290,8 +290,8 @@
   width: 64px;
   height: 64px;
   border-radius: 18px;
-  background: #e8dcc8;
-  color: #8d5a28;
+  background: var(--p-tint-soft);
+  color: var(--p-accent-text);
   display: grid;
   place-items: center;
   flex: none;
@@ -299,12 +299,12 @@
 .empty-icon svg { width: 30px; height: 30px; fill: currentColor; }
 .empty-title {
   font: 600 20px/1.25 var(--font-display);
-  color: #2b061e;
+  color: var(--p-ink);
   margin: 0;
 }
 .empty-lead {
   font: 400 var(--t-body, 16px)/1.55 var(--font-text);
-  color: #76575d;
+  color: var(--p-muted);
   margin: 0;
   max-width: 40ch;
 }

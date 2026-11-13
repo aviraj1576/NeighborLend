@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 /**
  * Footer — closing band (skill footer-statement).
  *
- * Inverse ground (ink #2B061E), cream text, one action, district-only address,
+ * Inverse ground (ink var(--p-ink)), cream text, one action, district-only address,
  * .example contact, and a single footer credit line.
  *
  * Props: none (keeps the same shape so any page can drop it in).

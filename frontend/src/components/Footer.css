@@ -1,11 +1,11 @@
 /*
-  Footer — inverse closing band. ground-inverse (ink #2B061E), cream text,
+  Footer — inverse closing band. ground-inverse (ink var(--p-ink)), cream text,
   hairline rule, one credit line, equal edges via .wrap.
 */
 
 .footer.closing {
   padding-block: var(--padt) calc(var(--padb) + var(--bar));
-  border-top: 1px solid var(--line-strong, color-mix(in oklab, var(--p-inv-ink, #ffeed6) 18%, transparent));
+  border-top: 1px solid var(--line-strong, color-mix(in oklab, var(--p-inv-ink) 18%, transparent));
 }
 
 .footer-grid {
@@ -24,18 +24,18 @@
 .footer-logo {
   font: 500 clamp(20px, 1vw + 16px, 26px)/1.1 var(--font-display, "Instrument Sans");
   letter-spacing: var(--display-tracking, -0.028em);
-  color: var(--p-inv-ink, #ffeed6);
+  color: var(--p-inv-ink);
   margin-bottom: var(--s-4, 16px);
 }
 .footer-lead {
-  color: var(--p-inv-muted, #aa8e8a);
+  color: var(--p-inv-muted);
   font: 400 var(--t-body, 16px)/1.55 var(--font-text);
   max-width: 44ch;
 }
 
 .footer-group-title {
   font: 500 var(--t-label, 13px)/1 var(--font-text);
-  color: var(--p-inv-ink, #ffeed6);
+  color: var(--p-inv-ink);
   letter-spacing: 0.01em;
   text-transform: uppercase;
   margin-bottom: var(--s-4, 16px);
@@ -46,16 +46,16 @@
 }
 .footer-link-group li a {
   font: 400 var(--t-body, 16px)/1.5 var(--font-text);
-  color: var(--p-inv-muted, #aa8e8a);
+  color: var(--p-inv-muted);
   text-decoration: underline;
-  text-decoration-color: color-mix(in oklab, var(--p-inv-muted, #aa8e8a) 50%, transparent);
+  text-decoration-color: color-mix(in oklab, var(--p-inv-muted) 50%, transparent);
   text-underline-offset: 4px;
   transition: text-decoration-color var(--m-out, 120ms) var(--m-ease, cubic-bezier(.2,.8,.2,1)),
     color var(--m-out, 120ms) var(--m-ease, cubic-bezier(.2,.8,.2,1));
 }
 .footer-link-group li a:hover {
-  color: var(--p-inv-accent, #d2bf55);
-  text-decoration-color: var(--p-inv-accent, #d2bf55);
+  color: var(--p-inv-accent);
+  text-decoration-color: var(--p-inv-accent);
 }
 
 .footer-contact {
@@ -65,11 +65,11 @@
 }
 .footer-address {
   font: 400 var(--t-body, 16px)/1.5 var(--font-text);
-  color: var(--p-inv-ink, #ffeed6);
+  color: var(--p-inv-ink);
 }
 .footer-contact-line {
   font: 400 var(--t-small, 14px)/1.5 var(--font-text);
-  color: var(--p-inv-muted, #aa8e8a);
+  color: var(--p-inv-muted);
 }
 .footer-actions {
   margin-top: auto;
@@ -80,11 +80,11 @@
 
 .footer-rule {
   border: none;
-  border-top: 1px solid var(--line-strong, color-mix(in oklab, var(--p-inv-ink, #ffeed6) 18%, transparent));
+  border-top: 1px solid var(--line-strong, color-mix(in oklab, var(--p-inv-ink) 18%, transparent));
   margin: var(--s-7, 48px) 0 var(--s-5, 24px);
 }
 .footer-credit {
   font: 400 var(--t-small, 14px)/1.5 var(--font-text);
-  color: var(--p-inv-muted, #aa8e8a);
+  color: var(--p-inv-muted);
   text-align: center;
 }

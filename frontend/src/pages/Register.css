@@ -6,8 +6,8 @@
 .register-page { display: flex; flex-direction: column; min-height: 0; }
 .register-page .wrap { height: 100%; }
 .register-copy { display: flex; flex-direction: column; justify-content: center; min-height: 0; }
-.register-header h1 { margin: 0 0 var(--s-4, 16px) 0; color: #2b061e; letter-spacing: var(--display-tracking, -0.028em); }
-.register-header p { margin: 0; color: #4a3630; }
+.register-header h1 { margin: 0 0 var(--s-4, 16px) 0; color: var(--p-ink); letter-spacing: var(--display-tracking, -0.028em); }
+.register-header p { margin: 0; color: var(--p-ink-soft); }
 
 .register-form-wrap { display: flex; align-items: center; justify-content: center; min-height: 0; }
 .register-card { max-width: 440px; width: 100%; }
@@ -15,9 +15,9 @@
 .error-banner {
   padding: var(--s-3, 12px) var(--s-4, 16px);
   border-radius: var(--r-md, 12px);
-  border: 1px solid color-mix(in oklab, #ef4444 35%, transparent);
-  background: color-mix(in oklab, #ef4444 10%, var(--card));
-  color: #b3261e;
+  border: 1px solid color-mix(in oklab, var(--p-danger) 35%, transparent);
+  background: color-mix(in oklab, var(--p-danger) 10%, var(--card));
+  color: var(--p-danger);
   font: 400 var(--t-small, 14px)/1.45 var(--font-text);
 }
 .form-row {
@@ -35,16 +35,16 @@
 }
 .captcha-question span {
   font: 400 var(--t-small, 14px)/1.4 var(--font-text);
-  color: #4a3630;
+  color: var(--p-ink-soft);
 }
 .captcha-question strong {
   font: 600 var(--t-body, 16px)/1.4 var(--font-text);
-  color: #2b061e;
+  color: var(--p-ink);
 }
 .refresh-captcha {
   background: none;
-  border: 1px solid color-mix(in oklab, var(--ink, #2b061e) 14%, transparent);
-  color: #8d5a28;
+  border: 1px solid color-mix(in oklab, var(--ink) 14%, transparent);
+  color: var(--p-accent-text);
   font: 500 var(--t-small, 14px)/1 var(--font-text);
   padding: var(--s-2, 8px) var(--s-4, 16px);
   border-radius: var(--r-md, 12px);
@@ -52,8 +52,8 @@
   flex: none;
 }
 .register-footer { margin-top: var(--s-2, 8px); }
-.register-footer p { margin: 0; color: #4a3630; text-align: center; }
-.auth-link { color: #8d5a28; font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
+.register-footer p { margin: 0; color: var(--p-ink-soft); text-align: center; }
+.auth-link { color: var(--p-accent-text); font-weight: 600; text-decoration: underline; text-underline-offset: 4px; }
 
 @media (max-width: 768px) {
   .form-row { grid-template-columns: 1fr; }
