@@ -64,7 +64,7 @@ const MyBorrowRequests = () => {
       <div className="wrap">
         <div className="page-header section-head--split">
           <div>
-            <h2 className="t-h2">My borrow requests</h2>
+            <h1 className="t-h2">My borrow requests</h1>
             <p className="t-lead measure">Track rentals you&rsquo;ve requested and offers made to you.</p>
           </div>
           <div className="tab-buttons">
