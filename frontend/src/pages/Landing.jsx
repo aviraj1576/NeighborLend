@@ -214,7 +214,7 @@ const Landing = () => {
             <p>Everything about NeighborLend is designed to keep lending local, safe and effortless.</p>
           </div>
           <div className="span-7 start-6">
-            <div className="grid grid--bento">
+            <div className="grid--bento">
               {features.map((f, i) => (
                 <Card key={f.title} variant="default">
                   <div className="feature-head">
