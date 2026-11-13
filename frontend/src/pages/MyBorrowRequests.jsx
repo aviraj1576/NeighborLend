@@ -8,6 +8,24 @@ import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import './MyBorrowRequests.css';
 
+const STATUS_LABELS = {
+  open: 'Open',
+  fulfilled: 'Fulfilled',
+  closed: 'Closed',
+  cancelled: 'Cancelled',
+};
+
+const HANDOVER_LABELS = {
+  not_applicable: 'No handover yet',
+  pending: 'Handover pending',
+  photos_uploaded: 'Photos uploaded',
+  borrower_confirmed: 'Item received',
+  lender_confirmed: 'Handover confirmed',
+  issue_reported: 'Issue reported',
+  return_photos_uploaded: 'Return photos uploaded',
+  return_confirmed: 'Returned',
+};
+
 const MyBorrowRequests = () => {
   const { user } = useAuth();
   const [requests, setRequests] = useState([]);
