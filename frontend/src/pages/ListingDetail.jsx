@@ -142,7 +142,9 @@ const ListingDetail = () => {
           <div className="detail-main span-8">
             <section className="detail-section">
               <h2 className="t-h2">Description</h2>
-              <p className="description-text measure">{listing.description}</p>
+              <p className="description-text measure">
+                {listing.description || 'The owner has not added a description yet.'}
+              </p>
             </section>
 
             {listing.ai_label && (
