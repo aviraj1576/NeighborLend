@@ -21,6 +21,7 @@ export default function Input({
   error,
   className = '',
   rows,
+  children,
   ...rest
 }) {
   const hasLabel = !!label;
