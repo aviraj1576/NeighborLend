@@ -382,6 +382,9 @@
   margin-top: var(--s-6, 32px);
 }
 .step-card { flex: 1; min-width: 0; }
+@media (max-width: 767px) {
+  .steps-row { flex-direction: column; }
+}
 .step-head {
   display: flex;
   align-items: flex-start;
