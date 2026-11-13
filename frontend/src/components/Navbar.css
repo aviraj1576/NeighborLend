@@ -19,17 +19,13 @@
   .navbar { height: 56px; }
 }
 
+/* .wrap already sets the width and side gutters; no extra padding here */
 .nav-wrap {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--s-5, 24px);
   height: 100%;
-  padding: 0 var(--gut, 80px);
-}
-
-@media (max-width: 639px) {
-  .nav-wrap { padding: 0 var(--s-5, 24px); }
 }
 
 .nav-logo {
