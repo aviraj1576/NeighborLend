@@ -170,7 +170,9 @@ const ListingDetail = () => {
                 <span>{listing.address || 'Neighborhood location'}</span>
               </div>
               <div className="map-placeholder entered">
-                Map view — {listing.lat}, {listing.lon}
+                {listing.latitude != null && listing.longitude != null
+                  ? `Approximate location: ${listing.latitude.toFixed(3)}, ${listing.longitude.toFixed(3)}`
+                  : 'Exact pickup point is shared in chat after you agree on a rental.'}
               </div>
             </section>
           </div>
