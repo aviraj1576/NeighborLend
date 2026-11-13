@@ -90,15 +90,15 @@ const MyListings = () => {
       <div className="wrap">
         <div className="page-header section-head--split">
           <div>
-            <h2 className="t-h2">My listings</h2>
+            <h1 className="t-h2">My listings</h1>
             <p className="t-lead measure">Manage the items you share with neighbors.</p>
           </div>
-          <Link to="/create-listing">
-            <Button variant="primary" className="add-listing-btn">
+          <Button variant="primary" className="add-listing-btn" asChild>
+            <Link to="/create-listing">
               <Plus size={18} />
               <span style={{ marginLeft: 'var(--s-2)' }}>List something</span>
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
 
         {loading ? (
