@@ -1,19 +1,30 @@
 /*
   NeighborLend design layer — extends the taste-skill kit (system.css, cards.css,
   motion.css, backgrounds.css, layout.css, icon.css) imported in main.jsx.
-  Brand tokens (start.mjs brand): cream #FFEED6 ground, ink #2B061E,
-  gold #D2BF55 accent, Instrument Sans + DM Mono, soft radius, tonal buttons.
+  Palette (kept): cream #FFEED6 ground, plum ink #2B061E, gold #D2BF55 accent,
+  Instrument Sans + DM Mono, soft radius, tonal buttons.
+  Gold is for FILLS only (badges, avatars, the inverse button, active underlines).
+  Text and icons that need the accent hue use --p-accent-text (a brown that passes
+  WCAG AA on every cream surface). Every colour in the app must come from these tokens.
 */
 
 :root {
   --p-bg: #ffeed6;
   --p-surface: #f3e1cc;
   --p-ink: #2b061e;
+  --p-ink-soft: #4a3630;
   --p-muted: #76575d;
   --p-accent: #d2bf55;
   --p-accent-ink: #111111;
+  --p-accent-text: #7d4f22;
   --p-action: #2b061e;
   --p-action-ink: #ffeed6;
+  --p-tint: #fbbfca;
+  --p-tint-soft: #e8dcc8;
+  --p-highlight: #fff8e7;
+  --p-border: #8e7275;
+  --p-danger: #b3261e;
+  --p-success: #166534;
   --p-inv-bg: #2b061e;
   --p-inv-surface: #381429;
   --p-inv-ink: #ffeed6;
