@@ -332,7 +332,7 @@ const Chat = () => {
   const isOfferRecipient = latestOffer && user && latestOffer.sender_id !== user.id;
 
   return (
-    <div className="chat-page section" style={{ '--h': '2' }}>
+    <div className="chat-page app-page">
       <div className="wrap">
         <aside className={`conversations-sidebar ${conversationId ? 'hidden-mobile' : ''}`}>
           <div className="conversations-header">
