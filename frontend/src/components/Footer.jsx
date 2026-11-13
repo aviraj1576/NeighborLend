@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import './Footer.css';
 
 /**
  * Footer — closing band (skill footer-statement).
@@ -39,29 +40,15 @@ export default function Footer() {
                 <li><Link to="/messages">Messages</Link></li>
               </ul>
             </div>
-            <div className="footer-link-group">
-              <h3 className="footer-group-title">Help</h3>
-              <ul>
-                <li><Link to="/">How it works</Link></li>
-                <li><Link to="/">Safety centre</Link></li>
-                <li><Link to="/">Terms of service</Link></li>
-                <li><Link to="/">Privacy policy</Link></li>
-              </ul>
-            </div>
           </div>
 
           <div className="footer-contact">
-            <h3 className="footer-group-title">NeighborHood HQ</h3>
+            <h3 className="footer-group-title">Where we are</h3>
             <p className="footer-address">
               Connaught Place district, Delhi • India
             </p>
-            <p className="footer-contact-line">
-              contact@example • support@example
-            </p>
             <div className="footer-actions" style={{ marginTop: 'auto' }}>
-              <Link to="/register">
-                <button className="btn btn--primary btn--sm">Get started</button>
-              </Link>
+              <Link to="/register" className="btn btn--primary btn--sm">Get started</Link>
             </div>
           </div>
         </div>
@@ -69,8 +56,7 @@ export default function Footer() {
         <hr className="footer-rule" />
 
         <p className="footer-credit">
-          Photographs and art supplied by the client; stand-in frames are listed in the
-          design report. &copy; 2026 NeighborLend — illustrative demo.
+          &copy; 2026 NeighborLend. Borrow and lend with neighbors nearby.
         </p>
       </div>
     </footer>
