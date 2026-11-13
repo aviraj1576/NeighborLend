@@ -205,20 +205,14 @@ const ListingDetail = () => {
             <Card variant="default" className="actions-card">
               {isOwner ? (
                 <div className="owner-actions">
-                  <Button variant="secondary" onClick={() => navigate(`/listing/${id}/edit`)}>
-                    Edit listing
-                  </Button>
-                  <Button variant="secondary" className="delete-btn" onClick={() => {}}>
-                    Delete listing
+                  <Button variant="secondary" onClick={() => navigate('/my-listings')}>
+                    Manage in My listings
                   </Button>
                 </div>
               ) : (
                 <div className="borrower-actions">
-                  <Button variant="primary" onClick={handleChatWithOwner} disabled={startingChat}>
-                    {startingChat ? 'Connecting…' : 'Chat with owner'}
-                  </Button>
-                  <Button variant="secondary" onClick={handleChatWithOwner}>
-                    Negotiate price
+                  <Button variant="secondary" onClick={handleChatWithOwner} disabled={startingChat}>
+                    {startingChat ? 'Connecting…' : 'Negotiate price in chat'}
                   </Button>
                 </div>
               )}
