@@ -4,6 +4,21 @@
   the product mockup, bento grid, proof strip and CTA band.
 */
 
+/* ---------------------------------------------------------------- hero notice */
+/* the kit colours the notice with --accent (gold = 1.6:1 on cream); text uses the accessible accent brown */
+.hero-notice b { color: var(--p-accent-text); }
+/* the hero glows extend past the mockup frame; clip them at the screen edge so phones never scroll sideways
+   (needed since T08: the frame no longer clips them) */
+.hero { overflow-x: clip; }
+/* stacked (1023px and below) the phone mockup is 560px tall: the frame grows to fit it instead of
+   shrinking to what is left of the screen (the phone was clipped, and since T08 it spills over the buttons) */
+@media (max-width: 1023px) {
+  .hero-split > .hero-visual { flex: none; height: auto; }
+  .hero-frame.frame--fill { height: auto; }
+}
+/* the mockup's "For rent" pill stays on one line (since T08 its own smaller size applies) */
+.app-pill { white-space: nowrap; }
+
 /* ---------------------------------------------------------------- hero visual: product mockup */
 .hero-frame {
   position: relative;
