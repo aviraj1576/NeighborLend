@@ -136,9 +136,9 @@ const MyBorrowRequests = () => {
                 Start a conversation and make an offer to create a rental request.
               </p>
               <div className="empty-actions" style={{ marginTop: 'var(--s-5)' }}>
-                <Link to="/browse">
-                  <Button variant="primary">Browse items</Button>
-                </Link>
+                <Button variant="primary" asChild>
+                  <Link to="/browse">Browse items</Link>
+                </Button>
               </div>
             </div>
           </Card>
