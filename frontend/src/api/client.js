@@ -2,7 +2,7 @@ import axios from 'axios';
 import { invalidateSession } from '../context/sessionSync.js';
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '/api',
+  baseURL: import.meta.env?.VITE_API_BASE_URL || '/api',
 });
 
 api.interceptors.request.use(

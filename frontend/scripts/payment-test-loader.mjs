@@ -1,13 +1,14 @@
-// Use the installed Vite transformer for the teammate's JSX UI primitives.
+// Transform JSX modules through the same Oxc transform used by the Vite toolchain.
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 export async function load(url, context, nextLoad) {
+  if (url.endsWith('.css') && url.includes('/src/')) {
+    return { format: 'module', source: '', shortCircuit: true };
+  }
   if (url.endsWith('.jsx') && url.includes('/src/components/')) {
-    let source = await readFile(new URL(url), 'utf8');
-    if (url.includes('/components/ui/')) {
-      const { transformWithOxc } = await import('vite');
-      source = (await transformWithOxc(source, fileURLToPath(url))).code;
-    }
+    const { transformWithOxc } = await import('vite');
+    const input = await readFile(new URL(url), 'utf8');
+    const { code: source } = await transformWithOxc(input, fileURLToPath(url));
     return { format: 'module', source, shortCircuit: true };
   }
   return nextLoad(url, context);

@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createServer } from 'node:http';
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import {
@@ -17,6 +18,8 @@ import {
   refundReviewLabel,
 } from './paymentFlow.js';
 import { invalidateSession, watchSessionChanges } from '../context/sessionSync.js';
+import apiClient from '../api/client.js';
+import { uploadEvidenceFiles } from './rentalEvidenceUpload.js';
 import PaymentModal from './PaymentModal.jsx';
 import EscrowStatusCard from './EscrowStatusCard.jsx';
 import DisputeResolutionModal from './DisputeResolutionModal.jsx';
@@ -801,6 +804,51 @@ test('rental photographs use authenticated rental-specific upload contract', asy
   assert.ok(calls[0][1] instanceof FormData);
   assert.equal(result, '/api/payments/evidence/synthetic-id');
   await assert.rejects(uploadRentalEvidence(api, null, new Blob(), 'return'));
+});
+
+test('private evidence helper uses shared authenticated API and leaves multipart boundary to Axios', async () => {
+  const oldStorage = globalThis.localStorage;
+  const oldAdapter = apiClient.defaults.adapter;
+  const oldBaseURL = apiClient.defaults.baseURL;
+  let captured;
+  let body = '';
+  const server = createServer((request, response) => {
+    const chunks = [];
+    request.on('data', (chunk) => chunks.push(chunk));
+    request.on('end', () => {
+      captured = { method: request.method, url: request.url, headers: request.headers };
+      body = Buffer.concat(chunks).toString('latin1');
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ id: 'evidence-1', url: '/api/payments/evidence/evidence-1' }));
+    });
+  });
+  globalThis.localStorage = { getItem: (key) => key === 'nl_token' ? 'test-session-token' : null };
+  await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
+  apiClient.defaults.baseURL = `http://127.0.0.1:${server.address().port}/api`;
+  apiClient.defaults.adapter = 'http';
+  try {
+    const file = new Blob(['private image bytes'], { type: 'image/png' });
+    const refs = await uploadEvidenceFiles(apiClient, 'booking-123', [file], 'handover');
+    assert.deepEqual(refs, ['/api/payments/evidence/evidence-1']);
+    assert.equal(captured.method, 'POST');
+    assert.equal(captured.url, '/api/payments/bookings/booking-123/evidence?stage=handover');
+    assert.equal(captured.headers.authorization, 'Bearer test-session-token');
+    assert.match(captured.headers['content-type'], /^multipart\/form-data; boundary=/);
+    assert.match(body, /name="file"; filename="blob"/);
+    assert.match(body, /Content-Type: image\/png/i);
+    assert.ok(body.includes('private image bytes'));
+  } finally {
+    apiClient.defaults.adapter = oldAdapter;
+    apiClient.defaults.baseURL = oldBaseURL;
+    if (oldStorage === undefined) delete globalThis.localStorage;
+    else globalThis.localStorage = oldStorage;
+    await new Promise((resolve, reject) => server.close((error) => error ? reject(error) : resolve()));
+  }
+});
+
+test('private evidence upload rejects missing booking and malformed backend response', async () => {
+  await assert.rejects(uploadEvidenceFiles({ post: async () => assert.fail('no request expected') }, null, [new Blob(['x'])], 'return'), /Verified rental booking/);
+  await assert.rejects(uploadEvidenceFiles({ post: async () => ({ data: {} }) }, 'booking', [new Blob(['x'])], 'return'), /private evidence reference/);
 });
 
 test('administrator handover recovery controls require an explicit reason', () => {
