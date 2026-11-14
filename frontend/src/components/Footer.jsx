@@ -55,6 +55,11 @@ export default function Footer() {
 
         <hr className="footer-rule" />
 
+        <nav className="footer-legal" aria-label="Legal">
+          <Link to="/privacy">Privacy Policy</Link>
+          <Link to="/terms">Terms of Service</Link>
+        </nav>
+
         <p className="footer-credit">
           &copy; 2026 NeighborLend. Borrow and lend with neighbors nearby.
         </p>

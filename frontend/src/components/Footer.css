@@ -97,3 +97,16 @@
   color: var(--p-inv-muted);
   text-align: center;
 }
+
+/* legal links: one quiet row above the credit line */
+.footer-legal {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-2, 8px) var(--s-6, 32px);
+  margin-bottom: var(--s-3, 12px);
+}
+.footer-legal a {
+  color: var(--p-inv-ink); text-decoration: none; font: 500 var(--t-small, 14px)/1.5 var(--font-text);
+  background: linear-gradient(currentColor, currentColor) 0 100% / 0 1px no-repeat;
+  transition: background-size 220ms ease; padding-bottom: 2px;
+}
+.footer-legal a:hover, .footer-legal a:focus-visible { background-size: 100% 1px; }
+.footer-legal a:focus-visible { outline: 2px solid var(--p-inv-accent); outline-offset: 3px; border-radius: 3px; }
