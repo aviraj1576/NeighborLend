@@ -7,7 +7,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from app.config import get_settings
 from app.database import engine, Base, migrate_schema
-from app.routers import auth, listings, ai, uploads, borrow_requests, chat, notifications
+from app.routers import auth, listings, ai, uploads, borrow_requests, chat, notifications, lend_damage
 
 settings = get_settings()
 
@@ -75,6 +75,15 @@ app.include_router(borrow_requests.router, prefix="/api/borrow-requests", tags=[
 app.include_router(chat.router, prefix="/api", tags=["Chat & Negotiation"])
 app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
 app.include_router(uploads.router, prefix="/api", tags=["Uploads"])
+app.include_router(lend_damage.router, prefix="/api", tags=["Lend Damage"])
+
+from damage_check import create_router as create_damage_router
+from app.services.damage_integration import get_damage_service, damage_user_id
+app.include_router(
+    create_damage_router(get_damage_service(), damage_user_id),
+    prefix="/api/damage-checks",
+    tags=["Damage Check"],
+)
 
 @app.get("/api/health")
 def health():

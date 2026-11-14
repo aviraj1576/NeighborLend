@@ -302,6 +302,8 @@ def borrower_confirm_handover(
     req.handover_confirmed_by = current_user.id
     req.borrowing_started_at = now
     req.return_due_at = now + timedelta(days=days)
+    if req.damage_link_expires_at:
+        req.damage_link_expires_at = max(req.damage_link_expires_at, req.return_due_at + timedelta(days=30))
     req.status = BorrowRequestStatus.fulfilled
     create_notification(
         db, lender_id, "handover_confirmed", "Borrower Confirmed Receipt",
