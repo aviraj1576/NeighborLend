@@ -56,6 +56,9 @@ def migrate_schema(target_engine=None):
             "borrower_rating_comment": "TEXT",
             "lender_rated_at": "DATETIME",
             "borrower_rated_at": "DATETIME",
+            "damage_check_id": "VARCHAR",
+            "damage_link_token": "VARCHAR",
+            "damage_link_expires_at": "DATETIME",
         },
         "negotiation_offers": {
             "listing_id": "VARCHAR",
@@ -83,6 +86,11 @@ def migrate_schema(target_engine=None):
             connection.execute(text(
                 "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_sub "
                 "ON users (google_sub)"
+            ))
+        if "borrow_requests" in existing_tables:
+            connection.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_borrow_requests_damage_link_token "
+                "ON borrow_requests (damage_link_token)"
             ))
 
         # Move the old conversation-level listing association onto historical
