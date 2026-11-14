@@ -128,8 +128,8 @@ Commands (exact, from this repo):
 - [x] Phase 0 — Seed data + env
 - [x] Phase 1 — Vendor module + storage adapter + mount
 - [x] Phase 2 — Data model + state machine + link tokens (backend)
-- [ ] Phase 3 — Before/return/review/dispute endpoints (backend)
-- [ ] Phase 4 — Admin backend: disputes, resolve, audit log, timeout
+- [x] Phase 3 — Before/return/review/dispute endpoints (backend)
+- [x] Phase 4 — Admin backend: disputes, resolve, audit log, timeout
 - [ ] Phase 5 — Frontend: before-photos flow + shareable link page
 - [ ] Phase 6 — Frontend: return flow + lender review + dispute
 - [ ] Phase 7 — Frontend: admin interface
