@@ -19,6 +19,8 @@ import DamageCheckPage from './pages/DamageCheckPage';
 import AdminDisputes from './pages/AdminDisputes';
 import AdminDisputeDetail from './pages/AdminDisputeDetail';
 import AdminSupport from './pages/AdminSupport';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import NotFound from './pages/NotFound';
 
 const ProtectedRoute = ({ children }) => {
@@ -60,6 +62,8 @@ function App() {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/borrow-requests/:id" element={<BorrowRequestDetail />} />
             <Route path="/browse" element={<Browse />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
             <Route path="/listing/:id" element={<ListingDetail />} />
             <Route path="/create-listing" element={
               <ProtectedRoute>
