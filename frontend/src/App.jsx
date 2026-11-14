@@ -15,12 +15,24 @@ import CreateBorrowRequest from './pages/CreateBorrowRequest';
 import ListingDetail from './pages/ListingDetail';
 import MyListings from './pages/MyListings';
 import Chat from './pages/Chat';
+import DamageCheckPage from './pages/DamageCheckPage';
+import AdminDisputes from './pages/AdminDisputes';
+import AdminDisputeDetail from './pages/AdminDisputeDetail';
+import AdminSupport from './pages/AdminSupport';
 import NotFound from './pages/NotFound';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return <div style={{ color: 'var(--ink)', padding: '100px', textAlign: 'center' }}>Loading...</div>;
   if (!isAuthenticated) return <Navigate to="/login" />;
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+  if (loading) return <div style={{ color: 'var(--ink)', padding: '100px', textAlign: 'center' }}>Loading...</div>;
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (!user?.is_admin) return <Navigate to="/" />;
   return children;
 };
 
@@ -73,6 +85,27 @@ function App() {
               <ProtectedRoute>
                 <Chat />
               </ProtectedRoute>
+            } />
+            <Route path="/damage-check/:token" element={
+              <ProtectedRoute>
+                <DamageCheckPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={<Navigate to="/admin/disputes" replace />} />
+            <Route path="/admin/disputes" element={
+              <AdminRoute>
+                <AdminDisputes />
+              </AdminRoute>
+            } />
+            <Route path="/admin/disputes/:disputeId" element={
+              <AdminRoute>
+                <AdminDisputeDetail />
+              </AdminRoute>
+            } />
+            <Route path="/admin/support" element={
+              <AdminRoute>
+                <AdminSupport />
+              </AdminRoute>
             } />
             <Route path="/inbox" element={
               <ProtectedRoute>
