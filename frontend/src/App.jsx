@@ -16,11 +16,20 @@ import ListingDetail from './pages/ListingDetail';
 import MyListings from './pages/MyListings';
 import Chat from './pages/Chat';
 import NotFound from './pages/NotFound';
+import PaymentReviewQueue from './components/PaymentReviewQueue';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return <div style={{ color: 'var(--ink)', padding: '100px', textAlign: 'center' }}>Loading...</div>;
   if (!isAuthenticated) return <Navigate to="/login" />;
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, user, loading } = useAuth();
+  if (loading) return <p role="status">Loading administrator session…</p>;
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  if (user?.is_admin !== true) return <Navigate to="/browse" replace />;
   return children;
 };
 
@@ -49,6 +58,7 @@ function App() {
             <Route path="/borrow-requests/:id" element={<BorrowRequestDetail />} />
             <Route path="/browse" element={<Browse />} />
             <Route path="/listing/:id" element={<ListingDetail />} />
+            <Route path="/admin/payments" element={<AdminRoute><PaymentReviewQueue /></AdminRoute>} />
             <Route path="/create-listing" element={
               <ProtectedRoute>
                 <CreateListing />

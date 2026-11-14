@@ -47,7 +47,7 @@ const ListingDetail = () => {
     if (isOwner) return;
     setStartingChat(true);
     try {
-      const res = await api.post('/conversations', { lender_id: listing.owner_id });
+      const res = await api.post('/conversations', { lender_id: listing.owner_id, listing_id: listing.id });
       navigate(`/messages/${res.data.id}`);
     } catch (err) {
       console.error('Failed to open chat:', err);

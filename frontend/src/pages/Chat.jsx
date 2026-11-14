@@ -94,10 +94,29 @@ const Chat = () => {
 
   useEffect(() => {
     if (!activeConv?.lender?.id) return;
+    if (activeConv.listing_id) {
+      setLenderListings(activeConv.listing ? [activeConv.listing] : []);
+      return;
+    }
+    let cancelled = false;
     api.get('/listings/search?radius_km=500')
-      .then((res) => setLenderListings(res.data.filter((item) => item.owner_id === activeConv.lender.id)))
+      .then((res) => {
+        if (!cancelled) setLenderListings(res.data.filter((item) => item.owner_id === activeConv.lender.id));
+      })
       .catch((err) => console.error('Failed to load lender listings:', err));
-  }, [activeConv?.lender?.id]);
+    return () => { cancelled = true; };
+  }, [activeConv?.id, activeConv?.listing, activeConv?.lender?.id]);
+
+  useEffect(() => {
+    setActiveConv(null);
+    setMessages([]);
+    setOffers([]);
+    setLenderListings([]);
+    setNegotiationMode(null);
+    setCounterTargetOffer(null);
+    setFormListingId('');
+    setOfferError('');
+  }, [conversationId]);
 
   const fetchActiveConversation = (convId, silent = false) => {
     if (!convId) return Promise.resolve();
@@ -228,8 +247,8 @@ const Chat = () => {
     const defaultEnd = new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0];
     setFormStartDate(today);
     setFormEndDate(defaultEnd);
-    setFormListingId(lenderListings[0]?.id || '');
-    setFormDailyPrice(lenderListings[0]?.price_per_day || '');
+    setFormListingId(activeConv?.listing_id || lenderListings[0]?.id || '');
+    setFormDailyPrice(activeConv?.listing?.price_per_day || lenderListings[0]?.price_per_day || '');
     setFormNote('');
   };
 
@@ -257,6 +276,10 @@ const Chat = () => {
     const selectedListing = lenderListings.find((item) => item.id === formListingId);
     if (!formListingId) {
       setOfferError('The lender has no available listings for an offer.');
+      return;
+    }
+    if (activeConv.listing_id && formListingId !== activeConv.listing_id) {
+      setOfferError('This conversation belongs to another listing. Reopen that listing to negotiate.');
       return;
     }
     if (selectedListing?.min_price_per_day && price < selectedListing.min_price_per_day) {
@@ -698,7 +721,7 @@ const Chat = () => {
                       label="Listing"
                       type="select"
                       value={formListingId}
-                      disabled={negotiationMode === 'counter'}
+                      disabled={Boolean(activeConv.listing_id) || negotiationMode === 'counter'}
                       onChange={(e) => {
                         const selected = lenderListings.find((item) => item.id === e.target.value);
                         setFormListingId(e.target.value);

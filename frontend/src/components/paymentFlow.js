@@ -203,7 +203,9 @@ export function paymentLabel(booking) {
   if (booking.payment_status === 'authorized')
     return 'Payment authorized — awaiting capture; handover locked';
   if (booking.payment_status !== 'captured') return 'Payment pending — handover locked';
-  return 'Payment captured — deposit held';
+  return booking.security_deposit_paise === 0
+    ? 'Payment captured — no security deposit required'
+    : 'Payment captured — deposit held';
 }
 
 export async function uploadRentalEvidence(api, bookingId, file, stage) {
@@ -233,6 +235,7 @@ export function paymentPermissions(booking, user, request) {
     booking.operations_enabled === true &&
     booking.sandbox_only === true &&
     booking.test_mode === true &&
+    !booking.gateway_review &&
     ['mock', 'razorpay_test'].includes(booking.provider);
   return {
     checkout: enabled && borrower && booking.booking_status === 'awaiting_payment',

@@ -7,7 +7,8 @@ export default function PaymentBreakdown({ booking }) {
     ['Refundable security deposit', booking.security_deposit_paise],
     ['Total payment', booking.total_amount_paise],
     ['Deposit held / pending allocation', booking.held_deposit_paise],
-    ['Deposit refunded', booking.deposit_refunded_paise],
+    ['Deposit refunded', booking.reconciliation?.processed_deposit_refund_paise ??
+      Math.min(booking.deposit_refunded_paise || 0, booking.security_deposit_paise || 0)],
     ['Authorized simulated compensation', booking.deduction_paise],
   ];
   return (

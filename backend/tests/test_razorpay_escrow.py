@@ -61,10 +61,11 @@ def test_expired_booking_cannot_create_payment_order(flow):
 @pytest.fixture
 def flow(tmp_path, monkeypatch, request):
     realistic = getattr(request, "param", "mock") == "realistic"
+    incident = getattr(request, "param", "mock") == "refund_incident"
     from app.config import get_settings
 
     monkeypatch.setattr(get_settings(), "rental_evidence_dir", str(tmp_path / "evidence"))
-    if getattr(request, "param", "mock") == "razorpay_test":
+    if getattr(request, "param", "mock") in {"razorpay_test", "refund_incident"}:
         from types import SimpleNamespace
 
         monkeypatch.setattr(
@@ -124,8 +125,8 @@ def flow(tmp_path, monkeypatch, request):
             owner_id=users["lender"].id,
             name="Synthetic drill",
             category="Tools",
-            price_per_day=500 if realistic else 200,
-            security_deposit=2000 if realistic else 500,
+            price_per_day=180 if incident else 500 if realistic else 200,
+            security_deposit=400 if incident else 2000 if realistic else 500,
             status=ListingStatus.published,
         )
         db.add(listing)
@@ -137,13 +138,13 @@ def flow(tmp_path, monkeypatch, request):
             conversation_id=conv.id,
             listing_id=listing.id,
             sender_id=users["borrower"].id,
-            daily_price=500 if realistic else 200,
-            total_cost=500 if realistic else 400,
+            daily_price=180 if incident else 500 if realistic else 200,
+            total_cost=180 if incident else 500 if realistic else 400,
             start_date=datetime.utcnow()
             + timedelta(days=-3 if getattr(request, "param", "mock") == "expired" else 1),
             end_date=datetime.utcnow()
             + timedelta(
-                days=-1 if getattr(request, "param", "mock") == "expired" else 2 if realistic else 3
+                days=-1 if getattr(request, "param", "mock") == "expired" else 2 if realistic or incident else 3
             ),
             status=OfferStatus.pending,
         )
@@ -480,9 +481,10 @@ def test_deduction_bounds_and_zero_refund(flow, deduction):
 
 def razorpay_flow(flow):
     """Only the provider transport is replaced; real signature and service checks execute."""
+    amount = flow["booking"]["total_amount_paise"]
     state = {
         "payment_status": "captured",
-        "amount": 90000,
+        "amount": amount,
         "currency": "INR",
         "order_id": "order_fixture",
     }
@@ -505,7 +507,7 @@ def razorpay_flow(flow):
             return {
                 "id": "order_fixture",
                 "receipt": data["receipt"],
-                "amount": 90000,
+                "amount": amount,
                 "currency": "INR",
             }
         if path.startswith("orders?"):
@@ -514,7 +516,7 @@ def razorpay_flow(flow):
                     {
                         "id": "order_fixture",
                         "receipt": state["receipt"],
-                        "amount": 90000,
+                        "amount": amount,
                         "currency": "INR",
                     }
                 ]
@@ -523,7 +525,7 @@ def razorpay_flow(flow):
             return {
                 "id": "order_fixture",
                 "receipt": state["receipt"],
-                "amount": 90000,
+                "amount": amount,
                 "currency": "INR",
             }
         if path == "payments/pay_fixture":
@@ -537,6 +539,26 @@ def razorpay_flow(flow):
         raise AssertionError(path)
 
     provider = RazorpayTestProvider(settings, transport=transport)
+    # Older focused refund tests replace the transport with only their operation
+    # under test. Supply their consistent synthetic baseline separately. Gateway
+    # inventory regressions remove this override and exercise real GET parsing.
+    def synthetic_snapshot(payment_id):
+        from app.payment_models import RefundIntent
+
+        refunds = []
+        with flow["factory"]() as db:
+            intent = db.scalar(select(RefundIntent))
+            if intent and intent.provider_refund_id:
+                refunds.append(dict(id=intent.provider_refund_id, payment_id=payment_id,
+                                    amount=intent.amount_paise, currency="INR",
+                                    receipt=intent.idempotency_key,
+                                    status=intent.status if intent.status in {"processed", "failed"} else "pending"))
+        refunded = sum(r["amount"] for r in refunds if r["status"] != "failed")
+        return dict(id=payment_id, order_id=state["order_id"], amount=amount,
+                    currency="INR", captured=True, amount_refunded=refunded,
+                    status="refunded" if refunded == amount else "captured"), refunds
+
+    provider.refund_snapshot = synthetic_snapshot
     app.dependency_overrides[payment_provider] = lambda: provider
     signature = hmac.new(
         b"fixture-secret", b"order_fixture|pay_fixture", hashlib.sha256

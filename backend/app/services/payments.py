@@ -1,5 +1,6 @@
 """Application-authorized test payments. Network calls never hold a DB transaction."""
 
+import hashlib
 import json
 import re
 from contextlib import contextmanager
@@ -43,7 +44,7 @@ def audit(db, booking, actor, action, **details):
     from app.services.notifications import create_notification
 
     recipients = {booking.borrower_id, booking.lender_id}
-    if action in {"dispute_escalated", "refund_unknown", "refund_failed"}:
+    if action in {"dispute_escalated", "refund_unknown", "refund_failed", "gateway_refund_review_required"}:
         recipients.update(db.scalars(select(User.id).where(User.is_admin.is_(True))).all())
     for recipient in recipients - {actor}:
         create_notification(
@@ -220,6 +221,11 @@ class PaymentService:
         db.flush()
         from app.services.rating_eligibility import rating_eligible
 
+        gateway_review = db.scalar(select(FinancialAudit).where(
+            FinancialAudit.booking_id == booking.id,
+            FinancialAudit.action == "gateway_refund_review_required",
+        ).order_by(FinancialAudit.created_at.desc()))
+
         refund = db.scalar(select(RefundIntent).where(RefundIntent.booking_id == booking.id))
         dispute = db.scalar(select(RentalDispute).where(RentalDispute.booking_id == booking.id))
         transactions = db.scalars(
@@ -269,6 +275,7 @@ class PaymentService:
             "test_mode": True,
             "sandbox_only": self.provider.sandbox_only,
             "simulated_escrow": True,
+            "gateway_review": json.loads(gateway_review.details) if gateway_review else None,
             "booking_status": booking.booking_status,
             "payment_status": booking.payment_status,
             "deposit_state": booking.deposit_state,
@@ -1095,6 +1102,8 @@ class PaymentService:
         # Every dispatch, including mock settlement, requires a real admin actor.
         if allow_dispatch or self.provider.kind == "mock":
             self._refund_admin(actor, admin)
+        if allow_dispatch and self.provider.kind == "razorpay_test":
+            self._guard_gateway_dispatch(booking_id, actor, admin=admin)
         db = self.db
         with locked(db, booking_id) as booking:
             authorize(booking, actor, admin=admin)
@@ -1294,6 +1303,14 @@ class PaymentService:
     def reconcile_refund(self, booking_id, actor, demo_outcome="processed", admin=False):
         if self.provider.kind == "mock":
             self._refund_admin(actor, admin)
+        if self.provider.kind == "razorpay_test" and admin:
+            self._refund_admin(actor, admin)
+            with locked(self.db, booking_id) as booking:
+                authorize(booking, actor, admin=admin)
+                row = self.db.scalar(select(RefundIntent).where(RefundIntent.booking_id == booking_id))
+                completed = row is not None and row.status == "processed"
+            if completed:
+                return self.review_gateway_refunds(booking_id, actor, admin=admin)
         # Crash recovery preserves the same provider idempotency key and exact payload.
         with locked(self.db, booking_id) as booking:
             authorize(booking, actor, admin=admin)
@@ -1311,6 +1328,70 @@ class PaymentService:
         return self.execute_refund(
             booking_id, actor, demo_outcome, admin=admin, allow_dispatch=False
         )
+
+    def inspect_gateway_refunds(self, booking_id, actor, *, admin=False):
+        from app.services.gateway_reconciliation import inspect_refunds
+
+        return inspect_refunds(self.db, self.provider, booking_id, actor, admin=admin)
+
+    def _record_gateway_review(self, booking_id, actor, result):
+        """Persist verified discrepancies only; never authorize or change a settlement."""
+        if result.get("status") != "review_required" or result.get("booking_id") != booking_id:
+            return
+        details = {k: result[k] for k in (
+            "status", "issues", "authorized_refund_paise", "amount_refunded_paise",
+            "remaining_gross_paise", "external_refunds",
+        )}
+        fingerprint = hashlib.sha256(json.dumps(details, sort_keys=True).encode()).hexdigest()
+        with locked(self.db, booking_id) as booking:
+            previous = self.db.scalars(select(FinancialAudit).where(
+                FinancialAudit.booking_id == booking_id,
+                FinancialAudit.action == "gateway_refund_review_required",
+            )).all()
+            if any(json.loads(row.details).get("fingerprint") == fingerprint for row in previous):
+                return
+            audit(self.db, booking, actor, "gateway_refund_review_required", fingerprint=fingerprint, **details)
+
+    def review_gateway_refunds(self, booking_id, actor, *, admin=False):
+        self._refund_admin(actor, admin)
+        result = self.inspect_gateway_refunds(booking_id, actor, admin=admin)
+        self._record_gateway_review(booking_id, actor, result)
+        return {**self.get(booking_id, actor, admin=admin), "gateway_reconciliation": result}
+
+    def _guard_gateway_dispatch(self, booking_id, actor, *, admin=False):
+        with locked(self.db, booking_id) as booking:
+            authorize(booking, actor, admin=admin)
+            self._mode(booking)
+            review = self.db.scalar(select(FinancialAudit.id).where(
+                FinancialAudit.booking_id == booking_id,
+                FinancialAudit.action == "gateway_refund_review_required",
+            ))
+            if review:
+                conflict("Gateway refund discrepancy requires administrator accounting review; no refund sent")
+            intent = self.db.scalar(select(RefundIntent).where(RefundIntent.booking_id == booking_id))
+            if not intent or intent.provider_refund_id or intent.status not in {"created", "unknown"}:
+                return
+            reference, amount, rid = intent.idempotency_key, intent.amount_paise, intent.id
+        result = self.inspect_gateway_refunds(booking_id, actor, admin=admin)
+        if result["status"] == "unavailable":
+            raise HTTPException(503, "Gateway refund inventory unavailable; no refund sent")
+        if result["status"] == "review_required":
+            self._record_gateway_review(booking_id, actor, result)
+            conflict("Gateway refund discrepancy requires administrator accounting review; no refund sent")
+        current = [r for r in result["refunds"] if r["current_intent"]]
+        if len(current) > 1:
+            conflict("Multiple gateway refunds reference this intent; no refund sent")
+        if current:
+            # Recover an accepted/lost POST by its exact receipt, without another POST.
+            with locked(self.db, booking_id):
+                row = self.db.get(RefundIntent, rid)
+                if row.idempotency_key != reference:
+                    conflict("Refund authorization changed during gateway inspection")
+                if row.provider_refund_id is None:
+                    row.provider_refund_id = current[0]["id"]
+            return
+        if result["remaining_gross_paise"] < amount:
+            conflict("Insufficient unrefunded gateway balance; no refund sent")
 
     def retry_failed_refund(self, booking_id, actor, admin=False):
         self._refund_admin(actor, admin)

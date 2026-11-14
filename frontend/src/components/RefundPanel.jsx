@@ -14,7 +14,7 @@ export default function RefundPanel({
 }) {
   const [approved, setApproved] = useState(false);
   const refund = booking.refund;
-  const canOperate = allowed && user?.is_admin === true;
+  const canOperate = allowed && !booking.gateway_review && user?.is_admin === true;
   if (!refund)
     return h(
       'p',
@@ -64,7 +64,7 @@ export default function RefundPanel({
       ...[
         ['Authorized refund to borrower', refund.amount_paise],
         ['Human-approved damage deduction', refund.deduction_paise],
-        ['Rental retained', refund.kind === 'cancellation' ? 0 : booking.rental_fee_paise],
+        ['Agreed rental allocation', refund.kind === 'cancellation' ? 0 : booking.rental_fee_paise],
         [
           'Simulated lender allocation',
           refund.kind === 'cancellation' ? 0 : booking.rental_fee_paise + refund.deduction_paise,

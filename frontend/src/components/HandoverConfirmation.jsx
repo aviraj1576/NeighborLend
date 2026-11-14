@@ -3,8 +3,9 @@ import Button from './ui/Button.jsx';
 import Input from './ui/Input.jsx';
 import RentalEvidenceImage from './RentalEvidenceImage.jsx';
 import { uploadEvidenceFiles } from './rentalEvidenceUpload.js';
+import { apiErrorMessage } from './paymentFlow.js';
 
-export default function HandoverConfirmation({ request, user, api, bookingId, onChange }) {
+export default function HandoverConfirmation({ request, user, api, bookingId, unlocked = false, onChange }) {
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [issue, setIssue] = useState('');
@@ -16,10 +17,10 @@ export default function HandoverConfirmation({ request, user, api, bookingId, on
   useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews]);
 
   async function run(operation) {
-    if (busy) return;
+    if (busy || !unlocked || !bookingId) return;
     setBusy(true); setError('');
     try { await operation(); await onChange?.(); }
-    catch (err) { setError(err.response?.data?.detail || err.message || 'Could not update handover.'); }
+    catch (err) { setError(apiErrorMessage(err, 'Could not update handover.')); }
     finally { setBusy(false); }
   }
   function selectFiles(event) {
@@ -29,14 +30,16 @@ export default function HandoverConfirmation({ request, user, api, bookingId, on
     setFiles(selected); setPreviews(selected.map((file) => URL.createObjectURL(file)));
   }
 
-  if (!['pending', 'photos_uploaded', 'borrower_confirmed', 'issue_reported'].includes(request.handover_status)) return null;
+  if ((!lender && !borrower) || !['pending', 'photos_uploaded', 'borrower_confirmed', 'issue_reported'].includes(request.handover_status)) return null;
+  const canAct = unlocked && Boolean(bookingId);
   return <section className="rental-lifecycle handover-panel" aria-label="Product handover">
     <h2 className="t-h2">Product handover</h2>
     <p className={`handover-status status-${request.handover_status}`}>
       {request.handover_status === 'pending' ? 'Awaiting lender product photos' : request.handover_status === 'photos_uploaded' ? 'Photos uploaded — borrower to confirm receipt' : request.handover_status === 'borrower_confirmed' ? 'Borrower confirmed — lender to complete handover' : 'Handover issue reported'}
     </p>
     {error && <p className="error-banner" role="alert">{error}</p>}
-    {request.handover_status === 'pending' && lender && <div className="handover-step">
+    {!canAct && <p role="status">Handover stays locked until verified payment status is available.</p>}
+    {request.handover_status === 'pending' && lender && canAct && <div className="handover-step">
       <h3 className="t-card">Lender: upload product photos</h3><p>Payment must be verified before the item can be handed over.</p>
       <input aria-label="Product handover photos" type="file" accept="image/jpeg,image/png" multiple disabled={busy} onChange={selectFiles} />
       <div className="photo-previews">{previews.map((src, i) => <img key={src} src={src} alt={`Preview ${i + 1}`} className="photo-preview" />)}</div>
@@ -46,7 +49,7 @@ export default function HandoverConfirmation({ request, user, api, bookingId, on
         setFiles([]); previews.forEach((url) => URL.revokeObjectURL(url)); setPreviews([]);
       })}>{busy ? 'Uploading…' : `Upload ${files.length} photo(s)`}</Button>
     </div>}
-    {request.handover_status === 'photos_uploaded' && borrower && <div className="handover-step">
+    {request.handover_status === 'photos_uploaded' && borrower && canAct && <div className="handover-step">
       <h3 className="t-card">Borrower: review and confirm receipt</h3>
       <div className="photo-previews">{(request.handover_photos || []).map((reference) => <RentalEvidenceImage key={reference} reference={reference} api={api} alt="Lender handover evidence" className="photo-preview" />)}</div>
       <label>Optional receipt photos<input aria-label="Receipt photos" type="file" accept="image/jpeg,image/png" multiple disabled={busy} onChange={selectFiles} /></label>
@@ -61,7 +64,7 @@ export default function HandoverConfirmation({ request, user, api, bookingId, on
         <Button type="submit" disabled={busy || !issue.trim()}>Submit issue</Button>
       </form>}
     </div>}
-    {request.handover_status === 'borrower_confirmed' && lender && <div className="handover-step">
+    {request.handover_status === 'borrower_confirmed' && lender && canAct && <div className="handover-step">
       <h3 className="t-card">Confirm product handover</h3><p>The borrower has confirmed receipt. Confirm to activate the rental.</p>
       <Button disabled={busy} onClick={() => run(() => api.post(`/borrow-requests/${request.id}/handover/lender-confirm`))}>{busy ? 'Confirming…' : 'Confirm handover complete'}</Button>
     </div>}

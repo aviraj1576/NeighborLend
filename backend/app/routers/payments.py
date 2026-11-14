@@ -213,9 +213,12 @@ def by_request(
         raise HTTPException(403, "Not authorized")
     row = db.scalar(select(RentalBooking).where(RentalBooking.borrow_request_id == request_id))
     if row is None:
+        from app.services.rating_eligibility import rating_eligible
+
         return {
             "legacy": True,
             "handover_unlocked": False,
+            "rating_eligible": rating_eligible(db, req),
             "message": "Legacy rental has no verified payment snapshot; arrange a new agreed booking",
         }
     actor, bid, admin = user.id, row.id, bool(user.is_admin)
@@ -232,6 +235,27 @@ def status(
 ):
     response.headers["Cache-Control"] = "no-store"
     return PaymentService(db, provider).get(booking_id, user.id, admin=bool(user.is_admin))
+
+
+@router.get("/bookings/{booking_id}/gateway-reconciliation")
+def gateway_reconciliation(
+    booking_id: str, user: User = Depends(get_current_user), db: Session = Depends(get_db),
+    provider=Depends(payment_provider),
+):
+    return PaymentService(db, provider).inspect_gateway_refunds(
+        booking_id, user.id, admin=bool(user.is_admin)
+    )
+
+
+@router.post("/refunds/inspect")
+def inspect_gateway_refunds(
+    data: PaymentInput, user: User = Depends(require_admin), db: Session = Depends(get_db),
+    provider=Depends(payment_provider),
+):
+    # Provider GETs only. Local review evidence is append-only; no settlement or refund dispatch.
+    return PaymentService(db, provider).review_gateway_refunds(
+        str(data.booking_id), user.id, admin=bool(user.is_admin)
+    )
 
 
 @router.post("/create-order")
@@ -429,7 +453,13 @@ async def webhook(
             previous = db.get(ProcessedWebhook, event_id)
             if previous.payload_sha256 != digest:
                 raise HTTPException(409, "Conflicting webhook identifier") from None
-    if kind == "refund.created":
+    if kind == "refund.created" and db.scalar(select(PaymentTransaction.id).where(
+        PaymentTransaction.provider == provider.kind,
+        PaymentTransaction.transaction_type == "payment",
+        PaymentTransaction.status == "captured",
+    ).limit(1)) is None:
+        # Preserve informational receipts when there is no local captured payment
+        # to reconcile. Such an event cannot verify funding or authorize settlement.
         receipt = db.get(ProcessedWebhook, event_id)
         receipt.status, receipt.processed_at = "processed", datetime.utcnow()
         db.commit()
@@ -448,6 +478,9 @@ async def webhook(
                 confirmed = provider.fetch_refund(entity["id"])
                 if confirmed.get("id") != entity["id"]:
                     raise HTTPException(409, "Refund identifier mismatch")
+                provider.identifier(confirmed.get("payment_id"), "pay")
+                if confirmed.get("receipt") is not None and not isinstance(confirmed["receipt"], str):
+                    raise ProviderError("invalid_provider_response")
                 old_attempt = db.scalar(
                     select(RefundAttempt).where(RefundAttempt.provider_refund_id == entity["id"])
                 )
@@ -464,8 +497,37 @@ async def webhook(
                         RefundIntent.idempotency_key == confirmed.get("receipt")
                     )
                 )
+                if intent is not None and (
+                    type(confirmed.get("amount")) is not int
+                    or confirmed["amount"] != intent.amount_paise
+                    or confirmed.get("currency") != "INR"
+                ):
+                    intent = None
                 if intent is None:
-                    raise HTTPException(503, "Refund receipt pending reconciliation")
+                    payment = db.scalar(select(PaymentTransaction).where(
+                        PaymentTransaction.razorpay_payment_id == confirmed.get("payment_id"),
+                        PaymentTransaction.transaction_type == "payment",
+                        PaymentTransaction.status == "captured",
+                        PaymentTransaction.provider == provider.kind,
+                    ))
+                    if payment is None:
+                        raise HTTPException(503, "Refund references unknown captured payment")
+                    booking = db.get(RentalBooking, payment.booking_id)
+                    result = service.inspect_gateway_refunds(booking.id, booking.borrower_id)
+                    if (result["status"] != "review_required"
+                            or not any(r["id"] == entity["id"] for r in result["external_refunds"])):
+                        raise HTTPException(503, "External refund inventory pending verification")
+                    service._record_gateway_review(booking.id, "gateway_webhook", result)
+                    receipt = db.get(ProcessedWebhook, event_id)
+                    receipt.status, receipt.processed_at = "processed", datetime.utcnow()
+                    db.commit()
+                    return {"received": True, "external_refund": True, "review_required": True}
+            if kind == "refund.created":
+                # Creation is not settlement authority. Unknown refunds above still raise review.
+                receipt = db.get(ProcessedWebhook, event_id)
+                receipt.status, receipt.processed_at = "processed", datetime.utcnow()
+                db.commit()
+                return {"received": True, "ignored": True}
             booking = db.get(RentalBooking, intent.booking_id)
             bid, actor = booking.id, booking.borrower_id
             service.reconcile_refund(bid, actor)

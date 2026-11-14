@@ -1,14 +1,18 @@
 import React, { useEffect, useState } from 'react';
 import Button from './ui/Button.jsx';
 import { uploadEvidenceFiles } from './rentalEvidenceUpload.js';
+import { apiErrorMessage } from './paymentFlow.js';
 
-export default function ReturnSubmission({ request, api, bookingId, onChange }) {
+export default function ReturnSubmission({ request, user, booking, api, onChange }) {
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews]);
-  if (request.handover_status !== 'lender_confirmed' || request.returned_at) return null;
+  if (user?.id !== request.borrower_id || user?.id !== booking?.borrower_id || !booking?.id ||
+    booking.borrow_request_id !== request.id || booking.payment_status !== 'captured' ||
+    !['funded', 'active', 'disputed'].includes(booking.booking_status) || booking.refund ||
+    request.handover_status !== 'lender_confirmed' || request.returned_at) return null;
   function selectFiles(event) {
     const selected = Array.from(event.target.files || []);
     if (selected.length > 10) { setError('Select up to 10 photos.'); return; }
@@ -19,11 +23,11 @@ export default function ReturnSubmission({ request, api, bookingId, onChange }) 
     if (busy || !files.length) return;
     setBusy(true); setError('');
     try {
-      const photo_urls = await uploadEvidenceFiles(api, bookingId, files, 'return');
+      const photo_urls = await uploadEvidenceFiles(api, booking.id, files, 'return');
       await api.post(`/borrow-requests/${request.id}/return/upload-photos`, { photo_urls });
       await onChange?.();
       setFiles([]); previews.forEach((url) => URL.revokeObjectURL(url)); setPreviews([]);
-    } catch (err) { setError(err.response?.data?.detail || err.message || 'Return photos could not be submitted.'); }
+    } catch (err) { setError(apiErrorMessage(err, 'Return photos could not be submitted.')); }
     finally { setBusy(false); }
   }
   return <section className="handover-step return-section" aria-label="Submit return evidence">

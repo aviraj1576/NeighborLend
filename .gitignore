@@ -84,6 +84,7 @@ keystore.properties
 Thumbs.db
 Desktop.ini
 backend/.payment-test-artifacts/
+backend/.test-tools/
 backend/.payment-demo/
 backend/.payment-verification/
 backend/private-rental-evidence/

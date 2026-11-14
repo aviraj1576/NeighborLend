@@ -15,7 +15,7 @@ router = APIRouter(dependencies=[Depends(financial_response_headers)])
 @router.get("")
 def dispute_queue(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     from app.models import BorrowRequest
-    from app.payment_models import RefundIntent, RentalBooking, RentalDispute
+    from app.payment_models import FinancialAudit, RefundIntent, RentalBooking, RentalDispute
 
     if not user.is_admin:
         raise HTTPException(403, "Administrator access required")
@@ -28,6 +28,10 @@ def dispute_queue(user: User = Depends(get_current_user), db: Session = Depends(
             "lender_id": booking.lender_id,
             "dispute": PaymentService._dispute_view(dispute),
             "refund": PaymentService._refund_view(refund),
+            "gateway_review": bool(db.scalar(select(FinancialAudit.id).where(
+                FinancialAudit.booking_id == booking.id,
+                FinancialAudit.action == "gateway_refund_review_required",
+            ).limit(1))),
         }
         for dispute, booking, request, refund in db.execute(
             select(RentalDispute, RentalBooking, BorrowRequest, RefundIntent)
@@ -41,6 +45,9 @@ def dispute_queue(user: User = Depends(get_current_user), db: Session = Depends(
                     (BorrowRequest.handover_status == "issue_reported")
                     & RentalBooking.settlement_kind.is_(None),
                     RefundIntent.status.in_(["created", "dispatching", "pending", "failed", "unknown"]),
+                    RentalBooking.id.in_(select(FinancialAudit.booking_id).where(
+                        FinancialAudit.action == "gateway_refund_review_required"
+                    )),
                 )
             )
         ).all()

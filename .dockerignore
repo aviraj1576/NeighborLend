@@ -21,3 +21,11 @@ venv/
 **/.dockerignore
 **/*.zip
 docs/
+
+# Local verification dependencies, credentials, evidence and generated artifacts
+backend/.test-tools/
+backend/.payment-test-artifacts/
+backend/.payment-demo/
+backend/.payment-verification/
+backend/private-rental-evidence/
+.agents/

@@ -46,7 +46,7 @@ export default function PaymentReviewQueue() {
       {cases.map((row) => (
         <p key={row.booking_id}>
           <Link to={`/borrow-requests/${row.borrow_request_id}`}>
-            {refundReviewLabel(row.refund) ||
+            {(row.gateway_review ? 'Gateway refund mismatch' : '') || refundReviewLabel(row.refund) ||
               row.dispute?.status ||
               row.handover_status ||
               'Payment recovery'}{' '}

@@ -93,6 +93,7 @@ const Navbar = () => {
           <span className="dropdown-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
         )}
       </Link>
+      {user?.is_admin && <Link to="/admin/payments" className="dropdown-link" onClick={() => setUserMenuOpen(false)}>Payment review</Link>}
       <div className="dropdown-divider" />
       <button
         className="dropdown-link dropdown-logout"
@@ -258,6 +259,7 @@ const Navbar = () => {
                   <span className="mobile-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
                 )}
               </Link>
+              {user?.is_admin && <Link to="/admin/payments" className="mobile-link" onClick={() => setMobileMenuOpen(false)}>Payment review</Link>}
               <button
                 className="mobile-link mobile-logout"
                 onClick={() => { handleLogout(); setMobileMenuOpen(false); }}

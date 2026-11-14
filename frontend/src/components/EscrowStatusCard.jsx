@@ -5,6 +5,7 @@ import PaymentStatus from './PaymentStatus.jsx';
 import PaymentHistory from './PaymentHistory.jsx';
 import DepositRefundStatus from './DepositRefundStatus.jsx';
 import DisputeSection from './DisputeSection.jsx';
+import GatewayRefundStatus from './GatewayRefundStatus.jsx';
 import './PaymentModal.css';
 import { apiErrorMessage, paymentPermissions, rupees, submitFinancialAction } from './paymentFlow.js';
 
@@ -14,26 +15,37 @@ export default function EscrowStatusCard({ request, user, api, onStatus, onBooki
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [refundOutcome, setRefundOutcome] = useState('processed');
+  const [gateway, setGateway] = useState(null);
   const refreshVersion = useRef(0);
   const actionInFlight = useRef(false);
   const permissions = booking ? paymentPermissions(booking, user, request) : {};
 
   const refresh = useCallback(async ({ strict = false } = {}) => {
     const version = ++refreshVersion.current;
+    setGateway(null);
     try {
       const { data } = await api.get(`/payments/by-request/${request.id}`, { timeout: 15000 });
       if (version !== refreshVersion.current) return;
       setBooking(data);
       setLoaded(true);
       onBooking?.(data);
-      onStatus(data.handover_unlocked === true);
+      onStatus?.(data.handover_unlocked === true);
       setError('');
+      if (data.provider === 'razorpay_test' && data.payment_status === 'captured') {
+        try {
+          const checked = await api.get(`/payments/bookings/${data.id}/gateway-reconciliation`, { timeout: 15000 });
+          if (version === refreshVersion.current) setGateway(checked.data);
+        } catch {
+          if (version === refreshVersion.current) setGateway({ status: 'unavailable' });
+        }
+      }
     } catch (err) {
       if (version !== refreshVersion.current) {
         if (strict) throw err;
         return;
       }
-      onStatus(false);
+      onStatus?.(false);
+      onBooking?.(null);
       setBooking((previous) => previous && { ...previous, operations_enabled: false, handover_unlocked: false });
       setError(apiErrorMessage(err, 'Payment service unavailable. Handover stays locked.'));
       setLoaded(true);
@@ -45,7 +57,7 @@ export default function EscrowStatusCard({ request, user, api, onStatus, onBooki
     refresh();
     const timer = setInterval(refresh, 15000);
     return () => { clearInterval(timer); refreshVersion.current += 1; };
-  }, [refresh, request.handover_status]);
+  }, [refresh, request]);
 
   async function action(path, extra = {}) {
     if (actionInFlight.current || !booking?.id) return;
@@ -75,8 +87,11 @@ export default function EscrowStatusCard({ request, user, api, onStatus, onBooki
         <>
           {!booking.operations_enabled && <p role="status">Payment dispatch is disabled. Saved status and authorized review remain available.</p>}
           <PaymentBreakdown booking={booking} />
-          {booking.lender_settlement && <p>Lender rental earnings payable: {rupees(booking.lender_settlement.rental_earnings_payable_paise)}. Simulated accounting; no transfer is sent.</p>}
-          {permissions.checkout && <PaymentCheckout booking={booking} api={api} onChange={refresh} />}
+          {booking.lender_settlement && <p>Recorded rental allocation: {rupees(booking.lender_settlement.rental_earnings_payable_paise)}. Simulated accounting; no lender payout has been sent.</p>}
+          <GatewayRefundStatus booking={booking} result={gateway} user={user} busy={busy} onInspect={() => action('/payments/refunds/inspect')} />
+          {permissions.checkout && <PaymentCheckout booking={booking} api={api} onChange={async () => {
+            await Promise.all([refresh({ strict: true }), onRentalChange?.({ strict: true })]);
+          }} />}
           {permissions.reconcile && <button type="button" disabled={busy} onClick={() => action('/payments/reconcile')}>Reconcile gateway payment</button>}
           {permissions.cancel && <button type="button" disabled={busy} onClick={() => action('/payments/cancel')}>Cancel before receipt</button>}
           <DisputeSection
@@ -94,7 +109,8 @@ export default function EscrowStatusCard({ request, user, api, onStatus, onBooki
           />
           <DepositRefundStatus
             key={`${booking.refund?.id}:${booking.refund?.status}`}
-            booking={booking} user={user} busy={busy} allowed={permissions.refund}
+            booking={gateway?.status === 'review_required' ? { ...booking, gateway_review: gateway } : booking} user={user} busy={busy}
+            allowed={permissions.refund && (booking.provider !== 'razorpay_test' || gateway?.status === 'verified')}
             onAction={action} demoOutcome={refundOutcome} onDemoOutcome={setRefundOutcome}
           />
           <PaymentHistory booking={booking} api={api} />

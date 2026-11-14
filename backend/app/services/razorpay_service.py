@@ -392,6 +392,20 @@ class RazorpayTestProvider:
     def fetch_refund(self, refund_id):
         return self._request("GET", "refunds/" + self.identifier(refund_id, "rfnd"))
 
+    def refund_snapshot(self, payment_id):
+        """Inspect the whole payment with GETs; never dispatch or retry a refund."""
+        payment_id = self.identifier(payment_id, "pay")
+        payment = self.fetch_payment(payment_id)
+        refunds = []
+        for skip in range(0, 1000, 100):
+            rows = self.collection(
+                self._request("GET", f"payments/{payment_id}/refunds?count=100&skip={skip}")
+            )
+            refunds.extend(rows)
+            if len(rows) < 100:
+                return payment, refunds
+        raise ProviderError("refund_inventory_incomplete")
+
     def find_refund(self, payment_id, reference):
         """Recover a lost POST response using GETs and its immutable receipt."""
         payment_id = self.identifier(payment_id, "pay")

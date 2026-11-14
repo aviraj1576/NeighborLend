@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -10,6 +10,8 @@ import EscrowStatusCard from '../components/EscrowStatusCard';
 import HandoverConfirmation from '../components/HandoverConfirmation';
 import ReturnSubmission from '../components/ReturnSubmission';
 import ReturnInspection from '../components/ReturnInspection';
+import RentalEvidenceImage from '../components/RentalEvidenceImage';
+import { apiErrorMessage } from '../components/paymentFlow.js';
 import './BorrowRequestDetail.css';
 
 const dateTime = (value) => value ? new Date(/Z$|[+-]\d\d:\d\d$/.test(value) ? value : `${value}Z`).toLocaleString('en-IN') : '—';
@@ -18,7 +20,9 @@ export default function BorrowRequestDetail() {
   const { id } = useParams();
   const { user } = useAuth();
   const [request, setRequest] = useState(null);
-  const [bookingId, setBookingId] = useState(null);
+  const [booking, setBooking] = useState(null);
+  const [paymentReady, setPaymentReady] = useState(false);
+  const refreshVersion = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
@@ -26,27 +30,39 @@ export default function BorrowRequestDetail() {
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
 
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async ({ strict = false } = {}) => {
+    const version = ++refreshVersion.current;
     try {
-      const { data } = await api.get(`/borrow-requests/${id}`);
-      let next = data;
-      const participant = user && [data.borrower_id, data.lender_id].includes(user.id);
-      if (participant && data.listing_id && data.handover_status !== 'not_applicable') {
-        const privateData = await api.get(`/borrow-requests/${id}/handover`);
-        next = { ...data, ...privateData.data };
-      }
-      if (participant && data.listing_id) {
+      let next;
+      if (user) {
         try {
-          const payment = await api.get(`/payments/by-request/${id}`);
-          setBookingId(payment.data?.legacy ? null : payment.data?.id || null);
-        } catch { setBookingId(null); }
+          next = (await api.get(`/payments/requests/${id}/rental`)).data;
+        } catch (err) {
+          // Public requests remain browsable, while participants can still
+          // inspect cancelled rentals through the authorized private endpoint.
+          if (user.is_admin || ![403, 404].includes(err.response?.status)) throw err;
+          next = (await api.get(`/borrow-requests/${id}`)).data;
+        }
+      } else {
+        next = (await api.get(`/borrow-requests/${id}`)).data;
       }
+      if (version !== refreshVersion.current) return;
       setRequest(next); setError('');
-    } catch (err) { setError(err.response?.data?.detail || 'Could not load this borrowing request.'); }
-    finally { setLoading(false); }
-  }, [id, user?.id]);
+    } catch (err) {
+      if (version !== refreshVersion.current) return;
+      setBooking(null); setPaymentReady(false);
+      if ([403, 404].includes(err.response?.status)) setRequest(null);
+      setError(apiErrorMessage(err, 'Could not load this borrowing request.'));
+      if (strict) throw err;
+    }
+    finally { if (version === refreshVersion.current) setLoading(false); }
+  }, [id, user?.id, user?.is_admin]);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  useEffect(() => {
+    setBooking(null); setPaymentReady(false); setLoading(true);
+    refresh();
+    return () => { refreshVersion.current += 1; };
+  }, [refresh]);
 
   async function submitRating(forLender) {
     if (busy || !rating) return;
@@ -54,7 +70,7 @@ export default function BorrowRequestDetail() {
     try {
       await api.post(`/borrow-requests/${id}/rate-${forLender ? 'lender' : 'borrower'}`, { rating, comment: ratingComment });
       setRating(0); setRatingComment(''); await refresh(); window.dispatchEvent(new Event('notifications:updated'));
-    } catch (err) { setError(err.response?.data?.detail || 'Could not submit rating.'); }
+    } catch (err) { setError(apiErrorMessage(err, 'Could not submit rating.')); }
     finally { setBusy(false); }
   }
 
@@ -66,15 +82,16 @@ export default function BorrowRequestDetail() {
     finally { setBusy(false); }
   }
 
-  if (loading) return <div className="rental-detail-loading">Loading request…</div>;
+  if (loading || (request && request.id !== id)) return <div className="rental-detail-loading">Loading request…</div>;
   if (!request) return <div className="rental-detail-loading">{error || 'Request not found.'}</div>;
 
   const participant = user && [request.borrower_id, request.lender_id].includes(user.id);
   const isBorrower = user?.id === request.borrower_id;
-  const isLender = user?.id === request.lender_id;
   const managed = request.handover_status && request.handover_status !== 'not_applicable';
+  const canReview = Boolean(request.listing_id && (participant || user?.is_admin));
   const canManage = Boolean(request.listing_id && participant);
-  const canRate = request.handover_status === 'return_confirmed' && !request.disputed_at;
+  const canRate = booking?.rating_eligible === true;
+  const bookingId = booking?.legacy ? null : booking?.id;
   const ratingTarget = isBorrower ? 'lender' : 'borrower';
   const alreadyRated = isBorrower ? request.lender_rating : request.borrower_rating;
 
@@ -90,19 +107,34 @@ export default function BorrowRequestDetail() {
       </dl>
       {error && <div className="error-banner" role="alert">{error}</div>}
 
-      {canManage && <EscrowStatusCard request={request} user={user} api={api} onRentalChange={refresh} />}
-      {managed && <>
-        <HandoverConfirmation request={request} user={user} api={api} bookingId={bookingId} onChange={refresh} />
+      {canReview && <EscrowStatusCard key={id} request={request} user={user} api={api} onStatus={setPaymentReady} onBooking={setBooking} onRentalChange={refresh} />}
+      {managed && participant && <>
+        <HandoverConfirmation request={request} user={user} api={api} bookingId={bookingId} unlocked={paymentReady} onChange={refresh} />
         {request.handover_status === 'lender_confirmed' && <div className="handover-active-details">
           <p>Handover confirmed: {dateTime(request.handover_confirmed_at)}</p>
           <p>Borrowing started: {dateTime(request.borrowing_started_at)}</p>
           <p>Return due: {dateTime(request.return_due_at)}</p>
           <p className="handover-active-label">Borrowing is active.</p>
         </div>}
-        <ReturnSubmission request={request} api={api} bookingId={bookingId} onChange={refresh} />
-        <ReturnInspection request={request} user={user} api={api} onChange={refresh} />
+        <ReturnSubmission request={request} user={user} booking={booking} api={api} onChange={refresh} />
+        <ReturnInspection request={request} user={user} booking={booking} api={api} onChange={refresh} />
         {request.handover_status === 'return_confirmed' && <p className="rating-done" role="status">Return approved. Deposit settlement status is shown above.</p>}
       </>}
+
+      {managed && user?.is_admin && !participant && <section aria-label="Rental evidence for administrator review">
+        <h2 className="t-h2">Private rental evidence</h2>
+        {[
+          ['Lender handover photos', request.handover_photos],
+          ['Borrower receipt photos', request.handover_confirmed_photos],
+          ['Borrower return photos', request.return_photos],
+        ].map(([label, references]) => <div key={label}>
+          <h3 className="t-card">{label}</h3>
+          <div className="photo-previews">{references?.length ? references.map((reference, index) => <RentalEvidenceImage key={reference} reference={reference} api={api} alt={`${label} ${index + 1}`} className="photo-preview" />) : <p>No photos submitted.</p>}</div>
+        </div>)}
+        {request.handover_condition_note && <p>{request.handover_condition_note}</p>}
+        {request.return_condition_note && <p>{request.return_condition_note}</p>}
+        {request.handover_issue_description && <p>{request.handover_issue_description}</p>}
+      </section>}
 
       {canRate && participant && !alreadyRated && <div className="handover-step rating-form">
         <h2 className="t-card">Rate the {ratingTarget}</h2>
