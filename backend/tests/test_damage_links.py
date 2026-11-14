@@ -188,6 +188,38 @@ class TestDamageLinks(unittest.TestCase):
             404,
         )
 
+    def test_token_is_only_exposed_to_the_lends_parties(self):
+        lend_id, _, check_id, body = self._shared_lend()
+        token = body["token"]
+        # the public lend endpoint (no auth) must never leak the link
+        public = self.client.get(f"/api/borrow-requests/{lend_id}")
+        self.assertEqual(public.status_code, 200)
+        self.assertIsNone(public.json()["damage_link_token"])
+        self.assertNotIn(token, public.text)
+        # the two parties get it from the private handover endpoint
+        for role in ("lender", "borrower"):
+            res = self.client.get(f"/api/borrow-requests/{lend_id}/handover", headers=self.headers[role])
+            self.assertEqual(res.json()["damage_link_token"], token)
+            self.assertEqual(res.json()["damage_check_id"], check_id)
+        # an outsider cannot read the handover at all
+        res = self.client.get(f"/api/borrow-requests/{lend_id}/handover", headers=self.headers["intruder"])
+        self.assertEqual(res.status_code, 403)
+        self.assertNotIn(token, res.text)
+
+    def test_private_responses_are_not_cacheable(self):
+        lend_id, _, check_id, body = self._shared_lend()
+        urls = [
+            (f"/api/damage-links/{body['token']}", "borrower"),     # 200
+            (f"/api/damage-links/{body['token']}", "intruder"),     # 403
+            ("/api/damage-links/not-a-real-token", "borrower"),     # 404
+            (f"/api/damage-checks/{check_id}/photos/before/front", "lender"),
+            (f"/api/borrow-requests/{lend_id}/handover", "lender"),
+            ("/api/admin/disputes", "intruder"),                    # 403
+        ]
+        for url, role in urls:
+            res = self.client.get(url, headers=self.headers[role])
+            self.assertEqual(res.headers.get("cache-control"), "no-store", f"{url} as {role} -> {res.status_code}")
+
     def test_expired_and_closed_links_return_410(self):
         lend_id, _, _, body = self._shared_lend()
         url = f"/api/damage-links/{body['token']}"

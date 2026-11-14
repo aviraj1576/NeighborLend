@@ -12,10 +12,12 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import (
-    AdminAuditLog, BorrowRequest, BorrowRequestStatus, Dispute, DisputeStatus,
-    HandoverStatus, User,
+    AdminAuditLog, BorrowRequest, BorrowRequestStatus, Conversation, Dispute, DisputeStatus,
+    HandoverStatus, Message, SupportTicket, SupportTicketStatus, User,
 )
 from app.routers.borrow_requests import _record_handover_event
+from app.routers.chat import _format_message
+from app.routers.support import get_support_user
 from app.services.auth import require_admin
 from app.services.damage_integration import get_damage_service
 from app.services.notifications import create_notification
@@ -209,3 +211,111 @@ def list_audit_logs(
         }
         for r in rows
     ]
+
+
+# ==================== SUPPORT ESCALATIONS ====================
+
+class SupportReplyIn(BaseModel):
+    content: str = Field(..., min_length=1, max_length=2000)
+
+
+def _ticket_summary(db: Session, ticket: SupportTicket) -> dict:
+    last_user_msg = (
+        db.query(Message)
+        .filter(Message.conversation_id == ticket.conversation_id, Message.sender_id == ticket.user_id)
+        .order_by(Message.created_at.desc())
+        .first()
+    )
+    return {
+        "id": ticket.id,
+        "conversation_id": ticket.conversation_id,
+        "user": {"id": ticket.user_id, "name": _name(db, ticket.user_id)},
+        "context_step": ticket.context_step,
+        "entity_type": ticket.entity_type,
+        "entity_id": ticket.entity_id,
+        "status": ticket.status.value if ticket.status else None,
+        "escalated_at": ticket.escalated_at,
+        "created_at": ticket.created_at,
+        "last_user_message": (last_user_msg.content[:140] if last_user_msg else None),
+    }
+
+
+def _get_ticket_or_404(db: Session, ticket_id: str) -> SupportTicket:
+    ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
+    if ticket is None:
+        raise HTTPException(status_code=404, detail="Support ticket not found")
+    return ticket
+
+
+@router.get("/support/escalations")
+def list_escalations(
+    status: str = Query("escalated", pattern="^(escalated|closed|all)$"),
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    query = db.query(SupportTicket)
+    if status == "all":
+        query = query.filter(SupportTicket.status != SupportTicketStatus.bot)
+    else:
+        query = query.filter(SupportTicket.status == SupportTicketStatus(status))
+    return [_ticket_summary(db, t) for t in query.order_by(SupportTicket.escalated_at.desc()).all()]
+
+
+@router.get("/support/escalations/{ticket_id}")
+def get_escalation(
+    ticket_id: str,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    ticket = _get_ticket_or_404(db, ticket_id)
+    conv = db.query(Conversation).filter(Conversation.id == ticket.conversation_id).first()
+    detail = _ticket_summary(db, ticket)
+    detail["messages"] = [_format_message(m).model_dump(mode="json") for m in (conv.messages if conv else [])]
+    return detail
+
+
+@router.post("/support/escalations/{ticket_id}/reply")
+def reply_to_escalation(
+    ticket_id: str,
+    data: SupportReplyIn,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    content = data.content.strip()
+    if not content:
+        raise HTTPException(status_code=400, detail="Reply cannot be empty")
+    ticket = _get_ticket_or_404(db, ticket_id)
+    if ticket.status != SupportTicketStatus.escalated:
+        raise HTTPException(status_code=409, detail="Only escalated chats can be replied to")
+    support = get_support_user(db)
+    message = Message(
+        conversation_id=ticket.conversation_id, sender_id=support.id, content=content,
+        is_system=False, meta=json.dumps({"admin": True}),
+    )
+    db.add(message)
+    conv = db.query(Conversation).filter(Conversation.id == ticket.conversation_id).first()
+    if conv:
+        conv.updated_at = datetime.utcnow()
+    create_notification(
+        db, ticket.user_id, "support_reply", "NeighborLend Support replied",
+        content[:120], f"/messages/{ticket.conversation_id}",
+    )
+    _audit(db, admin.id, "support_reply", "support_ticket", ticket.id, {"length": len(content)})
+    db.commit()
+    db.refresh(message)
+    return _format_message(message)
+
+
+@router.post("/support/escalations/{ticket_id}/close")
+def close_escalation(
+    ticket_id: str,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    ticket = _get_ticket_or_404(db, ticket_id)
+    if ticket.status == SupportTicketStatus.closed:
+        raise HTTPException(status_code=409, detail="This chat is already closed")
+    ticket.status = SupportTicketStatus.closed
+    _audit(db, admin.id, "support_closed", "support_ticket", ticket.id, {})
+    db.commit()
+    return _ticket_summary(db, ticket)

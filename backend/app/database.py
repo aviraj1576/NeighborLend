@@ -63,6 +63,9 @@ def migrate_schema(target_engine=None):
         "negotiation_offers": {
             "listing_id": "VARCHAR",
         },
+        "messages": {
+            "meta": "TEXT",
+        },
     }
 
     with target_engine.begin() as connection:

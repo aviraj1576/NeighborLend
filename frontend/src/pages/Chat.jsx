@@ -10,7 +10,15 @@ import api from '../api/client';
 import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Input from '../components/ui/Input';
+import SupportChatButton from '../components/SupportChatButton';
 import './Chat.css';
+
+const SUPPORT_USERNAME = 'nl_support';
+
+const parseMeta = (raw) => {
+  if (!raw) return null;
+  try { return JSON.parse(raw); } catch { return null; }
+};
 
 const formatTimestamp = (dateStr) => {
   if (!dateStr) return '';
@@ -171,11 +179,12 @@ const Chat = () => {
     };
   }, [conversationId]);
 
-  const handleSendMessage = async (e) => {
+  const handleSendMessage = async (e, textOverride) => {
     if (e) e.preventDefault();
-    if (!newMessage.trim() || sendingMessage || !activeConv) return;
+    const rawText = typeof textOverride === 'string' ? textOverride : newMessage;
+    if (!rawText.trim() || sendingMessage || !activeConv) return;
 
-    const content = newMessage.trim();
+    const content = rawText.trim();
     setNewMessage('');
     setSendingMessage(true);
 
@@ -193,8 +202,17 @@ const Chat = () => {
     setMessages((prev) => [...prev, optimisticMsg]);
 
     try {
-      const res = await api.post(`/conversations/${activeConv.id}/messages`, { content });
-      setMessages((prev) => prev.map((m) => (m.id === tempId ? res.data : m)));
+      if (isSupport) {
+        // Support threads go through the rule-based bot; the reply (if any) comes back with the echo.
+        const res = await api.post(`/support/conversations/${activeConv.id}/messages`, { content });
+        setMessages((prev) => {
+          const next = prev.map((m) => (m.id === tempId ? res.data.user_message : m));
+          return res.data.bot_message ? [...next, res.data.bot_message] : next;
+        });
+      } else {
+        const res = await api.post(`/conversations/${activeConv.id}/messages`, { content });
+        setMessages((prev) => prev.map((m) => (m.id === tempId ? res.data : m)));
+      }
       fetchConversations(true);
     } catch (err) {
       console.error('Failed to send message:', err);
@@ -328,12 +346,13 @@ const Chat = () => {
     return oName.includes(term) || uName.includes(term);
   });
 
+  const isSupport = activeConv?.lender?.username === SUPPORT_USERNAME;
   const latestOffer = activeConv?.active_offer || (offers.length > 0 ? offers[offers.length - 1] : null);
   const isOfferRecipient = latestOffer && user && latestOffer.sender_id !== user.id;
 
   return (
     <div className="chat-page app-page">
-      <div className="wrap">
+      <div className={isSupport ? 'wrap chat-wrap--support' : 'wrap'}>
         <aside className={`conversations-sidebar ${conversationId ? 'hidden-mobile' : ''}`}>
           <div className="conversations-header">
             <div className="conversations-title-row">
@@ -460,7 +479,8 @@ const Chat = () => {
                         {activeConv.is_borrower ? activeConv.lender.name : activeConv.borrower.name}
                       </h3>
                       <div className="chat-listing-pricing">
-                        <span>Conversation</span>
+                        <span>{isSupport ? 'NeighborLend Support' : 'Conversation'}</span>
+                        {isSupport && <span className="support-badge">Official</span>}
                       </div>
                     </div>
                   </div>
@@ -468,13 +488,15 @@ const Chat = () => {
               </div>
 
               <div className="chat-header-right">
-                <button
-                  className={`toggle-negotiation-btn ${showNegotiation ? 'active' : ''}`}
-                  onClick={() => setShowNegotiation(!showNegotiation)}
-                >
-                  <Tag size={16} />
-                  <span>Negotiation</span>
-                </button>
+                {!isSupport && (
+                  <button
+                    className={`toggle-negotiation-btn ${showNegotiation ? 'active' : ''}`}
+                    onClick={() => setShowNegotiation(!showNegotiation)}
+                  >
+                    <Tag size={16} />
+                    <span>Negotiation</span>
+                  </button>
+                )}
               </div>
             </header>
 
@@ -496,8 +518,10 @@ const Chat = () => {
                   <p>Ask about item condition, delivery pickup, or make a rental price offer.</p>
                 </div>
               ) : (
-                messages.map((msg) => {
+                messages.map((msg, index) => {
                   const isMe = user && msg.sender_id === user.id;
+                  const meta = parseMeta(msg.meta);
+                  const isLastMessage = index === messages.length - 1;
 
                   if (msg.is_system) {
                     return (
@@ -517,6 +541,7 @@ const Chat = () => {
                       {!isMe && (
                         <span className="message-sender-name">
                           {msg.sender_name || msg.sender_username}
+                          {meta?.admin && <span className="staff-tag">Staff</span>}
                         </span>
                       )}
                       <div className="message-bubble">
@@ -525,6 +550,21 @@ const Chat = () => {
                           {formatTimestamp(msg.created_at)}
                         </span>
                       </div>
+                      {isSupport && isLastMessage && !isMe && Array.isArray(meta?.quick_replies) && (
+                        <div className="quick-replies" role="group" aria-label="Quick replies">
+                          {meta.quick_replies.map((label) => (
+                            <button
+                              key={label}
+                              type="button"
+                              className="quick-reply"
+                              disabled={sendingMessage}
+                              onClick={() => handleSendMessage(null, label)}
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })
@@ -571,13 +611,19 @@ const Chat = () => {
           </section>
         )}
 
-        {conversationId && activeConv && showNegotiation && (
+        {conversationId && activeConv && showNegotiation && !isSupport && (
           <aside className="negotiation-panel">
             <div className="negotiation-header">
               <h3 className="negotiation-title">
                 <Tag size={20} className="text-accent" />
                 Rental negotiation
               </h3>
+              <SupportChatButton
+                step="negotiation"
+                entityType={activeConv?.active_offer?.borrow_request_id ? 'borrow_request' : null}
+                entityId={activeConv?.active_offer?.borrow_request_id || null}
+                label="Help"
+              />
               <button
                 className="negotiation-close-btn"
                 onClick={() => setShowNegotiation(false)}

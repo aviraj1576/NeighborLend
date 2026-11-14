@@ -7,6 +7,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+import SupportChatButton from '../components/SupportChatButton';
 import './CreateListing.css';
 
 const CATEGORIES = ['Tools', 'Electronics', 'Sports', 'Party', 'Books', 'Other'];
@@ -314,6 +315,8 @@ const CreateListing = () => {
               <p className="t-small muted photo-upload-status">{uploadedUrls.length} of {files.length} photos uploaded.</p>
             )}
 
+            <SupportChatButton step="listing_photos" label="Photo upload trouble? Chat with us" />
+
             <div className="wizard-actions">
               <Button variant="secondary" onClick={() => {}} disabled>
                 Back
@@ -611,6 +614,8 @@ const CreateListing = () => {
                 </div>
               </div>
             </div>
+
+            <SupportChatButton step="listing_create" label="Need help publishing? Chat with us" />
 
             <div className="wizard-actions">
               <Button variant="secondary" onClick={() => setStep(2)}>

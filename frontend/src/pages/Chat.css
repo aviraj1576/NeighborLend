@@ -458,3 +458,26 @@
   .offer-details-grid { grid-template-columns: 1fr; }
   .chat-page .wrap { gap: var(--s-5, 24px); padding-top: var(--s-6, 32px); }
 }
+
+/* Support thread: quick replies, official badge, staff tag */
+.quick-replies { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; max-width: 100%; }
+.quick-reply {
+  min-height: 36px; padding: 0 14px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 0.9rem;
+  border: 1px solid var(--p-border); background: var(--p-highlight); color: var(--p-ink);
+}
+.quick-reply:hover:not(:disabled) { background: var(--p-action); color: var(--p-action-ink); border-color: var(--p-action); }
+.quick-reply:disabled { opacity: 0.6; cursor: progress; }
+.quick-reply:focus-visible { outline: 3px solid var(--p-action); outline-offset: 2px; }
+.support-badge {
+  margin-left: 8px; padding: 1px 8px; border-radius: 999px; font-size: 0.7rem; font-weight: 600;
+  background: var(--p-accent); color: var(--p-accent-ink);
+}
+.staff-tag {
+  margin-left: 6px; padding: 0 6px; border-radius: 6px; font-size: 0.65rem; font-weight: 600;
+  background: var(--p-action); color: var(--p-action-ink); vertical-align: middle;
+}
+
+/* support threads have no negotiation panel, so let the thread use the freed column */
+@media (min-width: 1024px) {
+  .chat-page .wrap.chat-wrap--support { grid-template-columns: 300px 1fr; }
+}

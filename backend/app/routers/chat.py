@@ -42,6 +42,7 @@ def _format_message(msg: Message) -> MessageOut:
         sender_username=sender_username,
         content=msg.content,
         is_system=msg.is_system or False,
+        meta=msg.meta,
         created_at=msg.created_at
     )
 

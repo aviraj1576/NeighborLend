@@ -190,6 +190,7 @@ class Message(Base):
     sender_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     content = Column(Text, nullable=False)
     is_system = Column(Boolean, default=False)
+    meta = Column(Text, nullable=True)   # JSON: {"quick_replies": [...], "node_id": "...", "bot": true}
     created_at = Column(DateTime, default=datetime.utcnow)
 
     conversation = relationship("Conversation", back_populates="messages")
@@ -229,6 +230,24 @@ class AdminAuditLog(Base):
     target_id = Column(String, nullable=False, index=True)
     detail = Column(Text, nullable=True)             # JSON string
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+class SupportTicketStatus(str, enum.Enum):
+    bot = "bot"
+    escalated = "escalated"
+    closed = "closed"
+
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+    id = Column(String, primary_key=True, default=_uuid)
+    conversation_id = Column(String, ForeignKey("conversations.id"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    context_step = Column(String, nullable=False)      # e.g. "handover_photos"
+    entity_type = Column(String, nullable=True)        # "borrow_request" | "listing" | None
+    entity_id = Column(String, nullable=True)
+    status = Column(Enum(SupportTicketStatus), default=SupportTicketStatus.bot, index=True)
+    escalated_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class NegotiationOffer(Base):
     __tablename__ = "negotiation_offers"
