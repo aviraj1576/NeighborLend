@@ -9,6 +9,8 @@ from pathlib import Path
 
 _TEST_DATABASE = Path(tempfile.gettempdir()) / f"neighborlend-tests-{uuid.uuid4().hex}.db"
 os.environ["DATABASE_URL"] = f"sqlite:///{_TEST_DATABASE.as_posix()}"
+# Tests must never call the real vision model, whichever test module imports `app` first.
+os.environ.setdefault("DAMAGE_PROVIDER", "mock")
 
 
 def pytest_sessionfinish(session, exitstatus):

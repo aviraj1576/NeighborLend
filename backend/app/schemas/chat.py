@@ -20,6 +20,7 @@ class MessageOut(BaseModel):
     sender_username: Optional[str] = None
     content: str
     is_system: bool = False
+    meta: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

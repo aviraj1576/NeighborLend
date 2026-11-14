@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { MessageCircle, Star, Eye } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
@@ -8,6 +8,11 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+import SixPhotoCapture from '../components/damage/SixPhotoCapture';
+import DamageReportView from '../components/damage/DamageReportView';
+import BeforeAfterCompare from '../components/damage/BeforeAfterCompare';
+import SupportChatButton from '../components/SupportChatButton';
+import { apiError, getCheck, userPhotoPath } from '../components/damage/damageApi';
 import './BorrowRequestDetail.css';
 
 const HANDOVER_LABELS = {
@@ -18,9 +23,18 @@ const HANDOVER_LABELS = {
   issue_reported: 'Issue reported',
   return_photos_uploaded: 'Return photos uploaded — awaiting lender confirmation',
   return_confirmed: 'Return confirmed',
+  disputed: 'Dispute open — admins are reviewing',
+  dispute_resolved: 'Dispute resolved',
 };
 
 const formatDateTime = (value) => (value ? new Date(value).toLocaleString() : '—');
+
+const NON_RETURN_DISPUTE_DAYS = 7;
+
+const extractToken = (text) => {
+  const parts = String(text || '').trim().split(/[?#]/)[0].split('/').filter(Boolean);
+  return parts.length ? parts[parts.length - 1] : '';
+};
 
 const BorrowRequestDetail = () => {
   const { id } = useParams();
@@ -45,6 +59,14 @@ const BorrowRequestDetail = () => {
   const [lenderRatingComment, setLenderRatingComment] = useState('');
   const [borrowerRatingComment, setBorrowerRatingComment] = useState('');
   const [ratingFormOpen, setRatingFormOpen] = useState(false);
+
+  const navigate = useNavigate();
+  const [beforeComplete, setBeforeComplete] = useState(false);
+  const [shareInfo, setShareInfo] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [pastedLink, setPastedLink] = useState('');
+  const [damageCheck, setDamageCheck] = useState(null);
+  const [damageDisputeReason, setDamageDisputeReason] = useState('');
 
   const fetchRequest = useCallback(async () => {
     try {
@@ -82,6 +104,108 @@ const BorrowRequestDetail = () => {
     }, 15000);
     return () => window.clearInterval(timer);
   }, [id, request?.handover_status, request?.borrower_id, request?.lender_id, user?.id]);
+
+  // Lender review: load the damage check, and poll while the AI comparison runs.
+  const reviewCheckId = request?.damage_check_id;
+  const reviewStates = ['return_photos_uploaded', 'disputed'];
+  const reviewActive = Boolean(reviewCheckId && reviewStates.includes(request?.handover_status));
+  const damagePathFor = useCallback((phase, view) => userPhotoPath(reviewCheckId, phase, view), [reviewCheckId]);
+
+  useEffect(() => {
+    if (!reviewActive) return;
+    getCheck(reviewCheckId).then(setDamageCheck).catch(() => {});
+  }, [reviewActive, reviewCheckId]);
+
+  useEffect(() => {
+    if (damageCheck?.status !== 'processing') return undefined;
+    const timer = window.setInterval(() => {
+      getCheck(damageCheck.id).then(setDamageCheck).catch(() => {});
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [damageCheck?.status, damageCheck?.id]);
+
+  const refreshAfter = async () => {
+    await fetchRequest();
+    window.dispatchEvent(new Event('notifications:updated'));
+  };
+
+  const startDamageCheck = async () => {
+    setSubmitting(true);
+    setError('');
+    try {
+      await api.post(`/borrow-requests/${id}/damage-check/start`);
+      await fetchRequest();
+    } catch (err) {
+      setError(apiError(err, 'Could not start the condition check.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const shareDamageCheck = async () => {
+    setSubmitting(true);
+    setError('');
+    try {
+      const res = await api.post(`/borrow-requests/${id}/damage-check/share`);
+      setShareInfo(res.data);
+      await refreshAfter();
+    } catch (err) {
+      setError(apiError(err, 'Could not share the condition check.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const copyDamageLink = async (token) => {
+    const url = `${window.location.origin}/damage-check/${token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt('Copy this link', url);
+    }
+  };
+
+  const approveReturn = async () => {
+    if (!window.confirm('Approve this return? The lend will be closed.')) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await api.post(`/borrow-requests/${id}/return/approve`);
+      await refreshAfter();
+    } catch (err) {
+      setError(apiError(err, 'Could not approve the return.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const raiseDamageDispute = async () => {
+    const reason = damageDisputeReason.trim();
+    if (!reason) return;
+    if (!window.confirm('Send this dispute to NeighborLend admins? They will review both photo sets and decide.')) return;
+    setSubmitting(true);
+    setError('');
+    try {
+      await api.post(`/borrow-requests/${id}/return/dispute`, { reason });
+      setDamageDisputeReason('');
+      await refreshAfter();
+    } catch (err) {
+      setError(apiError(err, 'Could not raise the dispute.'));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const openPastedLink = () => {
+    const token = extractToken(pastedLink);
+    if (!token) {
+      setError('Paste the damage-check link first.');
+      return;
+    }
+    navigate(`/damage-check/${token}`);
+  };
 
   const runHandoverAction = async (action, confirmMessage) => {
     if (!window.confirm(confirmMessage)) return;
@@ -294,6 +418,9 @@ const BorrowRequestDetail = () => {
   const handoverManaged = request.handover_status && request.handover_status !== 'not_applicable';
   const isLender = user?.id === request.lender_id;
   const isBorrower = user?.id === request.borrower_id;
+  const dueAt = request.return_due_at ? new Date(request.return_due_at).getTime() : null;
+  const earlyReturn = dueAt !== null && dueAt > Date.now();
+  const notReturnedDispute = dueAt !== null && Date.now() > dueAt + NON_RETURN_DISPUTE_DAYS * 86400000;
   const canUseReturnActions = canManageRental
     && (!handoverManaged || request.handover_status === 'lender_confirmed');
 
@@ -360,35 +487,51 @@ const BorrowRequestDetail = () => {
                 </p>
               )}
 
-              {/* Step 1: Lender uploads photos */}
+              {/* Step 1: Lender documents the item's condition (6-photo damage check) */}
               {request.handover_status === 'pending' && isLender && (
                 <div className="handover-step">
-                  <h3 className="t-card">Step 1: Upload product photos</h3>
-                  <p className="t-body">Upload photos of the item before handing it over.</p>
-                  <div className="photo-input">
-                    <input
-                      id="handover-photos"
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={handleHandoverPhotos}
-                      disabled={submitting}
-                    />
-                  </div>
-                  {handoverPreviews.length && (
-                    <div className="photo-previews">
-                      {handoverPreviews.map((preview, i) => (
-                        <img key={i} src={preview} alt={`Handover ${i + 1}`} className="photo-preview" />
-                      ))}
-                    </div>
+                  <h3 className="t-card">Step 1: Document the item&rsquo;s condition</h3>
+                  <p className="t-body">
+                    Take 6 photos before handing the item over. The borrower receives a link to them and uses it again on return.
+                  </p>
+                  {!request.damage_check_id ? (
+                    <Button variant="primary" disabled={submitting} onClick={startDamageCheck}>
+                      {submitting ? 'Starting…' : 'Start condition check'}
+                    </Button>
+                  ) : (
+                    <>
+                      <SixPhotoCapture
+                        checkId={request.damage_check_id}
+                        phase="before"
+                        onComplete={() => setBeforeComplete(true)}
+                      />
+                      <Button variant="primary" disabled={submitting || !beforeComplete} onClick={shareDamageCheck}>
+                        {submitting ? 'Sharing…' : 'Share with borrower'}
+                      </Button>
+                    </>
                   )}
-                  <Button
-                    variant="primary"
-                    disabled={submitting || !handoverPhotos.length}
-                    onClick={uploadHandoverPhotos}
-                  >
-                    {submitting ? 'Uploading…' : `Upload ${handoverPhotos.length} photo(s)`}
-                  </Button>
+                  <div className="support-chat-slot">
+                    <SupportChatButton step="handover_photos" entityType="borrow_request" entityId={request.id} />
+                  </div>
+                </div>
+              )}
+
+              {request.handover_status === 'photos_uploaded' && isLender && request.damage_link_token && (
+                <div className="handover-step">
+                  <h3 className="t-card">Condition photos shared</h3>
+                  <p className="t-body">
+                    The borrower was notified. The link below only works for you and the borrower.
+                  </p>
+                  <div className="damage-link-row">
+                    <code className="damage-link">{`${window.location.origin}/damage-check/${request.damage_link_token}`}</code>
+                    <Button variant="secondary" size="sm" onClick={() => copyDamageLink(request.damage_link_token)}>
+                      {copied ? 'Copied' : 'Copy link'}
+                    </Button>
+                  </div>
+                  <Link className="link handover-chat-link" to={`/damage-check/${request.damage_link_token}`}>
+                    Open the photos
+                  </Link>
+                  {shareInfo && <p className="t-small muted">Link valid until {new Date(shareInfo.expires_at).toLocaleDateString()}.</p>}
                 </div>
               )}
 
@@ -399,6 +542,11 @@ const BorrowRequestDetail = () => {
                   <p className="t-body">
                     Review the lender&rsquo;s photos above. If the item looks correct, confirm you received it.
                   </p>
+                  {request.damage_link_token && (
+                    <Button asChild variant="secondary">
+                      <Link to={`/damage-check/${request.damage_link_token}`}>View the lender&rsquo;s 6 condition photos</Link>
+                    </Button>
+                  )}
                   {request.handover_photos && request.handover_photos.length > 0 && (
                     <div className="photo-previews lender-photos">
                       {request.handover_photos.map((url, i) => (
@@ -440,6 +588,9 @@ const BorrowRequestDetail = () => {
                       Report an issue
                     </Button>
                   )}
+                  <div className="support-chat-slot">
+                    <SupportChatButton step="handover_confirm" entityType="borrow_request" entityId={request.id} />
+                  </div>
                   {issueFormOpen && (
                     <form className="handover-issue-form" onSubmit={reportHandoverIssue}>
                       <Input
@@ -507,8 +658,43 @@ const BorrowRequestDetail = () => {
                 </div>
               )}
 
-              {/* Step 4: Borrower uploads return photos */}
-              {request.handover_status === 'lender_confirmed' && !request.returned_at && isBorrower && (
+              {/* Step 4: Borrower returns the item using the damage-check link */}
+              {request.handover_status === 'lender_confirmed' && !request.returned_at && isBorrower && request.damage_check_id && (
+                <div className="handover-step return-section">
+                  <h3 className="t-card">Step 4: Return the item</h3>
+                  <p className="t-body">
+                    {earlyReturn
+                      ? 'Returning before the due date? You can return today.'
+                      : 'Your return is due.'}{' '}
+                    Take 6 return photos using your damage-check link.
+                  </p>
+                  {request.damage_link_token ? (
+                    <Button asChild variant="primary">
+                      <Link to={`/damage-check/${request.damage_link_token}`}>
+                        {earlyReturn ? 'Return today' : 'Open return check'}
+                      </Link>
+                    </Button>
+                  ) : (
+                    <p className="t-body">Your damage-check link is missing. Paste it below.</p>
+                  )}
+                  <div className="damage-paste">
+                    <Input
+                      id="damage-link-paste"
+                      label="Or paste your damage-check link"
+                      value={pastedLink}
+                      onChange={(e) => setPastedLink(e.target.value)}
+                      placeholder="https://…/damage-check/…"
+                    />
+                    <Button variant="secondary" onClick={openPastedLink}>Open link</Button>
+                  </div>
+                  <div className="support-chat-slot">
+                    <SupportChatButton step="return_flow" entityType="borrow_request" entityId={request.id} />
+                  </div>
+                </div>
+              )}
+
+              {/* Legacy Step 4 (lends without a damage check): borrower uploads return photos */}
+              {request.handover_status === 'lender_confirmed' && !request.returned_at && isBorrower && !request.damage_check_id && (
                 <div className="handover-step return-section">
                   <h3 className="t-card">Step 4: Upload return photos</h3>
                   <p className="t-body">Upload photos of the item being returned.</p>
@@ -539,8 +725,104 @@ const BorrowRequestDetail = () => {
                 </div>
               )}
 
-              {/* Step 5: Lender confirms return */}
-              {request.handover_status === 'return_photos_uploaded' && isLender && (
+              {/* Lender: item never returned, a week past the due date */}
+              {request.handover_status === 'lender_confirmed' && isLender && request.damage_check_id && notReturnedDispute && (
+                <div className="handover-step return-section">
+                  <h3 className="t-card">Item not returned?</h3>
+                  <p className="t-body">
+                    The return was due on {formatDateTime(request.return_due_at)}. You can raise a dispute for NeighborLend admins to decide.
+                  </p>
+                  <Input
+                    id="damage-dispute-reason"
+                    label="What happened?"
+                    type="textarea"
+                    rows="3"
+                    maxLength={2000}
+                    value={damageDisputeReason}
+                    onChange={(e) => setDamageDisputeReason(e.target.value)}
+                  />
+                  <Button variant="secondary" disabled={submitting || !damageDisputeReason.trim()} onClick={raiseDamageDispute}>
+                    Raise dispute
+                  </Button>
+                </div>
+              )}
+
+              {/* Step 5: Lender reviews the return (before/after photos + AI log) */}
+              {request.handover_status === 'return_photos_uploaded' && isLender && request.damage_check_id && (
+                <div className="handover-step return-section">
+                  <h3 className="t-card">Step 5: Review the return</h3>
+                  <p className="t-body">
+                    Compare the before and after photos and the AI-assisted log. Approve the return, or raise a dispute
+                    for NeighborLend admins to decide. If you do nothing, the return is approved automatically 72 hours
+                    after it was submitted.
+                  </p>
+                  {damageCheck ? (
+                    <>
+                      <BeforeAfterCompare pathFor={damagePathFor} report={damageCheck.report} />
+                      <DamageReportView report={damageCheck.report} status={damageCheck.status} />
+                    </>
+                  ) : (
+                    <p className="t-body">Loading photos…</p>
+                  )}
+                  <Button variant="primary" disabled={submitting} onClick={approveReturn}>
+                    {submitting ? 'Working…' : 'Approve return'}
+                  </Button>
+                  <Input
+                    id="damage-dispute-reason"
+                    label="Not happy with the condition? Describe the problem"
+                    type="textarea"
+                    rows="3"
+                    maxLength={2000}
+                    value={damageDisputeReason}
+                    onChange={(e) => setDamageDisputeReason(e.target.value)}
+                  />
+                  <Button variant="secondary" disabled={submitting || !damageDisputeReason.trim()} onClick={raiseDamageDispute}>
+                    Raise dispute
+                  </Button>
+                  <div className="support-chat-slot">
+                    <SupportChatButton step="dispute" entityType="borrow_request" entityId={request.id} />
+                  </div>
+                </div>
+              )}
+
+              {request.handover_status === 'return_photos_uploaded' && isBorrower && request.damage_check_id && (
+                <div className="handover-step return-section">
+                  <h3 className="t-card">Return submitted</h3>
+                  <p className="t-body">
+                    The lender is reviewing your return photos. If they do not respond within 72 hours it is approved automatically.
+                  </p>
+                </div>
+              )}
+
+              {/* Disputed: both parties see the photos while admins decide */}
+              {request.handover_status === 'disputed' && (
+                <div className="handover-step return-section">
+                  <h3 className="t-card">Dispute open</h3>
+                  <p className="t-body">
+                    NeighborLend admins are reviewing both photo sets and will notify you of the decision.
+                  </p>
+                  {request.dispute_description && <p className="t-small muted">Reason given: {request.dispute_description}</p>}
+                  {damageCheck && damageCheck.after_views?.length === 6 && (
+                    <>
+                      <BeforeAfterCompare pathFor={damagePathFor} report={damageCheck.report} />
+                      <DamageReportView report={damageCheck.report} status={damageCheck.status} />
+                    </>
+                  )}
+                  <div className="support-chat-slot">
+                    <SupportChatButton step="dispute" entityType="borrow_request" entityId={request.id} />
+                  </div>
+                </div>
+              )}
+
+              {request.handover_status === 'dispute_resolved' && (
+                <div className="handover-step return-section">
+                  <h3 className="t-card">Dispute resolved</h3>
+                  <p className="t-body">An admin has decided this dispute. The decision was sent to your inbox.</p>
+                </div>
+              )}
+
+              {/* Legacy Step 5 (lends without a damage check): lender confirms return */}
+              {request.handover_status === 'return_photos_uploaded' && isLender && !request.damage_check_id && (
                 <div className="handover-step return-section">
                   <h3 className="t-card">Step 5: Confirm return</h3>
                   <p className="t-body">

@@ -26,6 +26,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install -r requirements.txt
 
 COPY backend/app ./app
+COPY backend/damage_check ./damage_check
 COPY backend/ai_service ./ai_service
 
 RUN mkdir -p uploads

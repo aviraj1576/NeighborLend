@@ -88,6 +88,8 @@ def _format_request_out(
         "handover_photos": parse_photos(req.handover_photos),
         "handover_confirmed_photos": parse_photos(req.handover_confirmed_photos),
         "return_photos": parse_photos(req.return_photos),
+        "damage_check_id": req.damage_check_id if include_private_handover else None,
+        "damage_link_token": req.damage_link_token if include_private_handover else None,
         "return_confirmed_at": req.return_confirmed_at,
         "return_confirmed_by": req.return_confirmed_by,
         "borrowing_started_at": req.borrowing_started_at,
@@ -145,6 +147,9 @@ def get_handover(
     db: Session = Depends(get_db),
 ):
     req, _ = _get_handover_request(request_id, db, current_user)
+    from app.routers.lend_damage import _apply_review_timeout  # local import: avoids a circular import
+    if _apply_review_timeout(db, req):
+        db.refresh(req)
     return _format_request_out(req, include_private_handover=True)
 
 
@@ -302,6 +307,8 @@ def borrower_confirm_handover(
     req.handover_confirmed_by = current_user.id
     req.borrowing_started_at = now
     req.return_due_at = now + timedelta(days=days)
+    if req.damage_link_expires_at:
+        req.damage_link_expires_at = max(req.damage_link_expires_at, req.return_due_at + timedelta(days=30))
     req.status = BorrowRequestStatus.fulfilled
     create_notification(
         db, lender_id, "handover_confirmed", "Borrower Confirmed Receipt",
