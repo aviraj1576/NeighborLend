@@ -145,6 +145,9 @@ def get_handover(
     db: Session = Depends(get_db),
 ):
     req, _ = _get_handover_request(request_id, db, current_user)
+    from app.routers.lend_damage import _apply_review_timeout  # local import: avoids a circular import
+    if _apply_review_timeout(db, req):
+        db.refresh(req)
     return _format_request_out(req, include_private_handover=True)
 
 

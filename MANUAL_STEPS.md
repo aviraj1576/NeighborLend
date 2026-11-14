@@ -93,6 +93,58 @@ creates the new tables/columns there. That is additive and expected.
 
 ## D. Deploying so Supabase actually gets the new tables
 
-Nothing exists on Render/Vercel until you commit and push (I never run git). After you
-push: Render rebuilds (the Dockerfile now copies `damage_check/`) and on startup creates
-the new tables and columns in Supabase; then run the section B SQL once.
+Nothing exists on Render/Vercel until the code is on the branch Render/Vercel deploy from
+(normally `main`). Work is pushed to `feature/damage-check-integration`; merge it into
+`main` (GitHub pull request) when you want it live. After the merge: Render rebuilds (the
+Dockerfile now copies `damage_check/`) and on startup creates the new tables and columns
+in Supabase; then run the section B SQL once.
+
+## E. Testing the backend (Phases 0-4) by hand against Supabase — no frontend needed yet
+
+Start the API locally with your normal `.env` (this connects to Supabase):
+
+```bash
+cd backend
+python seed_test_users.py          # once; note the printed passwords + the lend id
+python -m uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+Swagger (`/docs`) "Authorize" does not work here because login takes JSON, so use curl
+(Git Bash). Replace `<...>` with your values; use any 6 JPG/PNG photos (<8 MB), e.g. `p.jpg`.
+
+```bash
+B=http://127.0.0.1:8000/api
+tok() { curl -s $B/auth/login -H 'Content-Type: application/json' \
+  -d "{\"username_or_email\":\"$1\",\"password\":\"$2\"}" | python -c "import sys,json;print(json.load(sys.stdin)['access_token'])"; }
+L=$(tok nl_test_lender '<lender pw>'); R=$(tok nl_test_borrower '<borrower pw>'); A=$(tok nl_test_admin '<admin pw>')
+LEND=<lend id>
+post() { curl -s -X POST "$B$2" -H "Authorization: Bearer $1" -H 'Content-Type: application/json' -d "$3"; echo; }
+photos() { for v in front back left right top bottom; do \
+  curl -s -X PUT "$B/damage-checks/$2/photos/$3/$v" -H "Authorization: Bearer $1" -F file=@p.jpg >/dev/null; done; }
+
+# 1. Lender: start the check, upload the 6 BEFORE photos, share -> returns the link
+CHECK=$(post $L /borrow-requests/$LEND/damage-check/start | python -c "import sys,json;print(json.load(sys.stdin)['check_id'])")
+photos $L $CHECK before
+post $L /borrow-requests/$LEND/damage-check/share            # note "token"
+# 2. Borrower resolves the link; an outsider/other login would get 403
+curl -s $B/damage-links/<token> -H "Authorization: Bearer $R"; echo
+# 3. Handover: borrower confirms receipt, lender confirms handover
+post $R /borrow-requests/$LEND/handover/borrower-confirm '{}'
+post $L /borrow-requests/$LEND/handover/lender-confirm
+# 4. Return (works any day before the due date = early return): 6 AFTER photos, submit
+photos $R $CHECK after
+post $R /borrow-requests/$LEND/return/submit
+curl -s $B/damage-checks/$CHECK -H "Authorization: Bearer $L"; echo   # repeat until "status":"done" (AI report)
+# 5a. Happy path:  lender approves
+post $L /borrow-requests/$LEND/return/approve
+# 5b. OR dispute path (use --new-lend for a fresh lend):
+post $L /borrow-requests/$LEND/return/dispute '{"reason":"Scratch on the left side"}'
+curl -s "$B/admin/disputes" -H "Authorization: Bearer $A"; echo      # note the dispute "id"
+post $A /admin/disputes/<dispute id>/resolve '{"outcome":"partial","note":"Split the repair"}'
+curl -s "$B/admin/audit-logs" -H "Authorization: Bearer $A"; echo
+```
+
+Expected: every step returns 200; wrong-role calls return 403; repeating a step returns
+409; the lend ends `return_confirmed` (5a) or `dispute_resolved` (5b); both users get
+notifications (`GET $B/notifications` with their token). With a real `DAMAGE_GEMINI_API_KEY`
+the report is real; with identical test photos expect `clear`.
