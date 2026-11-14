@@ -130,12 +130,12 @@ Commands (exact, from this repo):
 - [x] Phase 2 — Data model + state machine + link tokens (backend)
 - [x] Phase 3 — Before/return/review/dispute endpoints (backend)
 - [x] Phase 4 — Admin backend: disputes, resolve, audit log, timeout
-- [ ] Phase 5 — Frontend: before-photos flow + shareable link page
-- [ ] Phase 6 — Frontend: return flow + lender review + dispute
-- [ ] Phase 7 — Frontend: admin interface
-- [ ] Phase 8 — Support bot backend
-- [ ] Phase 9 — Support bot frontend + "Chat with us" buttons
-- [ ] Phase 10 — Full regression + manual E2E script
+- [x] Phase 5 — Frontend: before-photos flow + shareable link page
+- [x] Phase 6 — Frontend: return flow + lender review + dispute
+- [x] Phase 7 — Frontend: admin interface
+- [x] Phase 8 — Support bot backend
+- [x] Phase 9 — Support bot frontend + "Chat with us" buttons
+- [x] Phase 10 — Full regression + manual E2E script
 
 ---
 
@@ -1159,3 +1159,24 @@ Report the outcome of every lettered section to the user. **Done.**
   the server is the gate.
 - Do NOT call any LLM from the support bot.
 - Do NOT skip the stop-and-report checkpoint at the end of each phase.
+
+
+---
+
+## Implementation notes (deviations found while building; all tested)
+
+- **Capture UI**: instead of plain file inputs, `SixPhotoCapture` wraps a port of the damage_check
+  module's guided camera (`GuidedCapture`, `CaptureCamera`, blur/brightness check, ghost overlay of the
+  lender's photo for the return shots, "Choose a file" fallback). Only missing views are captured, so it resumes.
+- **Startup without an AI key**: `UnavailableProvider` keeps the app booting; analyses end as `needs_review`.
+- **Dockerfile** now copies `backend/damage_check`; **conftest** defaults `DAMAGE_PROVIDER=mock`.
+- **Cache safety**: a middleware sets `Cache-Control: no-store` on `/api/damage-checks`, `/api/damage-links`,
+  `/api/admin`, `/api/support` and `*/handover`. Found in the browser run: a cached 410 from one user was served to
+  another user on the same browser.
+- **Support bot**: the first bot message is context-aware (`STEP_GREETING_NODE`), re-clicking the same step's
+  button reuses its open ticket, and escalating without a ticket creates one. Support threads get a two-column
+  chat layout (no negotiation panel).
+- **Not done**: no "Chat with us" on the email-verification page (users cannot log in before verifying).
+  `listing_create` / `listing_photos` pass no entity id because the wizard creates the listing at the end.
+- **Verified in a real browser** (throwaway SQLite, mock AI): happy path, dispute path with admin resolution,
+  chatbot path with escalation and staff reply, non-admin redirect, unknown / closed / outsider link pages.

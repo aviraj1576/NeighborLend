@@ -88,6 +88,8 @@ def _format_request_out(
         "handover_photos": parse_photos(req.handover_photos),
         "handover_confirmed_photos": parse_photos(req.handover_confirmed_photos),
         "return_photos": parse_photos(req.return_photos),
+        "damage_check_id": req.damage_check_id if include_private_handover else None,
+        "damage_link_token": req.damage_link_token if include_private_handover else None,
         "return_confirmed_at": req.return_confirmed_at,
         "return_confirmed_by": req.return_confirmed_by,
         "borrowing_started_at": req.borrowing_started_at,

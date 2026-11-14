@@ -148,3 +148,30 @@ Expected: every step returns 200; wrong-role calls return 403; repeating a step 
 409; the lend ends `return_confirmed` (5a) or `dispute_resolved` (5b); both users get
 notifications (`GET $B/notifications` with their token). With a real `DAMAGE_GEMINI_API_KEY`
 the report is real; with identical test photos expect `clear`.
+
+## F. Going live (after Phases 0-10) — checklist, in this order
+
+1. **Merge** `feature/damage-check-integration` into `main` (GitHub pull request). Vercel and
+   Render deploy from `main`.
+2. **Render** env vars set (section A): `DAMAGE_PROVIDER=gemini`, `DAMAGE_GEMINI_API_KEY`.
+   Nothing else new. Wait for the deploy to finish and `/api/health` to return ok.
+3. **Supabase → SQL Editor**: run the section B SQL (it now covers `damage_check_records`,
+   `disputes`, `admin_audit_logs`, `support_tickets`). The backend creates these tables on its
+   first start, and adds the new `borrow_requests` / `messages` columns automatically.
+4. **Create your real admin** on the live database. `seed_test_users.py` makes a test admin
+   (`nl_test_admin`) from your laptop; use a strong `SEED_ADMIN_PASSWORD`, or promote your own
+   account in the Supabase Table Editor (`users` → your row → `is_admin` = true). There is no
+   public admin signup by design. Delete the test users when you are done testing.
+5. **Vercel**: nothing new to set. The camera needs HTTPS, which Vercel provides.
+6. Open the live site as the test lender/borrower and run the E2E script in section E / the
+   guide's Phase 10.
+
+Known limits to be aware of on the live site:
+- Damage photos live on Render's ephemeral disk (see section A). Until you add a persistent disk
+  (or a Supabase-backed store) photos disappear on redeploy, and a link to a lend whose photos
+  were wiped shows "Photo unavailable".
+- The AI comparison is only a warning, never a verdict, and needs a real Gemini key to be useful
+  (`mock` reports every differing photo as a change).
+- The email-verification step has no "Chat with us" button: users cannot sign in (so cannot open a
+  support chat) until they are verified. The bot's "Email verification" topic is reachable from
+  any other support chat.
