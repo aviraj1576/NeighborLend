@@ -299,13 +299,22 @@
 }
 .negotiation-close-btn svg { width: 18px; height: 18px; flex: none; }
 
-.negotiation-body { display: flex; flex-direction: column; gap: var(--s-6, 32px); }
+.negotiation-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6, 32px);
+  min-width: 0;
+  container-type: inline-size;
+}
 
 .active-offer-card {
   display: flex;
   flex-direction: column;
   gap: var(--s-5, 24px);
   padding: var(--s-6, 32px);
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border-radius: var(--r-lg, 20px);
   border: 1px solid color-mix(in oklab, var(--ink) 12%, transparent);
   background: var(--p-surface);
@@ -358,8 +367,19 @@
   font: 400 var(--t-body, 16px)/1.5 var(--font-text);
   color: var(--p-ink-soft);
 }
-.offer-actions-group { display: flex; gap: var(--s-3, 12px); }
-.offer-actions-group > .btn { flex: 1; }
+.offer-actions-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-3, 12px);
+  width: 100%;
+  min-width: 0;
+}
+.offer-actions-group > .btn {
+  width: 100%;
+  min-width: 0;
+  justify-content: center;
+  white-space: normal;
+}
 .waiting-indicator {
   display: flex;
   align-items: center;
@@ -452,11 +472,15 @@
 
 @media (max-width: 639px) {
   .dates-row { grid-template-columns: 1fr; }
-  .offer-actions-group { flex-direction: column; }
   .form-buttons-row { flex-direction: column; }
   .message-bubble { max-width: 85%; }
   .offer-details-grid { grid-template-columns: 1fr; }
   .chat-page .wrap { gap: var(--s-5, 24px); padding-top: var(--s-6, 32px); }
+}
+
+@container (max-width: 360px) {
+  .active-offer-card { padding: var(--s-4, 16px); }
+  .offer-details-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 /* Support thread: quick replies, official badge, staff tag */

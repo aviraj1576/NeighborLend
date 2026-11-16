@@ -72,14 +72,6 @@ async def restrict_local_deployment(request: Request, call_next):
             return JSONResponse({"detail": "Local deployment accepts direct loopback requests only"}, status_code=403)
     return await call_next(request)
 
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origin_list,
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
 # Per-user responses must never sit in a shared browser cache: the cache key ignores the
 # Authorization header, so on a shared computer one user could be served another user's
 # cached response (including error responses such as 403/410).
@@ -126,3 +118,15 @@ def health():
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
     return {"status": "ok"}
+
+
+# Wrap the fully assembled ASGI application so CORS headers are also added to
+# unhandled-error responses generated outside FastAPI's regular middleware stack.
+# Origins remain an explicit allowlist because credentials (including JWTs) are enabled.
+app = CORSMiddleware(
+    app,
+    allow_origins=settings.cors_origin_list,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)

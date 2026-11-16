@@ -87,6 +87,38 @@ class TestChatAndNegotiation(unittest.TestCase):
         self.assertEqual(res.status_code, 400)
         self.assertIn("yourself", res.json()["detail"].lower())
 
+    def test_conversations_cors_preflight_and_authenticated_get(self):
+        origin = "http://localhost:5173"
+        preflight = self.client.options(
+            "/api/conversations",
+            headers={
+                "Origin": origin,
+                "Access-Control-Request-Method": "GET",
+                "Access-Control-Request-Headers": "authorization",
+            },
+        )
+        self.assertEqual(preflight.status_code, 200)
+        self.assertEqual(preflight.headers.get("access-control-allow-origin"), origin)
+        self.assertEqual(preflight.headers.get("access-control-allow-credentials"), "true")
+        self.assertIn("GET", preflight.headers.get("access-control-allow-methods", ""))
+        self.assertIn("authorization", preflight.headers.get("access-control-allow-headers", "").lower())
+
+        response = self.client.get(
+            "/api/conversations",
+            headers={**self.borrower_headers, "Origin": origin},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get("access-control-allow-origin"), origin)
+        self.assertEqual(response.headers.get("access-control-allow-credentials"), "true")
+
+    def test_cors_headers_are_present_on_error_responses(self):
+        response = self.client.get(
+            "/api/conversations",
+            headers={"Origin": "http://127.0.0.1:5173"},
+        )
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.headers.get("access-control-allow-origin"), "http://127.0.0.1:5173")
+
     def test_02_create_conversation_and_send_message(self):
         # Borrower starts conversation
         res = self.client.post(
