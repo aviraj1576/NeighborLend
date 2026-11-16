@@ -128,7 +128,8 @@
   top: calc(100% + 10px);
   right: 0;
   z-index: 50;
-  min-width: 200px;
+  width: min(280px, calc(100vw - 32px));
+  min-width: min(200px, calc(100vw - 32px));
   padding: var(--s-5, 24px);
   border-radius: var(--r-lg, 20px);
   border: 1px solid color-mix(in oklab, var(--p-ink) 12%, transparent);
@@ -136,6 +137,25 @@
   box-shadow: 0 24px 48px -10px color-mix(in oklab, var(--p-ink) 30%, transparent);
   color: var(--p-inv-ink);
   animation: dropdown-in var(--m-panel, 200ms) var(--m-ease, cubic-bezier(.2,.8,.2,1));
+}
+.dropdown-user {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+  margin: calc(var(--s-2, 8px) * -1) calc(var(--s-2, 8px) * -1) var(--s-3, 12px);
+  padding: var(--s-2, 8px) var(--s-2, 8px) var(--s-4, 16px);
+  border-bottom: 1px solid color-mix(in oklab, var(--p-inv-ink) 16%, transparent);
+}
+.dropdown-user-name {
+  color: var(--p-inv-ink);
+  font: 650 17px/1.3 var(--font-display, var(--font-text));
+  overflow-wrap: anywhere;
+}
+.dropdown-user-handle {
+  color: color-mix(in oklab, var(--p-inv-ink) 68%, transparent);
+  font: 400 var(--t-small, 13px)/1.35 var(--font-text);
+  overflow-wrap: anywhere;
 }
 @keyframes dropdown-in {
   from { opacity: 0; transform: translateY(-8px); }

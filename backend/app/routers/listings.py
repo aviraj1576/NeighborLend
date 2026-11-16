@@ -3,7 +3,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy.orm import Session
 from app.database import get_db
-from app.models import User, Listing, ListingPhoto, ListingStatus
+from app.models import User, Listing, ListingPhoto, ListingStatus, BorrowRequest, BorrowRequestStatus
 from app.schemas.listing import ListingCreateIn, ListingUpdateIn, ListingOut, SuggestPriceIn, SuggestPriceOut
 from app.services.auth import get_current_user
 from app.services.pricing import suggest_price_per_day, calculate_rental_suggestion
@@ -18,6 +18,16 @@ def haversine(lat1, lon1, lat2, lon2):
     dlon = math.radians(lon2 - lon1)
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
     return R * 2 * math.asin(math.sqrt(a))
+
+
+def _listing_is_in_use(db: Optional[Session], listing_id: str) -> bool:
+    if db is None:
+        return False
+    return db.query(BorrowRequest.id).filter(
+        BorrowRequest.listing_id == listing_id,
+        BorrowRequest.status == BorrowRequestStatus.fulfilled,
+        BorrowRequest.returned_at.is_(None),
+    ).first() is not None
 
 def _format_listing_out(listing: Listing, distance_km: Optional[float] = None, db: Optional[Session] = None) -> dict:
     address_str = listing.address_text or ""
@@ -77,7 +87,7 @@ def _format_listing_out(listing: Listing, distance_km: Optional[float] = None, d
                 key=lambda photo: (not photo.is_cover, photo.created_at, photo.id),
             )
         ],
-        "is_currently_rented": False,
+        "is_currently_rented": _listing_is_in_use(db, listing.id),
         "distance_km": None if distance_km == float('inf') else distance_km,
         "created_at": listing.created_at
     }
@@ -229,8 +239,10 @@ def update_listing(listing_id: str, data: ListingUpdateIn, current_user: User = 
     changes = data.model_dump(exclude_unset=True)
     status = changes.pop("status", None)
     has_content_changes = bool(changes)
-    if has_content_changes and listing.status not in (ListingStatus.draft, ListingStatus.pending_review):
-        raise HTTPException(status_code=409, detail="This listing has been published and can no longer be edited.")
+    if has_content_changes and listing.status == ListingStatus.removed:
+        raise HTTPException(status_code=409, detail="Removed listings can no longer be edited.")
+    if has_content_changes and _listing_is_in_use(db, listing.id):
+        raise HTTPException(status_code=409, detail="This listing cannot be edited while it is being rented.")
 
     if status is not None:
         allowed_transitions = {
@@ -247,10 +259,6 @@ def update_listing(listing_id: str, data: ListingUpdateIn, current_user: User = 
     effective_min_price = changes.get("min_price_per_day", listing.min_price_per_day)
     if effective_min_price is not None and effective_min_price > effective_price:
         raise HTTPException(status_code=422, detail="Minimum rental price cannot exceed the daily rental price.")
-    effective_latitude = changes.get("latitude", listing.latitude)
-    effective_longitude = changes.get("longitude", listing.longitude)
-    if (effective_latitude is None) != (effective_longitude is None):
-        raise HTTPException(status_code=422, detail="Enter both latitude and longitude, or clear both.")
     settings = get_settings()
     for url in photo_urls or []:
         if not is_public_listing_image_url(url):

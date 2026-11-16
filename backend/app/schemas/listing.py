@@ -36,8 +36,6 @@ class ListingUpdateIn(BaseModel):
     min_price_per_day: Optional[float] = None
     security_deposit: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)
     lending_radius_km: Optional[float] = Field(default=None, ge=1, le=50, allow_inf_nan=False)
-    latitude: Optional[float] = Field(default=None, ge=-90, le=90, allow_inf_nan=False)
-    longitude: Optional[float] = Field(default=None, ge=-180, le=180, allow_inf_nan=False)
     address_text: Optional[str] = Field(default=None, max_length=500)
     photo_urls: Optional[List[str]] = Field(default=None, max_length=20)
     years_owned: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)

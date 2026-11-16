@@ -15,6 +15,8 @@ const Navbar = () => {
   const [unreadCount, setUnreadCount] = useState(0);
 
   const isActive = (path) => location.pathname === path ? 'active' : '';
+  const fullName = (user?.name || '').trim();
+  const username = (user?.username || '').trim();
 
   useEffect(() => {
     if (!isAuthenticated) {
@@ -48,6 +50,12 @@ const Navbar = () => {
 
   const authedDropdown = (
     <>
+      {(fullName || username) && (
+        <div className="dropdown-user" role="group" aria-label="Signed in user">
+          <span className="dropdown-user-name">{fullName || username}</span>
+          {fullName && username && <span className="dropdown-user-handle">@{username}</span>}
+        </div>
+      )}
       <Link
         to="/create-listing"
         className="dropdown-link"

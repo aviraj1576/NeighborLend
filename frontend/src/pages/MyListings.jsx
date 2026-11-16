@@ -8,7 +8,8 @@ import Card from '../components/ui/Card';
 import './MyListings.css';
 
 const CATEGORIES = ['Tools', 'Electronics', 'Sports', 'Party', 'Books', 'Other'];
-const editable = (status) => status === 'draft' || status === 'pending_review';
+const isUnpublished = (status) => status === 'draft' || status === 'pending_review';
+const canEditListing = (listing) => listing.status !== 'removed' && !listing.is_currently_rented;
 
 const MyListings = () => {
   const [listings, setListings] = useState([]);
@@ -37,7 +38,7 @@ const MyListings = () => {
   useEffect(() => () => photoFilesRef.current.forEach(({ preview }) => URL.revokeObjectURL(preview)), []);
 
   const startEdit = (listing) => {
-    if (!editable(listing.status)) return;
+    if (!canEditListing(listing)) return;
     setNotice(null);
     setEditingId(listing.id);
     setPhotoFiles([]);
@@ -48,8 +49,6 @@ const MyListings = () => {
       price_per_day: listing.price_per_day ?? '',
       security_deposit: listing.security_deposit ?? 0,
       address_text: listing.address_text || '',
-      latitude: listing.latitude ?? '',
-      longitude: listing.longitude ?? '',
       photo_urls: [...(listing.photos || [])],
     });
   };
@@ -72,8 +71,6 @@ const MyListings = () => {
         ...editForm,
         price_per_day: Number(editForm.price_per_day),
         security_deposit: Number(editForm.security_deposit || 0),
-        latitude: editForm.latitude === '' ? null : Number(editForm.latitude),
-        longitude: editForm.longitude === '' ? null : Number(editForm.longitude),
         photo_urls: [...editForm.photo_urls, ...uploaded],
       };
       const { data } = await api.patch(`/listings/${id}`, payload);
@@ -145,10 +142,6 @@ const MyListings = () => {
                         <label className="edit-field">Security deposit (₹)<input name="security_deposit" type="number" min="0" step="any" value={editForm.security_deposit} onChange={changeField} /></label>
                       </div>
                       <label className="edit-field">Pickup address<input name="address_text" value={editForm.address_text} onChange={changeField} /></label>
-                      <div className="form-row">
-                        <label className="edit-field">Latitude<input name="latitude" type="number" min="-90" max="90" step="any" value={editForm.latitude} onChange={changeField} /></label>
-                        <label className="edit-field">Longitude<input name="longitude" type="number" min="-180" max="180" step="any" value={editForm.longitude} onChange={changeField} /></label>
-                      </div>
                       <div className="edit-field"><span>Listing photos</span><div className="edit-photo-grid">
                         {editForm.photo_urls.map((url, index) => <div className="edit-photo" key={`${url}-${index}`}><img src={url} alt={`Listing photo ${index + 1}`} /><button type="button" aria-label={`Remove photo ${index + 1}`} onClick={() => setEditForm((form) => ({ ...form, photo_urls: form.photo_urls.filter((_, photoIndex) => photoIndex !== index) }))}><X size={15} /></button></div>)}
                         {photoFiles.map((file, index) => <div className="edit-photo" key={`${file.file.name}-${index}`}><img src={file.preview} alt={`New photo ${index + 1}`} /><button type="button" aria-label={`Remove new photo ${index + 1}`} onClick={() => { URL.revokeObjectURL(file.preview); setPhotoFiles((files) => files.filter((_, fileIndex) => fileIndex !== index)); }}><X size={15} /></button></div>)}
@@ -158,13 +151,13 @@ const MyListings = () => {
                   </Card>
                 ) : (
                   <div className="dashboard-item">
-                    <ListingCard listing={listing} interactive={!editable(listing.status)} />
+                    <ListingCard listing={listing} interactive={!isUnpublished(listing.status)} />
                     <div className="dashboard-item-actions">
-                      {editable(listing.status) && <Button variant="secondary" size="sm" onClick={() => startEdit(listing)} title="Edit unpublished listing"><Edit2 size={15} /><span>Edit Listing</span></Button>}
-                      {editable(listing.status) ? <Button variant="primary" size="sm" onClick={() => publishDraft(listing)}><Play size={15} /><span>Publish</span></Button> : <Button variant="secondary" size="sm" onClick={() => toggleStatus(listing)} title={listing.status === 'published' ? 'Pause listing' : 'Publish listing'}>{listing.status === 'published' ? <Pause size={15} /> : <Play size={15} />}<span>{listing.status === 'published' ? 'Pause' : 'Publish'}</span></Button>}
+                      {canEditListing(listing) && <Button variant="secondary" size="sm" onClick={() => startEdit(listing)} title="Edit listing"><Edit2 size={15} /><span>Edit Listing</span></Button>}
+                      {isUnpublished(listing.status) ? <Button variant="primary" size="sm" onClick={() => publishDraft(listing)}><Play size={15} /><span>Publish</span></Button> : <Button variant="secondary" size="sm" onClick={() => toggleStatus(listing)} title={listing.status === 'published' ? 'Pause listing' : 'Publish listing'}>{listing.status === 'published' ? <Pause size={15} /> : <Play size={15} />}<span>{listing.status === 'published' ? 'Pause' : 'Publish'}</span></Button>}
                       <Button variant="secondary" size="sm" className="delete-action-btn" onClick={() => deleteListing(listing.id)} title="Delete listing"><Trash2 size={15} /><span>Delete</span></Button>
                     </div>
-                    {!editable(listing.status) && <p className="listing-edit-lock">Published listings can no longer be edited.</p>}
+                    {listing.is_currently_rented && <p className="listing-edit-lock">This listing can’t be edited while the item is being rented.</p>}
                   </div>
                 )}
               </div>
