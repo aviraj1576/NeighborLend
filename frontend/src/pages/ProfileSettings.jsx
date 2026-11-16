@@ -18,15 +18,29 @@ const ProfileSettings = () => {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
 
+  const syncProfile = (data) => setProfile({
+    name: data?.name || '',
+    username: data?.username || '',
+    email: data?.email || '',
+    phone: data?.phone || '',
+    avatar_url: data?.avatar_url || '',
+  });
+
   useEffect(() => {
     let active = true;
+    if (user) syncProfile(user);
     api.get('/auth/me').then(({ data }) => {
       if (!active) return;
       setUser(data);
-      setProfile({ name: data.name || '', username: data.username || '', email: data.email || '', phone: data.phone || '', avatar_url: data.avatar_url || '' });
-    }).catch((err) => { if (active) setError(err.response?.data?.detail || 'Could not load your profile.'); });
+      syncProfile(data);
+      setError('');
+    }).catch((err) => {
+      if (!active) return;
+      if (user) setError('Showing your signed-in profile details. Refresh to retry loading the latest saved values.');
+      else setError(err.response?.data?.detail || 'Could not load your profile. Please try again.');
+    });
     return () => { active = false; };
-  }, [setUser]);
+  }, [setUser, user?.id]);
 
   const run = async (key, action, success) => {
     setBusy(key); setError(''); setNotice('');

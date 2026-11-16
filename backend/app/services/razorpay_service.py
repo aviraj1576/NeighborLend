@@ -49,11 +49,16 @@ def validate_payment_configuration(settings):
         raise ProviderError("invalid_payment_provider")
     if settings.deployment_exposure not in {"local", "public"}:
         raise ProviderError("invalid_deployment_exposure")
-    public = settings.deployment_exposure == "public" or settings.app_env.lower() in {
-        "prod",
-        "production",
-    }
-    if not public:
+    public = settings.is_public_deployment
+    if public:
+        urls = [settings.public_base_url, *settings.cors_origin_list]
+        for url in urls:
+            if not url:
+                continue
+            parsed = urlparse(url)
+            if parsed.scheme != "https" or not parsed.hostname:
+                raise ProviderError("public_deployment_requires_https_urls")
+    else:
         for url in [settings.public_base_url, *settings.cors_origin_list]:
             if url and urlparse(url).hostname not in {"localhost", "127.0.0.1", "::1"}:
                 raise ProviderError("local_deployment_requires_loopback_urls")

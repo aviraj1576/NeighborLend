@@ -71,6 +71,7 @@ class Settings(BaseSettings):
     payment_provider: Literal["disabled", "mock", "razorpay_test"] = "disabled"
     payment_demo_mode: bool = False
     deployment_exposure: str = "local"
+    render_service_id: str = ""
     auto_migrate: bool = False
     rental_evidence_dir: str = "./private-rental-evidence"
     razorpay_key_id: str = ""
@@ -98,6 +99,15 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
+
+    @property
+    def is_public_deployment(self) -> bool:
+        """Recognize explicit public mode and Render even if APP_ENV is mis-set."""
+        return (
+            self.deployment_exposure.strip().lower() == "public"
+            or self.app_env.strip().lower() in {"prod", "production"}
+            or bool(self.render_service_id.strip())
+        )
 
     @property
     def admin_email_list(self) -> list[str]:

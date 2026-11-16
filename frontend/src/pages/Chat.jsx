@@ -45,6 +45,7 @@ const Chat = () => {
   const [conversations, setConversations] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [loadingConversations, setLoadingConversations] = useState(true);
+  const [conversationsError, setConversationsError] = useState('');
 
   const [activeConv, setActiveConv] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -84,10 +85,16 @@ const Chat = () => {
     if (conversationsRequestRef.current) return conversationsRequestRef.current;
     if (!silent) setLoadingConversations(true);
     const request = api.get('/conversations')
-      .then((res) => setConversations((previous) => (
-        JSON.stringify(previous) === JSON.stringify(res.data) ? previous : res.data
-      )))
-      .catch((err) => console.error('Failed to load conversations:', err))
+      .then((res) => {
+        setConversationsError('');
+        setConversations((previous) => (
+          JSON.stringify(previous) === JSON.stringify(res.data) ? previous : res.data
+        ));
+      })
+      .catch((err) => {
+        console.error('Failed to load conversations:', err);
+        setConversationsError(err.response?.data?.detail || 'Could not load conversations. Check your connection and try again.');
+      })
       .finally(() => {
         if (conversationsRequestRef.current === request) conversationsRequestRef.current = null;
         if (!silent) setLoadingConversations(false);
@@ -381,6 +388,12 @@ const Chat = () => {
                 <RefreshCw className="animate-spin text-accent" size={24} />
                 <p>Loading messages…</p>
               </div>
+            ) : conversationsError ? (
+              <div className="sidebar-empty-state" role="alert">
+                <AlertCircle size={32} className="text-danger" />
+                <p>{conversationsError}</p>
+                <Button variant="secondary" size="sm" onClick={() => fetchConversations()}>Try again</Button>
+              </div>
             ) : filteredConversations.length === 0 ? (
               <div className="sidebar-empty-state">
                 <MessageSquare size={36} className="text-muted" />
@@ -510,6 +523,7 @@ const Chat = () => {
                 <div className="messages-empty-state text-danger">
                   <AlertCircle size={32} />
                   <p>{errorMsg}</p>
+                  <Button variant="secondary" size="sm" onClick={() => fetchActiveConversation(conversationId)}>Try again</Button>
                 </div>
               ) : messages.length === 0 ? (
                 <div className="messages-empty-state">

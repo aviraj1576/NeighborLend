@@ -85,12 +85,16 @@ def test_disabled_configuration_and_live_key_rejection():
                     _env_file=None, payment_provider=provider, razorpay_key_id="rzp_live_forbidden"
                 )
             )
+
+
     public = dict(
         _env_file=None,
         app_env="production",
         deployment_exposure="public",
         jwt_secret=secret,
         payment_provider="disabled",
+        public_base_url="https://neighborlend-api.onrender.com",
+        cors_origins="https://neighborlend.vercel.app",
     )
     assert configured_provider(Settings(**public)).kind == "disabled"
     with pytest.raises(ProviderError, match="mock_requires"):
@@ -104,6 +108,33 @@ def test_disabled_configuration_and_live_key_rejection():
             configured_provider(
                 Settings(_env_file=None, deployment_exposure="public", jwt_secret=secret)
             )
+
+
+def test_local_urls_remain_loopback_only():
+    secret = "synthetic-private-public-jwt-0123456789-ABCDEFGHIJK"
+    local = dict(_env_file=None, jwt_secret=secret, app_env="development", deployment_exposure="local")
+    configured_provider(Settings(**local))
+    with pytest.raises(ProviderError, match="local_deployment_requires_loopback_urls"):
+        configured_provider(Settings(**{
+            **local,
+            "cors_origins": "https://neighborlend.vercel.app",
+        }))
+
+
+def test_render_urls_are_public_https_even_if_app_env_is_not_set_to_production():
+    settings = Settings(
+        _env_file=None,
+        jwt_secret="synthetic-private-public-jwt-0123456789-ABCDEFGHIJK",
+        app_env="development",
+        deployment_exposure="local",
+        payment_provider="disabled",
+        render_service_id="srv-neighborlend",
+        public_base_url="https://neighborlend-api.onrender.com",
+        cors_origins="https://neighborlend.vercel.app",
+    )
+    assert configured_provider(settings).kind == "disabled"
+    with pytest.raises(ProviderError, match="public_deployment_requires_https_urls"):
+        configured_provider(settings.model_copy(update={"public_base_url": "http://neighborlend-api.onrender.com"}))
 
 
 def test_disabled_mode_preserves_private_inspection_and_intent_recovery(flow):
