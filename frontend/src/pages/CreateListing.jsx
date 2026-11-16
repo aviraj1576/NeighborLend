@@ -1,12 +1,13 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { UploadCloud, CheckCircle2, Sparkles, MapPin, Calculator, RotateCcw, Loader2, Compass } from 'lucide-react';
+import { UploadCloud, CheckCircle2, Sparkles, MapPin, Calculator, RotateCcw, Loader2, Compass, Camera, X, Trash2 } from 'lucide-react';
 import api from '../api/client';
 import { detectUserLocation } from '../utils/location';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
+import SupportChatButton from '../components/SupportChatButton';
 import './CreateListing.css';
 
 const CATEGORIES = ['Tools', 'Electronics', 'Sports', 'Party', 'Books', 'Other'];
@@ -17,6 +18,70 @@ const CreateListing = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [aiOffline, setAiOffline] = useState(false);
   const fileInputRef = useRef(null);
+  const cameraFallbackRef = useRef(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const previewUrlsRef = useRef([]);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraError, setCameraError] = useState('');
+
+  const stopCamera = () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    streamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setCameraOpen(false);
+  };
+
+  useEffect(() => () => {
+    streamRef.current?.getTracks().forEach((track) => track.stop());
+    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+  }, []);
+
+  const openCamera = async () => {
+    setCameraError('');
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setCameraError('Live camera is unavailable in this browser. Use the camera or photo library picker instead.');
+      cameraFallbackRef.current?.click();
+      return;
+    }
+    if (!window.isSecureContext) {
+      setCameraError('Camera access requires a secure connection (HTTPS or localhost). Use the photo picker instead.');
+      cameraFallbackRef.current?.click();
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
+      streamRef.current = stream;
+      setCameraOpen(true);
+      requestAnimationFrame(() => {
+        if (videoRef.current) videoRef.current.srcObject = stream;
+      });
+    } catch (error) {
+      const messages = {
+        NotAllowedError: 'Camera permission was denied. Allow camera access in your browser settings or use the photo picker.',
+        NotFoundError: 'No camera was found. Use the photo picker to choose an image.',
+        NotReadableError: 'The camera is busy or unavailable. Close other camera apps and try again.',
+      };
+      setCameraError(messages[error.name] || 'The camera could not be opened. Use the photo picker or try again.');
+    }
+  };
+
+  const capturePhoto = () => {
+    const video = videoRef.current;
+    if (!video?.videoWidth) { setCameraError('Camera is still starting. Please try again in a moment.'); return; }
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+    canvas.toBlob((blob) => {
+      if (!blob) { setCameraError('This photo could not be captured. Please try again.'); return; }
+      const captured = new File([blob], `listing-photo-${Date.now()}.jpg`, { type: 'image/jpeg' });
+      processFiles([...files, captured]);
+      stopCamera();
+    }, 'image/jpeg', 0.92);
+  };
+
+  const removePhoto = (index) => processFiles(files.filter((_, fileIndex) => fileIndex !== index));
 
   // Form State
   const [files, setFiles] = useState([]);
@@ -52,23 +117,29 @@ const CreateListing = () => {
   const handleFileDrop = (e) => {
     e.preventDefault();
     if (e.dataTransfer.files?.length) {
-      processFiles(Array.from(e.dataTransfer.files));
+      processFiles([...files, ...Array.from(e.dataTransfer.files)]);
     }
   };
 
   const handleFileSelect = (e) => {
     if (e.target.files?.length) {
-      processFiles(Array.from(e.target.files));
+      processFiles([...files, ...Array.from(e.target.files)]);
       e.target.value = '';
     }
   };
 
   const processFiles = async (selectedFiles) => {
     const imageFiles = selectedFiles.filter((selectedFile) => selectedFile.type.startsWith('image/'));
-    if (!imageFiles.length) return;
+    previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    if (!imageFiles.length) {
+      setFiles([]); setPreviews([]); setUploadedUrls([]); setAiData(null); setUploadError(''); setAiOffline(false);
+      return;
+    }
 
     setFiles(imageFiles);
-    setPreviews(imageFiles.map((selectedFile) => URL.createObjectURL(selectedFile)));
+    const nextPreviews = imageFiles.map((selectedFile) => URL.createObjectURL(selectedFile));
+    previewUrlsRef.current = nextPreviews;
+    setPreviews(nextPreviews);
     setUploadedUrls([]);
     setUploadError('');
     setAiData(null);
@@ -190,7 +261,7 @@ const CreateListing = () => {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (publish = true) => {
     setIsLoading(true);
     try {
       const payload = {
@@ -208,6 +279,7 @@ const CreateListing = () => {
         ai_label: aiData?.label || null,
         ai_confidence: aiData ? Number(aiData.confidence) / 100.0 : null,
         photo_urls: uploadedUrls,
+        publish,
       };
 
       await api.post('/listings', payload);
@@ -250,12 +322,16 @@ const CreateListing = () => {
               onClick={() => !previews.length && fileInputRef.current?.click()}
             >
               <input type="file" ref={fileInputRef} onChange={handleFileSelect} hidden accept="image/*" multiple />
+              <input type="file" ref={cameraFallbackRef} onChange={handleFileSelect} hidden accept="image/*" capture="environment" />
 
               {previews.length ? (
                 <div className="preview-container">
                   <div className="preview-grid">
                     {previews.map((previewUrl, index) => (
-                      <img key={previewUrl} src={previewUrl} alt={`Photo ${index + 1}`} className="image-preview" />
+                      <div className="listing-photo-tile" key={previewUrl}>
+                        <img src={previewUrl} alt={`Photo ${index + 1}`} className="image-preview" />
+                        <button type="button" className="photo-remove" aria-label={`Remove photo ${index + 1}`} disabled={isLoading} onClick={(e) => { e.stopPropagation(); removePhoto(index); }}><Trash2 size={16} /></button>
+                      </div>
                     ))}
                   </div>
                   <Button
@@ -264,15 +340,10 @@ const CreateListing = () => {
                     disabled={isLoading}
                     onClick={(e) => {
                       e.stopPropagation();
-                      setPreviews([]);
-                      setFiles([]);
-                      setUploadedUrls([]);
-                      setAiData(null);
-                      setUploadError('');
-                      setAiOffline(false);
+                      fileInputRef.current?.click();
                     }}
                   >
-                    Choose different photos
+                    Add photos from device
                   </Button>
                 </div>
               ) : (
@@ -283,6 +354,19 @@ const CreateListing = () => {
                 </div>
               )}
             </div>
+
+            <div className="photo-actions">
+              <Button type="button" variant="secondary" disabled={isLoading} onClick={openCamera}><Camera size={18} /> Take a photo</Button>
+              <Button type="button" variant="secondary" disabled={isLoading} onClick={() => fileInputRef.current?.click()}><UploadCloud size={18} /> Choose from device</Button>
+            </div>
+            {cameraError && <p className="camera-message" role="status">{cameraError}</p>}
+            {cameraOpen && <div className="camera-dialog" role="dialog" aria-modal="true" aria-label="Take listing photo">
+              <div className="camera-panel">
+                <div className="camera-dialog-head"><h3 className="t-card">Take a listing photo</h3><button type="button" className="camera-close" onClick={stopCamera} aria-label="Close camera"><X /></button></div>
+                <video ref={videoRef} autoPlay playsInline muted className="camera-video" />
+                <div className="camera-controls"><Button type="button" variant="primary" onClick={capturePhoto}><Camera size={18} /> Capture photo</Button><Button type="button" variant="secondary" onClick={() => { stopCamera(); cameraFallbackRef.current?.click(); }}>Use device camera</Button></div>
+              </div>
+            </div>}
 
             {isLoading && (
               <div className="ai-loading">
@@ -313,6 +397,8 @@ const CreateListing = () => {
             {previews.length > 0 && !isLoading && !uploadError && (
               <p className="t-small muted photo-upload-status">{uploadedUrls.length} of {files.length} photos uploaded.</p>
             )}
+
+            <SupportChatButton step="listing_photos" label="Photo upload trouble? Chat with us" />
 
             <div className="wizard-actions">
               <Button variant="secondary" onClick={() => {}} disabled>
@@ -612,11 +698,16 @@ const CreateListing = () => {
               </div>
             </div>
 
+            <SupportChatButton step="listing_create" label="Need help publishing? Chat with us" />
+
             <div className="wizard-actions">
               <Button variant="secondary" onClick={() => setStep(2)}>
                 Back
               </Button>
-              <Button variant="primary" onClick={handleSubmit} disabled={isLoading} className="publish-btn">
+              <Button variant="secondary" onClick={() => handleSubmit(false)} disabled={isLoading}>
+                {isLoading ? <Loader2 size={16} className="animate-spin" /> : 'Save as draft'}
+              </Button>
+              <Button variant="primary" onClick={() => handleSubmit(true)} disabled={isLoading} className="publish-btn">
                 {isLoading ? <Loader2 size={16} className="animate-spin" /> : 'Publish listing'}
               </Button>
             </div>

@@ -22,13 +22,13 @@ router = APIRouter()
 
 def _format_participant(user: Optional[User]) -> ParticipantOut:
     if not user:
-        return ParticipantOut(id="", name="Unknown", username="unknown", avatar_url=None, trust_score=50.0)
+        return ParticipantOut(id="", name="Unknown", username="unknown", avatar_url=None, trust_score=3.41)
     return ParticipantOut(
         id=user.id,
         name=user.name,
         username=user.username,
         avatar_url=user.avatar_url,
-        trust_score=user.trust_score if user.trust_score is not None else 50.0
+        trust_score=user.trust_score if user.trust_score is not None else 3.41
     )
 
 def _format_message(msg: Message) -> MessageOut:
@@ -42,6 +42,7 @@ def _format_message(msg: Message) -> MessageOut:
         sender_username=sender_username,
         content=msg.content,
         is_system=msg.is_system or False,
+        meta=msg.meta,
         created_at=msg.created_at
     )
 

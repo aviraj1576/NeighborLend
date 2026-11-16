@@ -75,7 +75,7 @@ def _format_request_out(
         "id": req.id,
         "borrower_id": req.borrower_id,
         "borrower_name": req.borrower.name if req.borrower else "Anonymous",
-        "borrower_trust_score": req.borrower.trust_score if req.borrower else 50.0,
+        "borrower_trust_score": req.borrower.trust_score if req.borrower else 3.41,
         "title": req.title,
         "category": req.category,
         "description": req.description,
@@ -104,6 +104,8 @@ def _format_request_out(
         "return_photos": parse_photos(req.return_photos) if include_private_handover else [],
         "handover_condition_note": req.handover_condition_note if include_private_handover else None,
         "return_condition_note": req.return_condition_note if include_private_handover else None,
+        "damage_check_id": req.damage_check_id if include_private_handover else None,
+        "damage_link_token": req.damage_link_token if include_private_handover else None,
         "return_confirmed_at": req.return_confirmed_at,
         "return_confirmed_by": req.return_confirmed_by,
         "borrowing_started_at": req.borrowing_started_at,
@@ -146,10 +148,13 @@ def _get_handover_request(request_id: str, db: Session, current_user: User, *, l
     if req.listing_id is None or lender_id is None:
         raise HTTPException(status_code=409, detail="This request is not a negotiated rental")
     if lock:
-        from app.services.payments import require_funded
         if req.status == BorrowRequestStatus.cancelled:
             raise HTTPException(409, "Cancelled rental cannot proceed to handover")
-        require_funded(db, req)
+        from app.payment_models import RentalBooking
+        booking = db.query(RentalBooking).filter_by(borrow_request_id=req.id).first()
+        if booking is not None:
+            from app.services.payments import require_funded
+            require_funded(db, req)
     return req, lender_id
 
 
@@ -171,6 +176,9 @@ def get_handover(
     db: Session = Depends(get_db),
 ):
     req, _ = _get_handover_request(request_id, db, current_user)
+    from app.routers.lend_damage import _apply_review_timeout  # local import: avoids a circular import
+    if _apply_review_timeout(db, req):
+        db.refresh(req)
     return _format_request_out(req, include_private_handover=True)
 
 
@@ -198,8 +206,11 @@ def upload_handover_photos(
 
     from app.payment_models import RentalBooking
     from app.services.rental_evidence import validate_references
-    booking = db.query(RentalBooking).filter_by(borrow_request_id=req.id).one()
-    validate_references(db, booking, current_user.id, "handover", data.photo_urls)
+    booking = db.query(RentalBooking).filter_by(borrow_request_id=req.id).first()
+    if booking:
+        validate_references(db, booking, current_user.id, "handover", data.photo_urls)
+    elif data.photo_urls:
+        raise HTTPException(409, "Legacy rentals require verified payment before uploading evidence")
     req.handover_photos = json.dumps(data.photo_urls)
     req.handover_status = HandoverStatus.photos_uploaded.value
     req.updated_at = datetime.utcnow()
@@ -246,12 +257,25 @@ def borrower_confirm_handover(
     validate_references(db, payment_booking, current_user.id, "receipt", data.photo_urls)
     req.handover_confirmed_at = now
     req.handover_confirmed_by = current_user.id
-    create_notification(
-        db, lender_id, "handover_confirmed", "Borrower Confirmed Receipt",
-        f"{current_user.name} acknowledged receipt of {req.title}. Lender confirmation is still required.",
-        f"/borrow-requests/{req.id}", req.id,
-    )
-    _record_handover_event(db, req, current_user, f"{current_user.name} acknowledged receipt of {req.title}. Awaiting lender confirmation before rental activation.")
+    if not payment_booking:
+        req.borrowing_started_at = now
+        req.return_due_at = now + timedelta(days=days)
+        if req.damage_link_expires_at:
+            req.damage_link_expires_at = max(req.damage_link_expires_at, req.return_due_at + timedelta(days=30))
+        req.status = BorrowRequestStatus.fulfilled
+        create_notification(
+            db, lender_id, "handover_confirmed", "Borrower Confirmed Receipt",
+            f"{current_user.name} confirmed receipt of {req.title} and marked it as borrowed.",
+            f"/borrow-requests/{req.id}", req.id,
+        )
+        _record_handover_event(db, req, current_user, f"{current_user.name} confirmed receipt of {req.title}. Borrowing is now active.")
+    else:
+        create_notification(
+            db, lender_id, "handover_confirmed", "Borrower Confirmed Receipt",
+            f"{current_user.name} acknowledged receipt of {req.title}. Lender confirmation is still required.",
+            f"/borrow-requests/{req.id}", req.id,
+        )
+        _record_handover_event(db, req, current_user, f"{current_user.name} acknowledged receipt of {req.title}. Awaiting lender confirmation before rental activation.")
     db.commit()
     db.refresh(req)
     return _format_request_out(req, include_private_handover=True)
@@ -273,10 +297,24 @@ def lender_confirm_handover(
     now = datetime.utcnow()
     req.handover_status = HandoverStatus.lender_confirmed.value
     from app.payment_models import RentalBooking
-    booking = db.query(RentalBooking).filter_by(borrow_request_id=req.id).one()
-    booking.booking_status = "active"
+    booking = db.query(RentalBooking).filter_by(borrow_request_id=req.id).first()
+    if booking:
+        booking.booking_status = "active"
+        duration_days = booking.duration_days
+    else:
+        duration_days = 1
+        if req.needed_from and req.needed_until:
+            try:
+                days, _ = calculate_rental_duration_and_cost(
+                    req.max_price_per_day or 0, req.needed_from, req.needed_until
+                )
+                duration_days = days
+            except ValueError:
+                pass
     req.borrowing_started_at = now
-    req.return_due_at = now + timedelta(days=booking.duration_days)
+    req.return_due_at = now + timedelta(days=duration_days)
+    if req.damage_link_expires_at:
+        req.damage_link_expires_at = max(req.damage_link_expires_at, req.return_due_at + timedelta(days=30))
     req.status = BorrowRequestStatus.fulfilled
     req.updated_at = now
     create_notification(
@@ -341,6 +379,8 @@ def rate_lender(
     req.lender_rating_comment = data.comment
     req.lender_rated_at = datetime.utcnow()
     _update_rating_aggregate(db, lender_id, data.rating)
+    from app.services.trust_score import refresh_user_trust_score
+    refresh_user_trust_score(db, lender_id)
     create_notification(
         db, lender_id, "rating", "You Received a Rating",
         f"{current_user.name} rated you {data.rating}/5 stars for {req.title}.",
@@ -373,6 +413,8 @@ def rate_borrower(
     req.borrower_rating_comment = data.comment
     req.borrower_rated_at = datetime.utcnow()
     _update_rating_aggregate(db, req.borrower_id, data.rating)
+    from app.services.trust_score import refresh_user_trust_score
+    refresh_user_trust_score(db, req.borrower_id)
     create_notification(
         db, req.borrower_id, "rating", "You Received a Rating",
         f"{current_user.name} rated you {data.rating}/5 stars for {req.title}.",
@@ -616,6 +658,8 @@ def confirm_return(
             f"/borrow-requests/{req.id}", req.id,
         )
         _record_handover_event(db, req, current_user, f"{current_user.name} confirmed return of {req.title}. Rental completed.")
+        from app.services.trust_score import refresh_transaction_participants
+        refresh_transaction_participants(db, req)
         db.commit()
         db.refresh(req)
         return _format_request_out(req, include_private_handover=True)

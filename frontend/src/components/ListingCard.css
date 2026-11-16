@@ -9,6 +9,9 @@
   flex-direction: column;
   min-height: 0;
 }
+.listing-card--static { cursor: default; }
+.listing-card--static:hover { border-color: inherit; }
+.listing-card--static:hover .listing-photo { transform: none; }
 
 .listing-card:hover {
   border-color: color-mix(in oklab, var(--ink) 18%, transparent);

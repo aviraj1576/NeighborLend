@@ -1,5 +1,7 @@
 import re
 import secrets
+import hashlib
+import hmac
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -16,6 +18,7 @@ from app.models import EmailVerification, User
 from app.schemas.auth import (
     CaptchaOut, RegisterIn, LoginIn, UserOut, TokenOut, UpdateProfileIn,
     RegistrationOut, VerifyEmailIn, ResendVerificationIn, GoogleLoginIn,
+    ChangeEmailIn, VerifyContactChangeIn, ChangePasswordIn, ChangePhoneIn,
 )
 from app.services.auth import (
     EMAIL_OTP_MAX_ATTEMPTS, EMAIL_OTP_RESEND_SECONDS, EMAIL_OTP_TTL_MINUTES,
@@ -23,7 +26,7 @@ from app.services.auth import (
     hash_password, verify_password, verify_email_otp, create_access_token,
     get_current_user,
 )
-from app.services.email import send_verification_code
+from app.services.email import send_verification_code, send_phone_verification_code
 
 router = APIRouter()
 
@@ -83,6 +86,8 @@ def register(data: RegisterIn, db: Session = Depends(get_db)):
     db.add(new_user)
     try:
         db.flush()
+        from app.services.trust_score import refresh_user_trust_score
+        refresh_user_trust_score(db, new_user)
         db.add(EmailVerification(
             user_id=new_user.id,
             code_hash=hash_email_otp(new_user.id, code),
@@ -130,6 +135,8 @@ def verify_email(data: VerifyEmailIn, db: Session = Depends(get_db)):
 
     user.is_verified = True
     db.delete(verification)
+    from app.services.trust_score import refresh_user_trust_score
+    refresh_user_trust_score(db, user)
     db.commit()
     db.refresh(user)
     return {"access_token": create_access_token(user.id), "user": user}
@@ -229,6 +236,10 @@ def google_login(data: GoogleLoginIn, db: Session = Depends(get_db)):
             raise HTTPException(status_code=409, detail="This account could not be linked") from exc
         db.refresh(user)
 
+    from app.services.trust_score import refresh_user_trust_score
+    refresh_user_trust_score(db, user)
+    db.commit()
+    db.refresh(user)
     return {"access_token": create_access_token(user.id), "user": user}
 
 @router.post("/login", response_model=TokenOut)
@@ -242,22 +253,165 @@ def login(data: LoginIn, db: Session = Depends(get_db)):
     if not user.is_verified:
         raise HTTPException(status_code=403, detail="Please verify your email before logging in")
 
+    from app.services.trust_score import refresh_user_trust_score
+    refresh_user_trust_score(db, user)
+    db.commit()
+    db.refresh(user)
     access_token = create_access_token(user.id)
     return {"access_token": access_token, "user": user}
 
 @router.get("/me", response_model=UserOut)
-def get_me(current_user: User = Depends(get_current_user)):
+def get_me(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    from app.services.trust_score import refresh_user_trust_score
+    refresh_user_trust_score(db, current_user)
+    db.commit()
+    db.refresh(current_user)
     return current_user
 
 @router.patch("/me", response_model=UserOut)
 def update_me(data: UpdateProfileIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if data.name is not None:
-        current_user.name = data.name
-    if data.phone is not None:
-        current_user.phone = data.phone
+        name = data.name.strip()
+        if not name or len(name) > 120:
+            raise HTTPException(status_code=422, detail="Full name must contain 1 to 120 characters")
+        current_user.name = name
+    if data.username is not None:
+        username = data.username.strip().lower()
+        if db.query(User).filter(func.lower(User.username) == username, User.id != current_user.id).first():
+            raise HTTPException(status_code=409, detail="That username is already in use")
+        current_user.username = username
     if data.avatar_url is not None:
-        current_user.avatar_url = data.avatar_url
-        
+        avatar_url = data.avatar_url.strip()
+        local_upload_prefix = f"{settings.public_base_url.rstrip('/')}/uploads/"
+        if avatar_url and not (avatar_url.startswith("https://") or avatar_url.startswith(local_upload_prefix)):
+            raise HTTPException(status_code=422, detail="Profile picture must use a secure image URL")
+        current_user.avatar_url = avatar_url or None
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="That username is already in use") from exc
+    db.refresh(current_user)
+    return current_user
+
+
+def _contact_hash(user_id: str, kind: str, value: str, code: str) -> str:
+    message = f"{user_id}:{kind}:{value}:{code}".encode("utf-8")
+    key = settings.jwt_secret.get_secret_value().encode("utf-8")
+    return hmac.new(key, message, hashlib.sha256).hexdigest()
+
+
+def _start_contact_change(db: Session, user: User, kind: str, value: str) -> str:
+    now = datetime.utcnow()
+    record = db.query(EmailVerification).with_for_update().filter(EmailVerification.user_id == user.id).first()
+    if record is not None:
+        remaining = EMAIL_OTP_RESEND_SECONDS - int((now - record.last_sent_at).total_seconds())
+        if remaining > 0:
+            raise HTTPException(status_code=429, detail=f"Please wait {remaining} seconds before requesting another code.")
+    code = create_email_otp()
+    if record is None:
+        record = EmailVerification(user_id=user.id)
+        db.add(record)
+    record.code_hash = _contact_hash(user.id, kind, value, code)
+    record.expires_at = now + timedelta(minutes=EMAIL_OTP_TTL_MINUTES)
+    record.attempts = 0
+    record.last_sent_at = now
+    return code
+
+
+@router.post("/me/email/request")
+def request_email_change(data: ChangeEmailIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    email = str(data.email).strip().lower()
+    if email == current_user.email.lower():
+        raise HTTPException(status_code=400, detail="That is already your email address")
+    if db.query(User).filter(func.lower(User.email) == email, User.id != current_user.id).first():
+        raise HTTPException(status_code=409, detail="That email address is already in use")
+    code = _start_contact_change(db, current_user, "email", email)
+    try:
+        _send_otp_or_raise(email, code)
+        db.commit()
+    except HTTPException:
+        db.rollback()
+        raise
+    return {"message": "A verification code was sent to the new email address."}
+
+
+@router.post("/me/email/verify", response_model=UserOut)
+def verify_email_change(data: VerifyContactChangeIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    email = data.value.strip().lower()
+    record = db.query(EmailVerification).with_for_update().filter(EmailVerification.user_id == current_user.id).first()
+    if record is None or record.expires_at <= datetime.utcnow() or record.attempts >= EMAIL_OTP_MAX_ATTEMPTS:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+    if not hmac.compare_digest(_contact_hash(current_user.id, "email", email, data.code), record.code_hash):
+        record.attempts += 1
+        db.commit()
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+    if db.query(User).filter(func.lower(User.email) == email, User.id != current_user.id).first():
+        raise HTTPException(status_code=409, detail="That email address is already in use")
+    current_user.email = email
+    db.delete(record)
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="That email address is already in use") from exc
+    db.refresh(current_user)
+    return current_user
+
+
+@router.post("/me/phone/request")
+def request_phone_change(data: ChangePhoneIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    phone = data.phone.strip()
+    if phone == current_user.phone:
+        raise HTTPException(status_code=400, detail="That is already your phone number")
+    if db.query(User).filter(User.phone == phone, User.id != current_user.id).first():
+        raise HTTPException(status_code=409, detail="That phone number is already in use")
+    code = _start_contact_change(db, current_user, "phone", phone)
+    try:
+        send_phone_verification_code(phone, code)
+        db.commit()
+    except RuntimeError as exc:
+        db.rollback()
+        raise HTTPException(status_code=503, detail="Phone verification is unavailable. Please try again later.") from exc
+    return {"message": "A verification code was sent by SMS."}
+
+
+@router.post("/me/phone/verify", response_model=UserOut)
+def verify_phone_change(data: VerifyContactChangeIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    phone = data.value.strip()
+    record = db.query(EmailVerification).with_for_update().filter(EmailVerification.user_id == current_user.id).first()
+    if record is None or record.expires_at <= datetime.utcnow() or record.attempts >= EMAIL_OTP_MAX_ATTEMPTS:
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+    if not hmac.compare_digest(_contact_hash(current_user.id, "phone", phone, data.code), record.code_hash):
+        record.attempts += 1
+        db.commit()
+        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
+    if db.query(User).filter(User.phone == phone, User.id != current_user.id).first():
+        raise HTTPException(status_code=409, detail="That phone number is already in use")
+    current_user.phone = phone
+    db.delete(record)
     db.commit()
     db.refresh(current_user)
     return current_user
+
+
+@router.post("/me/password")
+def change_password(data: ChangePasswordIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if len(data.new_password.encode("utf-8")) > 72:
+        raise HTTPException(status_code=422, detail="New password must be 72 bytes or fewer")
+    if not verify_password(data.current_password, current_user.password_hash):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    if data.current_password == data.new_password:
+        raise HTTPException(status_code=400, detail="Choose a password you have not used before")
+    current_user.password_hash = hash_password(data.new_password)
+    db.commit()
+    return {"message": "Password updated successfully."}
+
+
+@router.delete("/me/contact-change")
+def cancel_contact_change(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    record = db.query(EmailVerification).filter(EmailVerification.user_id == current_user.id).first()
+    if record is not None:
+        db.delete(record)
+        db.commit()
+    return {"message": "Verification request cancelled."}

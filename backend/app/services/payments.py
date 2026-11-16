@@ -1288,6 +1288,9 @@ class PaymentService:
                     if row.kind == "cancellation"
                     else BorrowRequestStatus.closed
                 )
+                if row.kind != "cancellation":
+                    from app.services.trust_score import refresh_transaction_participants
+                    refresh_transaction_participants(db, req)
                 audit(db, booking, actor, "settlement_confirmed", refund_id=rid)
             return self.view(booking)
 

@@ -80,6 +80,24 @@
   border: 1px solid color-mix(in oklab, var(--ink) 14%, transparent);
   background: var(--p-tint-soft);
 }
+.listing-photo-tile { position: relative; min-width: 0; }
+.photo-remove, .camera-close {
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: 999px; background: var(--p-surface); color: var(--p-ink);
+  box-shadow: 0 2px 10px #0002; cursor: pointer;
+}
+.photo-remove { position: absolute; top: 8px; right: 8px; width: 36px; height: 36px; }
+.photo-remove:disabled { opacity: .55; cursor: wait; }
+.photo-actions, .camera-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--s-3, 12px); }
+.photo-actions .btn, .camera-controls .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.camera-message { margin: 0; color: var(--p-danger); text-align: center; }
+.camera-dialog { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 16px; background: #101820cc; }
+.camera-panel { width: min(100%, 720px); max-height: 95dvh; overflow: auto; padding: 16px; border-radius: var(--r-lg, 20px); background: var(--p-surface); }
+.camera-dialog-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.camera-dialog-head h3 { margin: 0; }
+.camera-close { width: 40px; height: 40px; }
+.camera-video { display: block; width: 100%; max-height: 65dvh; aspect-ratio: 4 / 3; object-fit: contain; border-radius: var(--r-md, 12px); background: #111; }
+.camera-controls { margin-top: 16px; }
 
 /* AI states */
 .ai-loading {
@@ -256,4 +274,8 @@
   .wizard-actions > .btn { width: 100%; flex: none; }
   .dropzone { padding: var(--s-5, 24px) var(--s-4, 16px); }
   .image-preview { aspect-ratio: 1 / 1; }
+  .photo-actions { flex-direction: column; }
+  .photo-actions .btn { width: 100%; }
+  .camera-controls { flex-direction: column; }
+  .camera-controls .btn { width: 100%; }
 }

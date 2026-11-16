@@ -23,7 +23,7 @@ class TestListingsAuthAndTrailingSlash(unittest.TestCase):
             username=f"listuser_{ts}",
             email=f"listuser_{ts}@test.com",
             password_hash=hash_password("password123"),
-            trust_score=80.0
+            trust_score=4.1
         )
         cls.db.add(cls.user)
         cls.db.commit()
@@ -103,6 +103,81 @@ class TestListingsAuthAndTrailingSlash(unittest.TestCase):
         """Requests without Authorization header must still be rejected with 401."""
         res = self.client.get("/api/listings")
         self.assertEqual(res.status_code, 401)
+
+    def test_delete_listing_by_owner_succeeds(self):
+        """Owner can delete their own listing; status becomes removed and GET returns 404."""
+        payload = {
+            "name": "Deletable Lawn Mower",
+            "category": "Tools",
+            "description": "Will be deleted",
+            "price_per_day": 20.0,
+            "security_deposit": 50.0,
+            "lending_radius_km": 5.0
+        }
+        create_res = self.client.post("/api/listings", json=payload, headers=self.headers)
+        self.assertEqual(create_res.status_code, 200)
+        listing_id = create_res.json()["id"]
+
+        del_res = self.client.delete(f"/api/listings/{listing_id}", headers=self.headers)
+        self.assertEqual(del_res.status_code, 200)
+        self.assertEqual(del_res.json(), {"status": "ok"})
+
+        get_res = self.client.get(f"/api/listings/{listing_id}")
+        self.assertEqual(get_res.status_code, 404)
+
+        del_again = self.client.delete(f"/api/listings/{listing_id}", headers=self.headers)
+        self.assertEqual(del_again.status_code, 404)
+
+    def test_delete_listing_with_trailing_slash_succeeds(self):
+        """DELETE with trailing slash succeeds without redirect."""
+        payload = {
+            "name": "Slash Deletable Item",
+            "category": "Tools",
+            "description": "Will be deleted with slash",
+            "price_per_day": 15.0,
+            "security_deposit": 40.0,
+            "lending_radius_km": 5.0
+        }
+        create_res = self.client.post("/api/listings", json=payload, headers=self.headers)
+        self.assertEqual(create_res.status_code, 200)
+        listing_id = create_res.json()["id"]
+
+        del_res = self.client.delete(f"/api/listings/{listing_id}/", headers=self.headers)
+        self.assertEqual(del_res.status_code, 200)
+        self.assertEqual(del_res.json(), {"status": "ok"})
+
+    def test_delete_listing_by_non_owner_returns_403(self):
+        """Non-owner receives 403 Forbidden when attempting to delete another user's listing."""
+        ts = int(datetime.utcnow().timestamp()) + 999
+        other_user = User(
+            name=f"Other User {ts}",
+            username=f"otheruser_{ts}",
+            email=f"otheruser_{ts}@test.com",
+            password_hash=hash_password("password123"),
+            trust_score=3.8
+        )
+        self.db.add(other_user)
+        self.db.commit()
+        self.db.refresh(other_user)
+        other_token = create_access_token(other_user.id)
+        other_headers = {"Authorization": f"Bearer {other_token}"}
+
+        try:
+            del_res = self.client.delete(f"/api/listings/{self.listing.id}", headers=other_headers)
+            self.assertEqual(del_res.status_code, 403)
+        finally:
+            self.db.delete(other_user)
+            self.db.commit()
+
+    def test_delete_listing_unauthenticated_returns_401(self):
+        """Unauthenticated DELETE returns 401."""
+        res = self.client.delete(f"/api/listings/{self.listing.id}")
+        self.assertEqual(res.status_code, 401)
+
+    def test_delete_nonexistent_listing_returns_404(self):
+        """DELETE for non-existent listing returns 404."""
+        res = self.client.delete("/api/listings/non-existent-id-12345", headers=self.headers)
+        self.assertEqual(res.status_code, 404)
 
 if __name__ == "__main__":
     unittest.main()

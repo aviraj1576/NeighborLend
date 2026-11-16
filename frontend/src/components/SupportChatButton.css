@@ -1,0 +1,10 @@
+.support-chat { display: inline-flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.support-chat__btn {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 12px;
+  border: 1px solid var(--p-border); border-radius: 999px; background: transparent;
+  color: var(--p-accent-text); font: inherit; font-size: 0.9rem; font-weight: 600; cursor: pointer;
+}
+.support-chat__btn:hover { background: var(--p-highlight); }
+.support-chat__btn:disabled { opacity: 0.6; cursor: progress; }
+.support-chat__btn:focus-visible { outline: 3px solid var(--p-action); outline-offset: 2px; }
+.support-chat__error { color: var(--p-danger); font-size: 0.85rem; }

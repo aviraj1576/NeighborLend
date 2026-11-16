@@ -1,0 +1,5 @@
+.public-profile-page { padding: var(--s-7, 48px) 0; }
+.public-profile-wrap { width: min(100% - 32px, 760px); margin-inline: auto; }
+.public-profile-back { display: inline-flex; align-items: center; gap: 4px; margin-bottom: 18px; }
+.public-profile-wrap > h1 { margin: 0 0 8px; }
+.public-profile-wrap > .t-lead { margin: 0 0 28px; }

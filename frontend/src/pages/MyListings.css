@@ -28,6 +28,26 @@
   .dashboard-grid { grid-template-columns: 1fr; gap: var(--s-5, 24px); }
 }
 .dashboard-wrap { min-width: 0; }
+.dashboard-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3, 12px);
+}
+.dashboard-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2, 8px);
+}
+.dashboard-item-actions .delete-action-btn {
+  color: var(--p-muted);
+}
+.dashboard-item-actions .delete-action-btn:hover {
+  color: var(--p-danger, #ef4444);
+}
+.listing-notice { margin: 0 0 var(--s-4, 16px); padding: 12px 16px; border-radius: 12px; }
+.listing-notice--success { color: var(--p-success, #15803d); background: color-mix(in oklab, var(--p-success, #15803d) 10%, var(--card)); }
+.listing-notice--error { color: var(--p-danger, #b91c1c); background: color-mix(in oklab, var(--p-danger, #b91c1c) 9%, var(--card)); }
+.listing-edit-lock { margin: 0; color: var(--p-muted); font-size: var(--t-small, 13px); }
 
 /* edit card */
 .edit-card { max-width: 520px; margin: 0 auto; width: 100%; }
@@ -46,8 +66,17 @@
   grid-template-columns: 1fr 1fr;
   gap: var(--s-4, 16px);
 }
-@media (max-width: 639px) { .form-row { grid-template-columns: 1fr; } }
+@media (max-width: 639px) { .edit-form .form-row { grid-template-columns: 1fr; } }
 .edit-form { display: flex; flex-direction: column; gap: var(--s-4, 16px); margin-bottom: var(--s-5, 24px); }
+.edit-field { display: flex; flex-direction: column; gap: 6px; color: var(--p-ink); font-size: var(--t-small, 14px); font-weight: 600; min-width: 0; }
+.edit-field input, .edit-field select, .edit-field textarea { width: 100%; min-width: 0; border: 1px solid var(--p-border, #ded7d0); border-radius: 10px; padding: 10px 12px; background: var(--card, #fff); color: var(--p-ink); font: inherit; font-weight: 400; }
+.edit-field textarea { resize: vertical; }
+.edit-photo-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 10px; }
+.edit-photo { position: relative; aspect-ratio: 1; overflow: hidden; border-radius: 10px; background: var(--p-surface, #f3f0ed); }
+.edit-photo img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.edit-photo button { position: absolute; top: 4px; right: 4px; width: 26px; height: 26px; display: grid; place-items: center; border: 0; border-radius: 50%; color: white; background: rgb(20 15 20 / 72%); cursor: pointer; }
+.edit-add-photo { position: relative; display: inline-flex; align-items: center; gap: 8px; width: fit-content; margin-top: 10px; padding: 9px 12px; border: 1px dashed var(--p-border, #cfc6be); border-radius: 10px; color: var(--p-accent-text); cursor: pointer; }
+.edit-add-photo input { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
 .edit-actions {
   display: flex;
   gap: var(--s-3, 12px);

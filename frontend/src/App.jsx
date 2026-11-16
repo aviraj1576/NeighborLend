@@ -15,12 +15,28 @@ import CreateBorrowRequest from './pages/CreateBorrowRequest';
 import ListingDetail from './pages/ListingDetail';
 import MyListings from './pages/MyListings';
 import Chat from './pages/Chat';
+import DamageCheckPage from './pages/DamageCheckPage';
+import AdminDisputes from './pages/AdminDisputes';
+import AdminDisputeDetail from './pages/AdminDisputeDetail';
+import AdminSupport from './pages/AdminSupport';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
 import NotFound from './pages/NotFound';
+import ProfileSettings from './pages/ProfileSettings';
+import PublicProfile from './pages/PublicProfile';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
   if (loading) return <div style={{ color: 'var(--ink)', padding: '100px', textAlign: 'center' }}>Loading...</div>;
   if (!isAuthenticated) return <Navigate to="/login" />;
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { isAuthenticated, loading, user } = useAuth();
+  if (loading) return <div style={{ color: 'var(--ink)', padding: '100px', textAlign: 'center' }}>Loading...</div>;
+  if (!isAuthenticated) return <Navigate to="/login" />;
+  if (!user?.is_admin) return <Navigate to="/" />;
   return children;
 };
 
@@ -48,6 +64,8 @@ function App() {
             <Route path="/verify-email" element={<VerifyEmail />} />
             <Route path="/borrow-requests/:id" element={<BorrowRequestDetail />} />
             <Route path="/browse" element={<Browse />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
             <Route path="/listing/:id" element={<ListingDetail />} />
             <Route path="/create-listing" element={
               <ProtectedRoute>
@@ -74,9 +92,40 @@ function App() {
                 <Chat />
               </ProtectedRoute>
             } />
+            <Route path="/damage-check/:token" element={
+              <ProtectedRoute>
+                <DamageCheckPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin" element={<Navigate to="/admin/disputes" replace />} />
+            <Route path="/admin/disputes" element={
+              <AdminRoute>
+                <AdminDisputes />
+              </AdminRoute>
+            } />
+            <Route path="/admin/disputes/:disputeId" element={
+              <AdminRoute>
+                <AdminDisputeDetail />
+              </AdminRoute>
+            } />
+            <Route path="/admin/support" element={
+              <AdminRoute>
+                <AdminSupport />
+              </AdminRoute>
+            } />
             <Route path="/inbox" element={
               <ProtectedRoute>
                 <Inbox />
+              </ProtectedRoute>
+            } />
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <ProfileSettings />
+              </ProtectedRoute>
+            } />
+            <Route path="/users/:userId" element={
+              <ProtectedRoute>
+                <PublicProfile />
               </ProtectedRoute>
             } />
             <Route path="/messages/:conversationId" element={

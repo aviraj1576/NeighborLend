@@ -17,6 +17,7 @@ class ListingCreateIn(BaseModel):
     longitude: Optional[float] = None
     address_text: str = ""
     photo_urls: List[str] = Field(default_factory=list)
+    publish: bool = True
     ai_label: Optional[str] = None
     ai_confidence: Optional[float] = None
 
@@ -29,20 +30,74 @@ class ListingCreateIn(BaseModel):
 
 class ListingUpdateIn(BaseModel):
     name: Optional[str] = None
+    category: Optional[str] = None
     description: Optional[str] = None
-    price_per_day: Optional[float] = None
+    price_per_day: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)
     min_price_per_day: Optional[float] = None
-    security_deposit: Optional[float] = None
-    lending_radius_km: Optional[float] = None
+    security_deposit: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)
+    lending_radius_km: Optional[float] = Field(default=None, ge=1, le=50, allow_inf_nan=False)
+    latitude: Optional[float] = Field(default=None, ge=-90, le=90, allow_inf_nan=False)
+    longitude: Optional[float] = Field(default=None, ge=-180, le=180, allow_inf_nan=False)
+    address_text: Optional[str] = Field(default=None, max_length=500)
+    photo_urls: Optional[List[str]] = Field(default=None, max_length=20)
+    years_owned: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)
+    price_bought: Optional[float] = Field(default=None, ge=0, allow_inf_nan=False)
     status: Optional[ListingStatus] = None
+
+    @field_validator("name")
+    @classmethod
+    def validate_name(cls, value):
+        if value is None:
+            raise ValueError("Title cannot be empty")
+        if value is not None and not value.strip():
+            raise ValueError("Title cannot be empty")
+        if value is not None and len(value.strip()) > 120:
+            raise ValueError("Title must be 120 characters or fewer")
+        return value.strip() if value is not None else value
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, value):
+        if value is None:
+            raise ValueError("Category cannot be empty")
+        if value is not None and not value.strip():
+            raise ValueError("Category cannot be empty")
+        if value is not None and len(value.strip()) > 60:
+            raise ValueError("Category must be 60 characters or fewer")
+        return value.strip() if value is not None else value
+
+    @field_validator("price_per_day")
+    @classmethod
+    def validate_price(cls, value):
+        if value is None:
+            raise ValueError("Rental price is required")
+        return value
+
+    @field_validator("min_price_per_day")
+    @classmethod
+    def validate_min_price(cls, value, values):
+        price = values.data.get("price_per_day")
+        if value is not None and value < 0:
+            raise ValueError("Minimum price cannot be negative")
+        if value is not None and price is not None and value > price:
+            raise ValueError("min_price_per_day cannot be greater than price_per_day")
+        return value
 
 class OwnerOut(BaseModel):
     id: str
     name: str
     username: str
-    trust_score: float = 50.0
+    avatar_url: Optional[str] = None
+    member_since: Optional[datetime] = None
+    trust_score: float = 3.41
+    rating_score: float = 3.12
+    reliability_score: float = 5.0
+    experience_score: float = 0.0
+    verification_score: float = 5.0
+    last_updated: Optional[datetime] = None
     rating: float = 0.0
     rating_count: int = 0
+    completed_rentals_count: int = 0
 
 class ListingOut(BaseModel):
     id: str
@@ -50,7 +105,7 @@ class ListingOut(BaseModel):
     owner_name: Optional[str] = None
     owner_username: Optional[str] = None
     owner: Optional[OwnerOut] = None
-    owner_trust_score: Optional[float] = 50.0
+    owner_trust_score: Optional[float] = 3.41
     owner_avg_rating: Optional[float] = 0.0
     owner_rating_count: Optional[int] = 0
     name: str

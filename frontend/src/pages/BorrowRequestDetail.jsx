@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { MessageCircle } from 'lucide-react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { MessageCircle, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
 import Button from '../components/ui/Button';
@@ -10,12 +10,18 @@ import EscrowStatusCard from '../components/EscrowStatusCard';
 import HandoverConfirmation from '../components/HandoverConfirmation';
 import ReturnSubmission from '../components/ReturnSubmission';
 import ReturnInspection from '../components/ReturnInspection';
+import SixPhotoCapture from '../components/damage/SixPhotoCapture';
+import DamageReportView from '../components/damage/DamageReportView';
+import BeforeAfterCompare from '../components/damage/BeforeAfterCompare';
+import SupportChatButton from '../components/SupportChatButton';
+import { apiError, getCheck, userPhotoPath } from '../components/damage/damageApi';
 import './BorrowRequestDetail.css';
 
 const dateTime = (value) => value ? new Date(/Z$|[+-]\d\d:\d\d$/.test(value) ? value : `${value}Z`).toLocaleString('en-IN') : '—';
 
 export default function BorrowRequestDetail() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [request, setRequest] = useState(null);
   const [bookingId, setBookingId] = useState(null);
@@ -25,6 +31,12 @@ export default function BorrowRequestDetail() {
   const [disputeDescription, setDisputeDescription] = useState('');
   const [rating, setRating] = useState(0);
   const [ratingComment, setRatingComment] = useState('');
+
+  // Damage check states
+  const [beforeComplete, setBeforeComplete] = useState(false);
+  const [shareInfo, setShareInfo] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const [damageCheck, setDamageCheck] = useState(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -47,6 +59,62 @@ export default function BorrowRequestDetail() {
   }, [id, user?.id]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  // Load and poll damage check if associated
+  const reviewCheckId = request?.damage_check_id;
+  const damagePathFor = useCallback((phase, view) => userPhotoPath(reviewCheckId, phase, view), [reviewCheckId]);
+
+  useEffect(() => {
+    if (!reviewCheckId) return undefined;
+    getCheck(reviewCheckId).then(setDamageCheck).catch(() => {});
+    if (damageCheck?.status !== 'processing') return undefined;
+    const t = window.setInterval(() => {
+      getCheck(damageCheck.id).then(setDamageCheck).catch(() => {});
+    }, 2000);
+    return () => window.clearInterval(t);
+  }, [reviewCheckId, damageCheck?.status, damageCheck?.id]);
+
+  const startDamageCheck = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const res = await api.post(`/borrow-requests/${id}/damage-check/start`);
+      await refresh();
+      if (res.data?.check_id) {
+        setDamageCheck(await getCheck(res.data.check_id));
+      }
+    } catch (err) {
+      setError(apiError(err, 'Could not start condition check.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const shareDamageCheck = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      const res = await api.post(`/borrow-requests/${id}/damage-check/share`);
+      setShareInfo(res.data);
+      await refresh();
+      window.dispatchEvent(new Event('notifications:updated'));
+    } catch (err) {
+      setError(apiError(err, 'Could not share the condition check.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const copyDamageLink = async (token) => {
+    const url = `${window.location.origin}/damage-check/${token}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt('Copy this link', url);
+    }
+  };
 
   async function submitRating(forLender) {
     if (busy || !rating) return;
@@ -91,15 +159,77 @@ export default function BorrowRequestDetail() {
       {error && <div className="error-banner" role="alert">{error}</div>}
 
       {canManage && <EscrowStatusCard request={request} user={user} api={api} onRentalChange={refresh} />}
+
       {managed && <>
         <HandoverConfirmation request={request} user={user} api={api} bookingId={bookingId} onChange={refresh} />
+
+        {/* Optional AI 6-photo damage check for lender */}
+        {isLender && request.handover_status === 'pending' && (
+          <div className="damage-check-section card" style={{ marginTop: '16px' }}>
+            <h3 className="t-card">AI Damage Check (Recommended)</h3>
+            <p className="t-body" style={{ marginBottom: '12px' }}>
+              Take 6 structured photos (front, back, left, right, top, bottom) to document baseline condition before handover.
+            </p>
+            {!request.damage_check_id ? (
+              <Button variant="secondary" disabled={busy} onClick={startDamageCheck}>
+                Start 6-photo condition check
+              </Button>
+            ) : (
+              <div className="damage-before-flow">
+                <SixPhotoCapture
+                  checkId={request.damage_check_id}
+                  phase="before"
+                  onComplete={() => setBeforeComplete(true)}
+                />
+                <div style={{ marginTop: '12px' }}>
+                  <Button variant="primary" disabled={busy || !beforeComplete} onClick={shareDamageCheck}>
+                    Share condition photos with borrower
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Damage Check Link Display */}
+        {request.damage_link_token && (
+          <div className="damage-link-card card" style={{ marginTop: '16px' }}>
+            <h4 className="t-card">Condition Verification Link</h4>
+            <p className="t-body" style={{ marginBottom: '8px' }}>
+              {isLender ? 'Share this link with borrower to review baseline condition:' : 'Lender provided 6-photo baseline condition documentation:'}
+            </p>
+            <div className="damage-link-row">
+              <code className="damage-link">{`${window.location.origin}/damage-check/${request.damage_link_token}`}</code>
+              <Button variant="secondary" size="sm" onClick={() => copyDamageLink(request.damage_link_token)}>
+                {copied ? 'Copied!' : 'Copy link'}
+              </Button>
+            </div>
+            <div style={{ marginTop: '8px' }}>
+              <Link className="link handover-chat-link" to={`/damage-check/${request.damage_link_token}`}>
+                View condition check photos →
+              </Link>
+            </div>
+          </div>
+        )}
+
         {request.handover_status === 'lender_confirmed' && <div className="handover-active-details">
           <p>Handover confirmed: {dateTime(request.handover_confirmed_at)}</p>
           <p>Borrowing started: {dateTime(request.borrowing_started_at)}</p>
           <p>Return due: {dateTime(request.return_due_at)}</p>
           <p className="handover-active-label">Borrowing is active.</p>
         </div>}
+
         <ReturnSubmission request={request} api={api} bookingId={bookingId} onChange={refresh} />
+
+        {/* AI Damage Report & Comparison during return inspection */}
+        {damageCheck && (damageCheck.report || damageCheck.after_views?.length === 6) && (
+          <div className="damage-review-card card" style={{ marginTop: '16px' }}>
+            <h3 className="t-card">AI Return Damage Assessment</h3>
+            <BeforeAfterCompare pathFor={damagePathFor} report={damageCheck.report} />
+            <DamageReportView report={damageCheck.report} status={damageCheck.status} />
+          </div>
+        )}
+
         <ReturnInspection request={request} user={user} api={api} onChange={refresh} />
         {request.handover_status === 'return_confirmed' && <p className="rating-done" role="status">Return approved. Deposit settlement status is shown above.</p>}
       </>}
@@ -127,6 +257,9 @@ export default function BorrowRequestDetail() {
         </form>}
       </section>}
       {request.conversation_id && request.handover_status === 'issue_reported' && <Link className="link handover-chat-link" to={`/messages/${request.conversation_id}`}><MessageCircle size={16} /> Open conversation</Link>}
+
+      {/* Support Chat Button */}
+      <SupportChatButton entityType="borrow_request" entityId={request.id} />
     </section>
   </div></div>;
 }

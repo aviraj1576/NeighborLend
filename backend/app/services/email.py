@@ -1,6 +1,9 @@
 import smtplib
 import ssl
 import logging
+import base64
+import urllib.parse
+import urllib.request
 from email.message import EmailMessage
 
 from app.config import get_settings
@@ -53,3 +56,26 @@ def _send_message(server, message: EmailMessage, username: str, password: str) -
     if username:
         server.login(username, password)
     server.send_message(message)
+
+
+def send_phone_verification_code(recipient: str, code: str) -> None:
+    """Send a short-lived phone verification code through the configured Twilio account."""
+    settings = get_settings()
+    token = settings.twilio_auth_token.get_secret_value()
+    if not (settings.twilio_account_sid and token and settings.twilio_from_number):
+        raise RuntimeError("SMS verification is not configured")
+    endpoint = f"https://api.twilio.com/2010-04-01/Accounts/{settings.twilio_account_sid}/Messages.json"
+    body = urllib.parse.urlencode({
+        "To": recipient,
+        "From": settings.twilio_from_number,
+        "Body": f"Your NeighborLend verification code is {code}. It expires in 10 minutes.",
+    }).encode()
+    credentials = base64.b64encode(f"{settings.twilio_account_sid}:{token}".encode()).decode()
+    request = urllib.request.Request(endpoint, data=body, headers={"Authorization": f"Basic {credentials}"})
+    try:
+        with urllib.request.urlopen(request, timeout=15) as response:
+            if response.status >= 300:
+                raise RuntimeError("SMS provider rejected the request")
+    except Exception as exc:
+        logger.warning("SMS delivery failed (%s)", type(exc).__name__)
+        raise RuntimeError("Unable to deliver the verification SMS") from exc

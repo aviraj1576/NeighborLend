@@ -84,9 +84,15 @@ def migrate_schema(target_engine=None):
             "borrower_rating_comment": "TEXT",
             "lender_rated_at": "DATETIME",
             "borrower_rated_at": "DATETIME",
+            "damage_check_id": "VARCHAR",
+            "damage_link_token": "VARCHAR",
+            "damage_link_expires_at": "DATETIME",
         },
         "negotiation_offers": {
             "listing_id": "VARCHAR",
+        },
+        "messages": {
+            "meta": "TEXT",
         },
     }
 
@@ -112,7 +118,14 @@ def migrate_schema(target_engine=None):
                 "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_google_sub "
                 "ON users (google_sub)"
             ))
+        if "borrow_requests" in existing_tables:
+            connection.execute(text(
+                "CREATE UNIQUE INDEX IF NOT EXISTS ix_borrow_requests_damage_link_token "
+                "ON borrow_requests (damage_link_token)"
+            ))
 
     # Explicit migration only; AUTO_MIGRATE remains disabled by default.
     from app.services.conversation_migrations import migrate_conversations
     migrate_conversations(target_engine)
+    from app.services.trust_score_migrations import migrate_trust_scores
+    migrate_trust_scores(target_engine)

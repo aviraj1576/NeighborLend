@@ -8,8 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 from app.config import get_settings
 from app.database import engine, Base, migrate_schema, require_generic_schema_target_allowed
-from app.routers import auth, listings, ai, uploads, borrow_requests, chat, notifications
-from app.routers import payments, disputes
+from app.routers import auth, listings, ai, uploads, borrow_requests, chat, notifications, payments, disputes, lend_damage, admin, support, trust
 
 settings = get_settings()
 
@@ -81,6 +80,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Per-user responses must never sit in a shared browser cache: the cache key ignores the
+# Authorization header, so on a shared computer one user could be served another user's
+# cached response (including error responses such as 403/410).
+_NO_STORE_PREFIXES = ("/api/damage-checks", "/api/damage-links", "/api/admin", "/api/support", "/api/trust")
+
+
+@app.middleware("http")
+async def no_store_for_private_routes(request, call_next):
+    response = await call_next(request)
+    path = request.url.path
+    if path.startswith(_NO_STORE_PREFIXES) or path.endswith("/handover"):
+        response.headers["Cache-Control"] = "no-store"
+    return response
+
+
 app.mount("/uploads", StaticFiles(directory=settings.upload_dir_abs, check_dir=False), name="uploads")
 
 app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
@@ -92,6 +106,18 @@ app.include_router(ai.router, prefix="/api/ai", tags=["AI"])
 app.include_router(uploads.router, prefix="/api", tags=["Uploads"])
 app.include_router(payments.router, prefix="/api/payments", tags=["Test payments"])
 app.include_router(disputes.router, prefix="/api/disputes", tags=["Disputes"])
+app.include_router(lend_damage.router, prefix="/api", tags=["Lend Damage"])
+app.include_router(admin.router, prefix="/api/admin", tags=["Admin"])
+app.include_router(support.router, prefix="/api/support", tags=["Support"])
+app.include_router(trust.router, prefix="/api/trust", tags=["Trust"])
+
+from damage_check import create_router as create_damage_router
+from app.services.damage_integration import get_damage_service, damage_user_id
+app.include_router(
+    create_damage_router(get_damage_service(), damage_user_id),
+    prefix="/api/damage-checks",
+    tags=["Damage Check"],
+)
 
 @app.get("/api/health")
 def health():

@@ -25,21 +25,21 @@ class TestChatAndNegotiation(unittest.TestCase):
             username=f"lender_{ts}",
             email=f"lender_{ts}@test.com",
             password_hash=hash_password("password123"),
-            trust_score=85.0
+            trust_score=4.4
         )
         cls.borrower = User(
             name=f"Borrower User {ts}",
             username=f"borrower_{ts}",
             email=f"borrower_{ts}@test.com",
             password_hash=hash_password("password123"),
-            trust_score=75.0
+            trust_score=3.8
         )
         cls.intruder = User(
             name=f"Intruder User {ts}",
             username=f"intruder_{ts}",
             email=f"intruder_{ts}@test.com",
             password_hash=hash_password("password123"),
-            trust_score=50.0
+            trust_score=3.4
         )
         cls.db.add_all([cls.lender, cls.borrower, cls.intruder])
         cls.db.commit()

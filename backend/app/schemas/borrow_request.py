@@ -28,7 +28,7 @@ class BorrowRequestOut(BaseModel):
     id: str
     borrower_id: str
     borrower_name: Optional[str] = None
-    borrower_trust_score: Optional[float] = 50.0
+    borrower_trust_score: Optional[float] = 3.41
     title: str
     category: str
     description: str
@@ -57,6 +57,8 @@ class BorrowRequestOut(BaseModel):
     return_photos: Optional[List[str]] = []
     handover_condition_note: Optional[str] = None
     return_condition_note: Optional[str] = None
+    damage_check_id: Optional[str] = None
+    damage_link_token: Optional[str] = None
     return_confirmed_at: Optional[datetime] = None
     return_confirmed_by: Optional[str] = None
     borrowing_started_at: Optional[datetime] = None

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { MapPin, Star, Shield, AlertCircle, Clock, Check, MessageSquare, ChevronLeft } from 'lucide-react';
+import { MapPin, Shield, AlertCircle, Clock, Check, MessageSquare, ChevronLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
 import { resolvePhotoUrl } from '../utils/photoUrl';
@@ -8,6 +8,7 @@ import Button from '../components/ui/Button';
 import Card from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import './ListingDetail.css';
+import TrustScorePanel from '../components/TrustScorePanel';
 
 const ListingDetail = () => {
   const { id } = useParams();
@@ -17,6 +18,7 @@ const ListingDetail = () => {
   const [photoIndex, setPhotoIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [startingChat, setStartingChat] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     const fetchListing = async () => {
@@ -32,12 +34,60 @@ const ListingDetail = () => {
     fetchListing();
   }, [id]);
 
-  if (loading) return <div className="detail-loading">Loading listing…</div>;
-  if (!listing) return <div className="detail-loading">Listing not found.</div>;
 
-  const isOwner = user && listing.owner && user.username === listing.owner.username;
-  const photos = listing.photos?.length ? listing.photos : (listing.image_url ? [listing.image_url] : []);
+
+
+
+  if (loading) {
+    return (
+      <div className="listing-detail-page" role="status" aria-live="polite">
+        <div className="wrap">Loading listing…</div>
+      </div>
+    );
+  }
+
+  if (!listing || typeof listing !== 'object') {
+    return (
+      <div className="listing-detail-page">
+        <div className="wrap" id="content">
+          <h1>Listing not found</h1>
+          <p>This listing may have been removed or is unavailable.</p>
+          <Button variant="secondary" asChild>
+            <Link to="/browse">Back to browse</Link>
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const isOwner = Boolean(
+    user && (
+      (listing.owner?.username && user.username === listing.owner.username) ||
+      (listing.owner_id != null && user.id === listing.owner_id) ||
+      (listing.owner_username && user.username === listing.owner_username)
+    )
+  );
+  const photos = Array.isArray(listing.photos) && listing.photos.length
+    ? listing.photos
+    : (listing.image_url ? [listing.image_url] : []);
   const imageUrl = resolvePhotoUrl(photos[photoIndex] || photos[0]);
+
+  const handleDeleteListing = async () => {
+    if (!window.confirm('Are you sure you want to delete this listing? This action cannot be undone.')) {
+      return;
+    }
+    setDeleting(true);
+    try {
+      await api.delete(`/listings/${id}`);
+      navigate('/my-listings');
+    } catch (err) {
+      console.error('Failed to delete listing:', err);
+      const detail = err.response?.data?.detail || 'Failed to delete listing. Please try again.';
+      alert(detail);
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const handleChatWithOwner = async () => {
     if (!user) {
@@ -45,6 +95,10 @@ const ListingDetail = () => {
       return;
     }
     if (isOwner) return;
+    if (listing.owner_id == null) {
+      alert('The owner for this listing is unavailable.');
+      return;
+    }
     setStartingChat(true);
     try {
       const res = await api.post('/conversations', { lender_id: listing.owner_id });
@@ -185,20 +239,11 @@ const ListingDetail = () => {
                   {(listing.owner?.username || listing.owner_username || 'U')[0]?.toUpperCase()}
                 </div>
                 <div className="owner-meta">
-                  <h3 className="t-card">{listing.owner?.username || listing.owner_username}</h3>
+                  <h3 className="t-card"><Link to={`/users/${listing.owner?.id || listing.owner_id}`}>{listing.owner?.username || listing.owner_username}</Link></h3>
                   <p className="member-since">Member since {listing.owner?.member_since || '2023'}</p>
                 </div>
               </div>
-              <div className="owner-stats">
-                <div className="stat">
-                  <Star size={16} className="stat-icon" />
-                  <span>{listing.owner?.rating || listing.owner_avg_rating || 5.0} rating</span>
-                </div>
-                <div className="stat">
-                  <Shield size={16} className="stat-icon" />
-                  <span>{listing.owner?.trust_score || listing.owner_trust_score || 100} trust</span>
-                </div>
-              </div>
+              <TrustScorePanel userId={listing.owner?.id || listing.owner_id} compact initialTrust={listing.owner} />
             </Card>
 
             {/* Actions */}
@@ -207,6 +252,14 @@ const ListingDetail = () => {
                 <div className="owner-actions">
                   <Button variant="secondary" onClick={() => navigate('/my-listings')}>
                     Manage in My listings
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="delete-btn"
+                    onClick={handleDeleteListing}
+                    disabled={deleting}
+                  >
+                    {deleting ? 'Deleting…' : 'Delete listing'}
                   </Button>
                 </div>
               ) : (

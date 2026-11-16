@@ -24,6 +24,8 @@ os.environ["AUTO_MIGRATE"] = "false"
 os.environ["RENTAL_EVIDENCE_DIR"] = str(Path(__file__).resolve().parents[1] / ".payment-verification" / "evidence")
 os.environ["SUPABASE_URL"] = ""
 os.environ["SUPABASE_SERVICE_ROLE_KEY"] = ""
+# Tests must never call the real vision model, whichever test module imports `app` first.
+os.environ.setdefault("DAMAGE_PROVIDER", "mock")
 # Financial regression tests never consume configured external provider credentials.
 for _name in ("RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET"):
     # Empty process values also shadow backend/.env; tests must never load local keys.

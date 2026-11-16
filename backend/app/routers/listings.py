@@ -19,20 +19,30 @@ def haversine(lat1, lon1, lat2, lon2):
     a = math.sin(dlat/2)**2 + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2)**2
     return R * 2 * math.asin(math.sqrt(a))
 
-def _format_listing_out(listing: Listing, distance_km: Optional[float] = None) -> dict:
+def _format_listing_out(listing: Listing, distance_km: Optional[float] = None, db: Optional[Session] = None) -> dict:
     address_str = listing.address_text or ""
     if not address_str and listing.latitude is not None and listing.longitude is not None:
         address_str = f"Location ({listing.latitude:.4f}°, {listing.longitude:.4f}°)"
 
     owner_dict = None
     if listing.owner:
+        from app.services.trust_score import refresh_user_trust_score
+        trust = refresh_user_trust_score(db, listing.owner) if db is not None else None
         owner_dict = {
             "id": listing.owner.id,
             "name": listing.owner.name,
             "username": listing.owner.username,
+            "avatar_url": listing.owner.avatar_url,
+            "member_since": listing.owner.created_at,
             "trust_score": listing.owner.trust_score,
+            "rating_score": trust["rating_score"] if trust else 3.12,
+            "reliability_score": trust["reliability_score"] if trust else 5.0,
+            "experience_score": trust["experience_score"] if trust else 0.0,
+            "verification_score": trust["verification_score"] if trust else 5.0,
+            "last_updated": trust["last_updated"] if trust else None,
             "rating": listing.owner.avg_rating,
-            "rating_count": listing.owner.rating_count
+            "rating_count": listing.owner.rating_count,
+            "completed_rentals_count": listing.owner.completed_rentals_count,
         }
 
     return {
@@ -41,7 +51,7 @@ def _format_listing_out(listing: Listing, distance_km: Optional[float] = None) -
         "owner_name": listing.owner.name if listing.owner else "Unknown",
         "owner_username": listing.owner.username if listing.owner else "Unknown",
         "owner": owner_dict,
-        "owner_trust_score": listing.owner.trust_score if listing.owner else 50.0,
+        "owner_trust_score": listing.owner.trust_score if listing.owner else 3.41,
         "owner_avg_rating": listing.owner.avg_rating if listing.owner else 0.0,
         "owner_rating_count": listing.owner.rating_count if listing.owner else 0,
         "name": listing.name,
@@ -104,7 +114,7 @@ def create_listing(data: ListingCreateIn, current_user: User = Depends(get_curre
         latitude=data.latitude,
         longitude=data.longitude,
         address_text=data.address_text,
-        status=ListingStatus.published,
+        status=ListingStatus.published if data.publish else ListingStatus.draft,
         ai_label=data.ai_label,
         ai_confidence=data.ai_confidence
     )
@@ -117,13 +127,13 @@ def create_listing(data: ListingCreateIn, current_user: User = Depends(get_curre
         
     db.commit()
     db.refresh(listing)
-    return _format_listing_out(listing)
+    return _format_listing_out(listing, db=db)
 
 @router.get("", response_model=List[ListingOut])
 @router.get("/", response_model=List[ListingOut])
 def list_my_listings(current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     listings = db.query(Listing).filter(Listing.owner_id == current_user.id, Listing.status != ListingStatus.removed).all()
-    return [_format_listing_out(l) for l in listings]
+    return [_format_listing_out(l, db=db) for l in listings]
 
 @router.get("/detect-location")
 def detect_location(request: Request):
@@ -197,34 +207,79 @@ def search_listings(
             results.append((float('inf'), l))
                 
     results.sort(key=lambda x: x[0])
-    return [_format_listing_out(l, dist) for dist, l in results]
+    return [_format_listing_out(l, dist, db) for dist, l in results]
 
 
 @router.get("/{listing_id}", response_model=ListingOut)
 def get_listing(listing_id: str, db: Session = Depends(get_db)):
-    listing = db.query(Listing).filter(Listing.id == listing_id, Listing.status != ListingStatus.removed).first()
+    listing = db.query(Listing).filter(
+        Listing.id == listing_id,
+        Listing.status.notin_([ListingStatus.draft, ListingStatus.pending_review, ListingStatus.removed]),
+    ).first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found")
-    return _format_listing_out(listing)
+    return _format_listing_out(listing, db=db)
 
 @router.patch("/{listing_id}", response_model=ListingOut)
 def update_listing(listing_id: str, data: ListingUpdateIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    listing = db.query(Listing).filter(Listing.id == listing_id, Listing.owner_id == current_user.id).first()
+    listing = db.query(Listing).filter(Listing.id == listing_id, Listing.owner_id == current_user.id).with_for_update().first()
     if not listing:
         raise HTTPException(status_code=404, detail="Listing not found or unauthorized")
-        
-    for key, value in data.model_dump(exclude_unset=True).items():
+
+    changes = data.model_dump(exclude_unset=True)
+    status = changes.pop("status", None)
+    has_content_changes = bool(changes)
+    if has_content_changes and listing.status not in (ListingStatus.draft, ListingStatus.pending_review):
+        raise HTTPException(status_code=409, detail="This listing has been published and can no longer be edited.")
+
+    if status is not None:
+        allowed_transitions = {
+            ListingStatus.draft: {ListingStatus.published},
+            ListingStatus.pending_review: {ListingStatus.published},
+            ListingStatus.published: {ListingStatus.paused},
+            ListingStatus.paused: {ListingStatus.published},
+        }
+        if status != listing.status and status not in allowed_transitions.get(listing.status, set()):
+            raise HTTPException(status_code=409, detail="That listing status change is not allowed.")
+
+    photo_urls = changes.pop("photo_urls", None)
+    effective_price = changes.get("price_per_day", listing.price_per_day)
+    effective_min_price = changes.get("min_price_per_day", listing.min_price_per_day)
+    if effective_min_price is not None and effective_min_price > effective_price:
+        raise HTTPException(status_code=422, detail="Minimum rental price cannot exceed the daily rental price.")
+    effective_latitude = changes.get("latitude", listing.latitude)
+    effective_longitude = changes.get("longitude", listing.longitude)
+    if (effective_latitude is None) != (effective_longitude is None):
+        raise HTTPException(status_code=422, detail="Enter both latitude and longitude, or clear both.")
+    settings = get_settings()
+    for url in photo_urls or []:
+        if not is_public_listing_image_url(url):
+            if settings.app_env.lower() in {"production", "prod"}:
+                raise HTTPException(status_code=422, detail="Listing photos must be uploaded to this project's public Supabase listing_photos bucket.")
+            if not (url.startswith(settings.public_base_url.rstrip("/") + "/uploads/") or url.startswith("/uploads/")):
+                raise HTTPException(status_code=422, detail="Invalid photo URL. Must be from Supabase Storage or local uploads.")
+
+    for key, value in changes.items():
         setattr(listing, key, value)
+    if photo_urls is not None:
+        listing.photos.clear()
+        for index, url in enumerate(photo_urls):
+            listing.photos.append(ListingPhoto(url=url, is_cover=(index == 0)))
+    if status is not None:
+        listing.status = status
         
     db.commit()
     db.refresh(listing)
-    return _format_listing_out(listing)
+    return _format_listing_out(listing, db=db)
 
 @router.delete("/{listing_id}")
+@router.delete("/{listing_id}/")
 def delete_listing(listing_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    listing = db.query(Listing).filter(Listing.id == listing_id, Listing.owner_id == current_user.id).first()
-    if not listing:
-        raise HTTPException(status_code=404, detail="Listing not found or unauthorized")
+    listing = db.query(Listing).filter(Listing.id == listing_id).first()
+    if not listing or listing.status == ListingStatus.removed:
+        raise HTTPException(status_code=404, detail="Listing not found")
+    if listing.owner_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this listing")
         
     listing.status = ListingStatus.removed
     db.commit()

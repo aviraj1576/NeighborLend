@@ -6,7 +6,7 @@ import Card from './ui/Card';
 import Badge from './ui/Badge';
 import './ListingCard.css';
 
-const ListingCard = ({ listing }) => {
+const ListingCard = ({ listing, interactive = true }) => {
   const navigate = useNavigate();
 
   const handleClick = () => {
@@ -33,8 +33,8 @@ const ListingCard = ({ listing }) => {
   return (
     <Card
       variant="default"
-      className="listing-card"
-      onClick={handleClick}
+      className={`listing-card${interactive ? '' : ' listing-card--static'}`}
+      onClick={interactive ? handleClick : undefined}
     >
       <div className="listing-photo-wrap">
         {imageUrl ? (

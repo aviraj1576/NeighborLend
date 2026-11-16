@@ -31,6 +31,8 @@ class HandoverStatus(str, enum.Enum):
     issue_reported = "issue_reported"
     return_photos_uploaded = "return_photos_uploaded"  # Borrower uploaded return photos
     return_confirmed = "return_confirmed"        # Lender confirmed return
+    disputed = "disputed"                        # Lender disputed the return; awaiting an admin decision
+    dispute_resolved = "dispute_resolved"        # Admin decided; lend closed
 
 class User(Base):
     __tablename__ = "users"
@@ -43,7 +45,7 @@ class User(Base):
     is_verified = Column(Boolean, nullable=False, default=True, server_default="true")
     google_sub = Column(String, unique=True, nullable=True, index=True)
     avatar_url = Column(String, nullable=True)
-    trust_score = Column(Float, default=50.0)
+    trust_score = Column(Float, nullable=False, default=3.41, server_default="3.41")
     avg_rating = Column(Float, default=0.0)
     rating_count = Column(Integer, default=0)
     completed_rentals_count = Column(Integer, default=0)
@@ -52,6 +54,16 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     listings = relationship("Listing", back_populates="owner", foreign_keys="Listing.owner_id")
     borrow_requests = relationship("BorrowRequest", back_populates="borrower", foreign_keys="BorrowRequest.borrower_id")
+
+
+class TrustScoreSnapshot(Base):
+    __tablename__ = "trust_score_snapshots"
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    rating_component = Column(Float, nullable=False, default=3.12, server_default="3.12")
+    reliability_component = Column(Float, nullable=False, default=5.0, server_default="5.0")
+    experience_component = Column(Float, nullable=False, default=0.0, server_default="0.0")
+    verification_component = Column(Float, nullable=False, default=5.0, server_default="5.0")
+    updated_at = Column(DateTime, nullable=False, default=datetime.utcnow)
 
 class CaptchaChallenge(Base):
     __tablename__ = "captcha_challenges"
@@ -136,6 +148,9 @@ class BorrowRequest(Base):
     returned_at = Column(DateTime, nullable=True)
     disputed_at = Column(DateTime, nullable=True)
     dispute_description = Column(Text, nullable=True)
+    damage_check_id = Column(String, nullable=True)
+    damage_link_token = Column(String, nullable=True, unique=True, index=True)
+    damage_link_expires_at = Column(DateTime, nullable=True)
     lender_rating = Column(Integer, nullable=True)          # Rating given by borrower to lender (1-5)
     borrower_rating = Column(Integer, nullable=True)        # Rating given by lender to borrower (1-5)
     lender_rating_comment = Column(Text, nullable=True)
@@ -191,10 +206,64 @@ class Message(Base):
     sender_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
     content = Column(Text, nullable=False)
     is_system = Column(Boolean, default=False)
+    meta = Column(Text, nullable=True)   # JSON: {"quick_replies": [...], "node_id": "...", "bot": true}
     created_at = Column(DateTime, default=datetime.utcnow)
 
     conversation = relationship("Conversation", back_populates="messages")
     sender = relationship("User")
+
+class DamageCheckRecord(Base):
+    """Host storage for the damage_check module's CheckRecord JSON blob."""
+    __tablename__ = "damage_check_records"
+    check_id = Column(String, primary_key=True)
+    record_json = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class DisputeStatus(str, enum.Enum):
+    open = "open"
+    resolved = "resolved"
+
+class Dispute(Base):
+    __tablename__ = "disputes"
+    id = Column(String, primary_key=True, default=_uuid)
+    borrow_request_id = Column(String, ForeignKey("borrow_requests.id"), nullable=False, index=True)
+    check_id = Column(String, nullable=True)
+    raised_by = Column(String, ForeignKey("users.id"), nullable=False)
+    reason = Column(Text, nullable=False)
+    status = Column(Enum(DisputeStatus), default=DisputeStatus.open, index=True)
+    outcome = Column(String, nullable=True)          # "lender" | "borrower" | "partial"
+    resolution_note = Column(Text, nullable=True)
+    resolved_by = Column(String, ForeignKey("users.id"), nullable=True)
+    resolved_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+class AdminAuditLog(Base):
+    __tablename__ = "admin_audit_logs"
+    id = Column(String, primary_key=True, default=_uuid)
+    admin_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    action = Column(String, nullable=False)          # e.g. "dispute_resolved"
+    target_type = Column(String, nullable=False)     # "dispute" | "support_ticket" | "borrow_request"
+    target_id = Column(String, nullable=False, index=True)
+    detail = Column(Text, nullable=True)             # JSON string
+    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+
+class SupportTicketStatus(str, enum.Enum):
+    bot = "bot"
+    escalated = "escalated"
+    closed = "closed"
+
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+    id = Column(String, primary_key=True, default=_uuid)
+    conversation_id = Column(String, ForeignKey("conversations.id"), nullable=False, index=True)
+    user_id = Column(String, ForeignKey("users.id"), nullable=False, index=True)
+    context_step = Column(String, nullable=False)      # e.g. "handover_photos"
+    entity_type = Column(String, nullable=True)        # "borrow_request" | "listing" | None
+    entity_id = Column(String, nullable=True)
+    status = Column(Enum(SupportTicketStatus), default=SupportTicketStatus.bot, index=True)
+    escalated_at = Column(DateTime, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class NegotiationOffer(Base):
     __tablename__ = "negotiation_offers"

@@ -8,7 +8,7 @@ class ParticipantOut(BaseModel):
     name: str
     username: str
     avatar_url: Optional[str] = None
-    trust_score: Optional[float] = 50.0
+    trust_score: Optional[float] = 3.41
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -20,6 +20,7 @@ class MessageOut(BaseModel):
     sender_username: Optional[str] = None
     content: str
     is_system: bool = False
+    meta: Optional[str] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)
