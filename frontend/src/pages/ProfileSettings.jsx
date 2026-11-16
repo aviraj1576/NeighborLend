@@ -12,9 +12,7 @@ const ProfileSettings = () => {
   const { user, setUser } = useAuth();
   const [profile, setProfile] = useState({ name: '', username: '', email: '', phone: '', avatar_url: '' });
   const [emailCode, setEmailCode] = useState('');
-  const [phoneCode, setPhoneCode] = useState('');
   const [emailPending, setEmailPending] = useState('');
-  const [phonePending, setPhonePending] = useState('');
   const [passwords, setPasswords] = useState({ current_password: '', new_password: '', confirm: '' });
   const [busy, setBusy] = useState('');
   const [notice, setNotice] = useState('');
@@ -74,24 +72,18 @@ const ProfileSettings = () => {
       setUser(data); setProfile((prev) => ({ ...prev, email: data.email })); setEmailPending(''); return { data: { message: 'Email address verified and updated.' } };
     });
   };
-  const requestPhone = (event) => {
+  const savePhone = (event) => {
     event.preventDefault();
     run('phone', async () => {
-      const { data } = await api.post('/auth/me/phone/request', { phone: profile.phone });
-      setPhonePending(profile.phone.trim()); setPhoneCode(''); return { data };
-    });
-  };
-  const verifyPhone = (event) => {
-    event.preventDefault();
-    run('phone', async () => {
-      const { data } = await api.post('/auth/me/phone/verify', { value: phonePending, code: phoneCode });
-      setUser(data); setProfile((prev) => ({ ...prev, phone: data.phone || '' })); setPhonePending(''); return { data: { message: 'Phone number verified and updated.' } };
+      const phone = profile.phone.trim();
+      const { data } = await api.patch('/auth/me', { phone: phone || null });
+      setUser(data); setProfile((prev) => ({ ...prev, phone: data.phone || '' }));
+      return { data: { message: 'Phone number updated.' } };
     });
   };
   const cancelContact = (kind) => run(kind, async () => {
     await api.delete('/auth/me/contact-change');
-    if (kind === 'email') { setEmailPending(''); setEmailCode(''); setProfile((prev) => ({ ...prev, email: user.email })); }
-    else { setPhonePending(''); setPhoneCode(''); setProfile((prev) => ({ ...prev, phone: user.phone || '' })); }
+    setEmailPending(''); setEmailCode(''); setProfile((prev) => ({ ...prev, email: user.email }));
     return { data: { message: 'Verification request cancelled.' } };
   });
   const changePassword = (event) => {
@@ -133,11 +125,10 @@ const ProfileSettings = () => {
       <div className="profile-form-actions">{emailPending && <Button type="button" variant="secondary" disabled={Boolean(busy)} onClick={() => cancelContact('email')}>Cancel</Button>}<Button type="submit" disabled={Boolean(busy)} loading={busy === 'email'}>{emailPending ? 'Verify email' : 'Send verification code'}</Button></div>
     </form></Card>
 
-    <Card className="profile-card"><form onSubmit={phonePending ? verifyPhone : requestPhone}>
-      <h2 className="t-card">Phone number</h2><p className="t-small muted">Use international format, for example +14155552671. We’ll text a verification code.</p>
-      <div className="profile-fields contact-fields"><Input name="phone" type="tel" label="Phone" autoComplete="tel" placeholder="+14155552671" pattern="\+[1-9][0-9]{7,14}" required value={profile.phone} disabled={Boolean(phonePending)} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} />
-        {phonePending && <Input name="phone-code" label={`Code sent to ${phonePending}`} inputMode="numeric" autoComplete="one-time-code" maxLength={6} required value={phoneCode} onChange={(e) => setPhoneCode(e.target.value.replace(/\D/g, '').slice(0, 6))} />}</div>
-      <div className="profile-form-actions">{phonePending && <Button type="button" variant="secondary" disabled={Boolean(busy)} onClick={() => cancelContact('phone')}>Cancel</Button>}<Button type="submit" disabled={Boolean(busy)} loading={busy === 'phone'}>{phonePending ? 'Verify phone' : 'Send SMS code'}</Button></div>
+    <Card className="profile-card"><form onSubmit={savePhone}>
+      <h2 className="t-card">Phone number</h2><p className="t-small muted">Enter your phone number in international format. Phone number changes are saved immediately.</p>
+      <div className="profile-fields contact-fields"><Input name="phone" type="tel" label="Phone" autoComplete="tel" placeholder="+14155552671" pattern="\+[1-9][0-9]{7,14}" value={profile.phone} onChange={(e) => setProfile({ ...profile, phone: e.target.value })} /></div>
+      <div className="profile-form-actions"><Button type="submit" disabled={Boolean(busy)} loading={busy === 'phone'}>Save phone number</Button></div>
     </form></Card>
 
     <Card className="profile-card"><form onSubmit={changePassword}>
@@ -147,7 +138,7 @@ const ProfileSettings = () => {
         <Input name="confirm_password" type="password" label="Confirm new password" autoComplete="new-password" minLength={8} maxLength={72} required value={passwords.confirm} onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })} /></div>
       <div className="profile-form-actions"><Button type="submit" disabled={Boolean(busy)} loading={busy === 'password'}>Update password</Button></div>
     </form></Card>
-    <p className="profile-footnote"><Info size={14} /> Changes to your email or phone take effect only after verification.</p>
+    <p className="profile-footnote"><Info size={14} /> Email changes take effect only after verification. Phone number changes are saved immediately.</p>
   </div></div>;
 };
 

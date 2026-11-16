@@ -85,7 +85,7 @@ docker compose up --build   # Requires .env with DATABASE_URL, JWT_SECRET
 - **Frontend**: Vercel (root: `frontend/`, framework: Vite). Requires `VITE_API_BASE_URL` (HTTPS, path ends in `/api`)
 - **Backend**: Render via `render.yaml` (Docker). Health check: `/api/health`
 - **Supabase**: PostgreSQL + Storage bucket `listing_photos`
-- **Email**: Brevo SMTP for OTP verification
+- **Email**: Brevo SMTP for email verification
 
 ## Common Gotchas
 1. **CORS errors**: Ensure `CORS_ORIGINS` in `.env` includes your frontend origin (e.g., `http://localhost:5173`)

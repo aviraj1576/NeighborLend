@@ -89,9 +89,6 @@ class Settings(BaseSettings):
     smtp_password: str = ""
     smtp_from_email: str = ""
     smtp_use_tls: bool = True
-    twilio_account_sid: str = ""
-    twilio_auth_token: SecretStr = SecretStr("")
-    twilio_from_number: str = ""
 
     @field_validator("jwt_secret")
     @classmethod

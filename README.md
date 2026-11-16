@@ -176,6 +176,7 @@ NeighborLend/
 ### 1. Smart Authentication & Protection
 * **CAPTCHA Challenge**: Lightweight math challenge on registration prevents automated bot signups.
 * **Email OTP Verification**: Delivers a 6-digit one-time passcode via Brevo SMTP to verify user emails.
+* **Phone number updates**: Authenticated users can update or remove their phone number directly from profile settings.
 * **Google Sign-In**: One-click authentication using Google Identity Services.
 * **JWT Tokens**: Secure bearer tokens stored on the client and attached via Axios request interceptors.
 

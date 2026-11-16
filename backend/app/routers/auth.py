@@ -18,7 +18,7 @@ from app.models import EmailVerification, User
 from app.schemas.auth import (
     CaptchaOut, RegisterIn, LoginIn, UserOut, TokenOut, UpdateProfileIn,
     RegistrationOut, VerifyEmailIn, ResendVerificationIn, GoogleLoginIn,
-    ChangeEmailIn, VerifyContactChangeIn, ChangePasswordIn, ChangePhoneIn,
+    ChangeEmailIn, VerifyContactChangeIn, ChangePasswordIn,
 )
 from app.services.auth import (
     EMAIL_OTP_MAX_ATTEMPTS, EMAIL_OTP_RESEND_SECONDS, EMAIL_OTP_TTL_MINUTES,
@@ -26,7 +26,7 @@ from app.services.auth import (
     hash_password, verify_password, verify_email_otp, create_access_token,
     get_current_user,
 )
-from app.services.email import send_verification_code, send_phone_verification_code
+from app.services.email import send_verification_code
 
 router = APIRouter()
 
@@ -280,6 +280,11 @@ def update_me(data: UpdateProfileIn, current_user: User = Depends(get_current_us
         if db.query(User).filter(func.lower(User.username) == username, User.id != current_user.id).first():
             raise HTTPException(status_code=409, detail="That username is already in use")
         current_user.username = username
+    if "phone" in data.model_fields_set:
+        phone = data.phone.strip() if data.phone else None
+        if phone and db.query(User).filter(User.phone == phone, User.id != current_user.id).first():
+            raise HTTPException(status_code=409, detail="That phone number is already in use")
+        current_user.phone = phone
     if data.avatar_url is not None:
         avatar_url = data.avatar_url.strip()
         local_upload_prefix = f"{settings.public_base_url.rstrip('/')}/uploads/"
@@ -290,7 +295,7 @@ def update_me(data: UpdateProfileIn, current_user: User = Depends(get_current_us
         db.commit()
     except IntegrityError as exc:
         db.rollback()
-        raise HTTPException(status_code=409, detail="That username is already in use") from exc
+        raise HTTPException(status_code=409, detail="That username or phone number is already in use") from exc
     db.refresh(current_user)
     return current_user
 
@@ -355,42 +360,6 @@ def verify_email_change(data: VerifyContactChangeIn, current_user: User = Depend
     except IntegrityError as exc:
         db.rollback()
         raise HTTPException(status_code=409, detail="That email address is already in use") from exc
-    db.refresh(current_user)
-    return current_user
-
-
-@router.post("/me/phone/request")
-def request_phone_change(data: ChangePhoneIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    phone = data.phone.strip()
-    if phone == current_user.phone:
-        raise HTTPException(status_code=400, detail="That is already your phone number")
-    if db.query(User).filter(User.phone == phone, User.id != current_user.id).first():
-        raise HTTPException(status_code=409, detail="That phone number is already in use")
-    code = _start_contact_change(db, current_user, "phone", phone)
-    try:
-        send_phone_verification_code(phone, code)
-        db.commit()
-    except RuntimeError as exc:
-        db.rollback()
-        raise HTTPException(status_code=503, detail="Phone verification is unavailable. Please try again later.") from exc
-    return {"message": "A verification code was sent by SMS."}
-
-
-@router.post("/me/phone/verify", response_model=UserOut)
-def verify_phone_change(data: VerifyContactChangeIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    phone = data.value.strip()
-    record = db.query(EmailVerification).with_for_update().filter(EmailVerification.user_id == current_user.id).first()
-    if record is None or record.expires_at <= datetime.utcnow() or record.attempts >= EMAIL_OTP_MAX_ATTEMPTS:
-        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
-    if not hmac.compare_digest(_contact_hash(current_user.id, "phone", phone, data.code), record.code_hash):
-        record.attempts += 1
-        db.commit()
-        raise HTTPException(status_code=400, detail="Invalid or expired verification code")
-    if db.query(User).filter(User.phone == phone, User.id != current_user.id).first():
-        raise HTTPException(status_code=409, detail="That phone number is already in use")
-    current_user.phone = phone
-    db.delete(record)
-    db.commit()
     db.refresh(current_user)
     return current_user
 

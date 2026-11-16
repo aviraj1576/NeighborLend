@@ -62,6 +62,7 @@ class UpdateProfileIn(BaseModel):
     name: Optional[str] = Field(default=None, min_length=1, max_length=120)
     username: Optional[str] = Field(default=None, min_length=3, max_length=50, pattern=r"^[a-zA-Z0-9_.-]+$")
     avatar_url: Optional[str] = Field(default=None, max_length=2048)
+    phone: Optional[str] = Field(default=None, min_length=8, max_length=20, pattern=r"^\+[1-9][0-9]{7,14}$")
 
 class ChangeEmailIn(BaseModel):
     email: EmailStr
@@ -73,6 +74,3 @@ class VerifyContactChangeIn(BaseModel):
 class ChangePasswordIn(BaseModel):
     current_password: str = Field(..., min_length=1, max_length=128)
     new_password: str = Field(..., min_length=8, max_length=72)
-
-class ChangePhoneIn(BaseModel):
-    phone: str = Field(..., min_length=8, max_length=20, pattern=r"^\+[1-9][0-9]{7,14}$")
