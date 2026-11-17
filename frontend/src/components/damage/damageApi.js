@@ -20,10 +20,48 @@ export function uploadPhoto(checkId, phase, view, blob) {
 export const userPhotoPath = (checkId, phase, view) => `/damage-checks/${checkId}/photos/${phase}/${view}`;
 export const adminPhotoPath = (disputeId, phase, view) => `/admin/disputes/${disputeId}/photos/${phase}/${view}`;
 
+// Six thumbnails firing at once exhaust the backend's small database pool and
+// come back as 500s, so photo downloads go through a tiny queue and retry.
+const MAX_PARALLEL_PHOTOS = 2;
+let activePhotoLoads = 0;
+const photoQueue = [];
+
+function nextPhoto() {
+  if (activePhotoLoads >= MAX_PARALLEL_PHOTOS || photoQueue.length === 0) return;
+  activePhotoLoads += 1;
+  const { run, resolve, reject } = photoQueue.shift();
+  run().then(resolve, reject).finally(() => {
+    activePhotoLoads -= 1;
+    nextPhoto();
+  });
+}
+
+function queuePhoto(run) {
+  return new Promise((resolve, reject) => {
+    photoQueue.push({ run, resolve, reject });
+    nextPhoto();
+  });
+}
+
+const wait = (ms) => new Promise((r) => { window.setTimeout(r, ms); });
+
 /** Damage photos are private, so they need the Bearer header: fetch, then hand back a blob URL. */
-export async function fetchPhotoUrl(path) {
-  const res = await api.get(path, { responseType: 'blob' });
-  return URL.createObjectURL(res.data);
+export function fetchPhotoUrl(path) {
+  return queuePhoto(async () => {
+    let lastError;
+    for (let attempt = 0; attempt < 4; attempt += 1) {
+      try {
+        const res = await api.get(path, { responseType: 'blob' });
+        return URL.createObjectURL(res.data);
+      } catch (err) {
+        lastError = err;
+        const status = err?.response?.status;
+        if (status && status < 500) break; // 403/404 will not fix themselves
+        await wait(600 * (attempt + 1));
+      }
+    }
+    throw lastError;
+  });
 }
 
 /** Loads a set of photos as blob URLs. `pathFor(view)` returns the API path for one view. */

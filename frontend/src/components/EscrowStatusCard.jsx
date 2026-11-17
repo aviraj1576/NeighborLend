@@ -26,14 +26,14 @@ export default function EscrowStatusCard({ request, user, api, onStatus, onBooki
       setBooking(data);
       setLoaded(true);
       onBooking?.(data);
-      onStatus(data.handover_unlocked === true);
+      onStatus?.(data.handover_unlocked === true);
       setError('');
     } catch (err) {
       if (version !== refreshVersion.current) {
         if (strict) throw err;
         return;
       }
-      onStatus(false);
+      onStatus?.(false);
       setBooking((previous) => previous && { ...previous, operations_enabled: false, handover_unlocked: false });
       setError(apiErrorMessage(err, 'Payment service unavailable. Handover stays locked.'));
       setLoaded(true);
