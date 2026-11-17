@@ -219,7 +219,19 @@ def by_request(
             "message": "Legacy rental has no verified payment snapshot; arrange a new agreed booking",
         }
     actor, bid, admin = user.id, row.id, bool(user.is_admin)
-    return PaymentService(db, provider).get(bid, actor, admin=admin)
+    service = PaymentService(db, provider)
+    # A deposit refund the platform already sent can sit at "pending" at the
+    # gateway for a moment. Re-check it with the gateway (a status fetch, never
+    # a new refund) so the deposit settles without an admin reconcile click.
+    from app.payment_models import RefundIntent
+
+    refund = db.scalar(select(RefundIntent).where(RefundIntent.booking_id == bid))
+    if refund is not None and refund.status == "pending" and refund.provider_refund_id:
+        try:
+            service.execute_refund(bid, actor, admin=True, system=True, allow_dispatch=False)
+        except Exception:  # keep showing the saved status if the gateway is slow
+            db.rollback()
+    return service.get(bid, actor, admin=admin)
 
 
 @router.get("/bookings/{booking_id}")

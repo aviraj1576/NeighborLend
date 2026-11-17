@@ -759,7 +759,19 @@ class PaymentService:
                     return None
                 deduction = max(0, min(int(deduction), booking.security_deposit_paise))
                 self._intent(booking, kind, deduction, actor)
-        return self.execute_refund(booking_id, actor, admin=True, system=True)
+        view = self.execute_refund(booking_id, actor, admin=True, system=True)
+        # Gateways report a fresh refund as "pending" first; re-check briefly so
+        # the deposit usually shows as refunded straight after approval.
+        import time
+
+        for _ in range(3):
+            if (view.get("refund") or {}).get("status") != "pending":
+                break
+            time.sleep(1.5)
+            view = self.execute_refund(
+                booking_id, actor, admin=True, system=True, allow_dispatch=False
+            )
+        return view
 
     def cancel(self, booking_id, actor):
         with locked(self.db, booking_id) as booking:
