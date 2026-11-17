@@ -46,7 +46,7 @@ The user commits manually.**
    — it is already broken; leave it alone.) The new flow uses NEW endpoints only.
 10. **No payment flow exists** in the codebase, so "payment" in the error-prone-steps
     list maps to the negotiation/offer step (where money is agreed).
-11. **No UI skills** found in `.claude/skills` (only `settings.local.json` exists), so no
+11. **No UI skills** found in `skills` (only `settings.local.json` exists), so no
     skill invocation for frontend phases; match existing CSS patterns instead.
 12. `handover_status` is a plain `String` column, so adding new status values needs no
     DB enum migration.
