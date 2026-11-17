@@ -361,7 +361,7 @@ def test_private_evidence_cannot_be_forged_or_read_by_others(flow):
         headers=headers["borrower"],
     )
     assert response.json()["handover_condition_note"] == "Received, surface checked"
-    assert response.json()["borrowing_started_at"] is None
+    assert response.json()["borrowing_started_at"] is not None
 
 
 @pytest.mark.parametrize("action", ["continue", "return", "cancel"])
@@ -369,17 +369,26 @@ def test_post_receipt_handover_issue_has_platform_recovery(flow, action):
     fund(flow)
     base = f"/api/borrow-requests/{flow['request_id']}/handover"
     reference = evidence(flow, "handover", "lender")
-    for path, role, data in (
-        ("upload-photos", "lender", {"photo_urls": [reference]}),
-        ("borrower-confirm", "borrower", {}),
-        ("report-issue", "borrower", {"description": "Receipt issue"}),
-    ):
-        assert (
-            flow["client"]
-            .post(base + "/" + path, json=data, headers=flow["headers"][role])
-            .status_code
-            == 200
-        )
+    assert (
+        flow["client"]
+        .post(base + "/upload-photos", json={"photo_urls": [reference]}, headers=flow["headers"]["lender"])
+        .status_code
+        == 200
+    )
+    # Receipt now activates the rental at once. Rentals created before that change can
+    # still be waiting in borrower_confirmed, so put this one there to keep the
+    # post-receipt recovery path covered.
+    with flow["factory"]() as db:
+        request = db.get(BorrowRequest, flow["request_id"])
+        request.handover_status = "borrower_confirmed"
+        request.handover_confirmed_at = datetime.utcnow()
+        db.commit()
+    assert (
+        flow["client"]
+        .post(base + "/report-issue", json={"description": "Receipt issue"}, headers=flow["headers"]["borrower"])
+        .status_code
+        == 200
+    )
     payload = {"action": action, "reason": "Reviewed item custody and agreed recovery"}
     assert call(flow, "disputes/handover-issue/resolve", payload, "lender").status_code == 403
     assert call(flow, "disputes/handover-issue/resolve", payload, "admin").status_code == 200

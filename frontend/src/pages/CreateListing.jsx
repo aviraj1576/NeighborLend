@@ -172,6 +172,7 @@ const CreateListing = () => {
   const [aiData, setAiData] = useState(null);
   const [uploadedUrls, setUploadedUrls] = useState([]);
   const [uploadError, setUploadError] = useState('');
+  const [fileTypeError, setFileTypeError] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -213,11 +214,17 @@ const CreateListing = () => {
 
   const processFiles = async (selectedFiles) => {
     const imageFiles = selectedFiles.filter((selectedFile) => selectedFile.type.startsWith('image/'));
+    const rejected = selectedFiles.filter((selectedFile) => !selectedFile.type.startsWith('image/'));
+    const rejectedMessage = rejected.length
+      ? `${rejected.map((f) => `"${f.name}"`).join(', ')} ${rejected.length === 1 ? 'is not a photo' : 'are not photos'} and was not uploaded. Choose a JPG or PNG image.`
+      : '';
     previewUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     if (!imageFiles.length) {
       setFiles([]); setPreviews([]); setUploadedUrls([]); setAiData(null); setUploadError(''); setAiOffline(false);
+      setFileTypeError(rejectedMessage);
       return;
     }
+    setFileTypeError(rejectedMessage);
 
     setFiles(imageFiles);
     const nextPreviews = imageFiles.map((selectedFile) => URL.createObjectURL(selectedFile));
@@ -531,6 +538,12 @@ const CreateListing = () => {
                   </div>
                   <span className="t-small muted">{aiData.confidence}% match</span>
                 </div>
+              </div>
+            )}
+
+            {fileTypeError && (
+              <div className="ai-result error" role="alert">
+                <p className="t-body">{fileTypeError}</p>
               </div>
             )}
 

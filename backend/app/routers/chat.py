@@ -607,6 +607,18 @@ def accept_offer(
         f"/messages/{conv.id}",
         borrow_req.id,
     )
+    # Both sides of the deal hear about the new booking, including the person who accepted.
+    item_name = offer.listing.name if offer.listing else 'the item'
+    create_notification(
+        db,
+        current_user.id,
+        "booking_created",
+        "Booking created",
+        f"You accepted the offer for {item_name} ({date_range}, ₹{offer.daily_price}/day). "
+        "Your booking is created; handover is pending.",
+        f"/borrow-requests/{borrow_req.id}",
+        borrow_req.id,
+    )
 
     conv.updated_at = datetime.utcnow()
     db.commit()

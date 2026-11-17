@@ -157,11 +157,12 @@ class TestHandover(unittest.TestCase):
         confirm_resp = self.client.post(borrower_confirm_url, headers=self.headers["borrower"], json={"photo_urls": []})
         self.assertEqual(confirm_resp.status_code, 200)
         body = confirm_resp.json()
-        self.assertEqual(body["handover_status"], "borrower_confirmed")
-        self.assertEqual(body["status"], "open")
+        # Receipt of the shared item completes the handover and starts the rental.
+        self.assertEqual(body["handover_status"], "lender_confirmed")
+        self.assertEqual(body["status"], "fulfilled")
         self.assertEqual(body["handover_confirmed_by"], self.borrower.id)
-        self.assertIsNone(body["borrowing_started_at"])
-        self.assertIsNone(body["return_due_at"])
+        self.assertIsNotNone(body["borrowing_started_at"])
+        self.assertIsNotNone(body["return_due_at"])
 
         # 3. Lender confirms handover complete
         self.assertEqual(self.client.post(lender_confirm_url, headers=self.headers["intruder"]).status_code, 403)
@@ -171,8 +172,8 @@ class TestHandover(unittest.TestCase):
         self.assertEqual(lender_confirm_resp.status_code, 200)
         self.assertEqual(lender_confirm_resp.json()["handover_status"], "lender_confirmed")
 
-        # Cannot confirm again
-        self.assertEqual(self.client.post(lender_confirm_url, headers=self.headers["lender"]).status_code, 409)
+        # Confirming an already active rental again is a harmless no-op
+        self.assertEqual(self.client.post(lender_confirm_url, headers=self.headers["lender"]).status_code, 200)
 
         self.db.expire_all()
         request = self.db.query(BorrowRequest).filter_by(id=self.request_id).one()

@@ -49,6 +49,16 @@
   margin-bottom: var(--s-5, 24px);
 }
 
+.success-banner {
+  padding: var(--s-3, 12px) var(--s-4, 16px);
+  border-radius: var(--r-md, 12px);
+  border: 1px solid color-mix(in oklab, var(--p-success, #2f7d4a) 35%, transparent);
+  background: color-mix(in oklab, var(--p-success, #2f7d4a) 10%, var(--card));
+  color: var(--p-success, #2f7d4a);
+  font: 400 var(--t-small, 14px)/1.45 var(--font-text);
+  margin-bottom: var(--s-5, 24px);
+}
+
 /* handover panel */
 .rental-lifecycle { display: flex; flex-direction: column; gap: var(--s-6, 32px); }
 .rental-lifecycle h2 {

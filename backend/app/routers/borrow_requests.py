@@ -276,12 +276,22 @@ def borrower_confirm_handover(
         )
         _record_handover_event(db, req, current_user, f"{current_user.name} confirmed receipt of {req.title}. Borrowing is now active.")
     else:
+        # The lender already handed the item over by sharing the condition photos, so the
+        # borrower's confirmation of receipt completes the handover and starts the rental.
+        req.handover_status = HandoverStatus.lender_confirmed.value
+        payment_booking.booking_status = "active"
+        req.borrowing_started_at = now
+        req.return_due_at = now + timedelta(days=payment_booking.duration_days or days)
+        if req.damage_link_expires_at:
+            req.damage_link_expires_at = max(req.damage_link_expires_at, req.return_due_at + timedelta(days=30))
+        req.status = BorrowRequestStatus.fulfilled
+        req.updated_at = now
         create_notification(
             db, lender_id, "handover_confirmed", "Borrower Confirmed Receipt",
-            f"{current_user.name} acknowledged receipt of {req.title}. Lender confirmation is still required.",
+            f"{current_user.name} confirmed receipt of {req.title}. The rental is now active.",
             f"/borrow-requests/{req.id}", req.id,
         )
-        _record_handover_event(db, req, current_user, f"{current_user.name} acknowledged receipt of {req.title}. Awaiting lender confirmation before rental activation.")
+        _record_handover_event(db, req, current_user, f"{current_user.name} confirmed receipt of {req.title}. Borrowing is now active.")
     db.commit()
     db.refresh(req)
     return _format_request_out(req, include_private_handover=True)
@@ -297,6 +307,9 @@ def lender_confirm_handover(
     req, lender_id = _get_handover_request(request_id, db, current_user, lock=True)
     if current_user.id != lender_id:
         raise HTTPException(status_code=403, detail="Only the lender can confirm handover")
+    if req.handover_status == HandoverStatus.lender_confirmed.value and req.borrowing_started_at:
+        # The borrower's receipt already completed the handover; nothing left to confirm.
+        return _format_request_out(req, include_private_handover=True)
     if req.handover_status != HandoverStatus.borrower_confirmed.value:
         raise HTTPException(status_code=409, detail="Borrower must confirm receipt first")
 

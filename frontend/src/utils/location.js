@@ -1,6 +1,53 @@
 import api from '../api/client';
 
 /**
+ * Asks the browser for the user's position, with no IP fallback, so the caller can tell
+ * the user when location is unavailable. Resolves { latitude, longitude, address } or
+ * { error: 'denied' | 'unavailable' | 'timeout' | 'unsupported' }.
+ */
+export function requestBrowserLocation(timeoutMs = 8000) {
+  return new Promise((resolve) => {
+    if (typeof navigator === 'undefined' || !navigator.geolocation) {
+      resolve({ error: 'unsupported' });
+      return;
+    }
+    let done = false;
+    let timer = null;
+    const finish = (value) => {
+      if (done) return;
+      done = true;
+      if (timer) clearTimeout(timer);
+      resolve(value);
+    };
+    timer = setTimeout(() => finish({ error: 'timeout' }), timeoutMs);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const latitude = Number(pos.coords.latitude.toFixed(5));
+        const longitude = Number(pos.coords.longitude.toFixed(5));
+        let address = `Location (${latitude.toFixed(3)}°, ${longitude.toFixed(3)}°)`;
+        try {
+          const rev = await fetch(
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=en`,
+            { signal: AbortSignal.timeout(3500) },
+          );
+          if (rev.ok) {
+            const data = await rev.json();
+            const locality = data.locality || data.city || data.principalSubdivision;
+            const region = data.principalSubdivision || data.countryName;
+            if (locality) address = `${locality}${region && region !== locality ? `, ${region}` : ''}`;
+          }
+        } catch {
+          // keep the coordinate label
+        }
+        finish({ latitude, longitude, address });
+      },
+      (err) => finish({ error: err && err.code === 1 ? 'denied' : 'unavailable' }),
+      { enableHighAccuracy: false, timeout: timeoutMs, maximumAge: 60000 },
+    );
+  });
+}
+
+/**
  * Robust location detection utility:
  * 1. Attempts high-accuracy browser GPS with a 5s timeout.
  * 2. On GPS success, reverse geocodes to get a human-friendly address name.

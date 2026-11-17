@@ -26,9 +26,11 @@ def test_photo_free_receipt_keeps_payment_baseline_both_parties_and_return_evide
     body = received.json()
     assert body["handover_confirmed_photos"] == []
     assert body["handover_photos"] == [before]
-    assert body["handover_status"] == "borrower_confirmed"
-    assert body["borrowing_started_at"] is None and body["return_due_at"] is None
-    assert client.post(route + "/return/upload-photos", headers=headers["borrower"], json={"photo_urls": [before]}).status_code == 409
+    # Receipt of the shared item completes the handover and starts the rental.
+    assert body["handover_status"] == "lender_confirmed"
+    assert body["borrowing_started_at"] is not None and body["return_due_at"] is not None
+    # The rental is active, but a handover photo cannot be reused as return evidence.
+    assert client.post(route + "/return/upload-photos", headers=headers["borrower"], json={"photo_urls": [before]}).status_code == 403
     assert client.post(handover + "/lender-confirm", headers=headers["borrower"]).status_code == 403
     active = client.post(handover + "/lender-confirm", headers=headers["lender"])
     assert active.status_code == 200 and active.json()["borrowing_started_at"] is not None

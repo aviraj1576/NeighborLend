@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { MessageCircle, Star } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api/client';
@@ -22,6 +22,8 @@ const dateTime = (value) => value ? new Date(/Z$|[+-]\d\d:\d\d$/.test(value) ? v
 export default function BorrowRequestDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const routeLocation = useLocation();
+  const [notice] = useState(routeLocation.state?.notice || '');
   const { user } = useAuth();
   const [request, setRequest] = useState(null);
   const [bookingId, setBookingId] = useState(null);
@@ -173,6 +175,7 @@ export default function BorrowRequestDetail() {
         <div className="meta-row"><dt>Agreed from</dt><dd>{request.needed_from ? new Date(request.needed_from).toLocaleDateString('en-IN') : 'Flexible'}</dd></div>
         <div className="meta-row"><dt>Agreed until</dt><dd>{request.needed_until ? new Date(request.needed_until).toLocaleDateString('en-IN') : 'Flexible'}</dd></div>
       </dl>
+      {notice && <div className="success-banner" role="status">{notice}</div>}
       {error && <div className="error-banner" role="alert">{error}</div>}
 
       {canManage && <EscrowStatusCard request={request} user={user} api={api} onRentalChange={refresh} />}

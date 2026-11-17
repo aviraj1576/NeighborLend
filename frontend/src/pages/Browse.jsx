@@ -5,7 +5,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Badge from '../components/ui/Badge';
 import api from '../api/client';
-import { detectUserLocation, POPULAR_LOCATIONS } from '../utils/location';
+import { requestBrowserLocation, POPULAR_LOCATIONS } from '../utils/location';
 import './Browse.css';
 
 const CATEGORIES = ['All', 'Tools', 'Electronics', 'Sports', 'Party', 'Books', 'Other'];
@@ -56,18 +56,39 @@ const Browse = () => {
     fetchListings();
   };
 
+  const [locationNotice, setLocationNotice] = useState('');
+
   const getUserLocation = async () => {
     setIsLocating(true);
+    setLocationNotice('');
     try {
-      const loc = await detectUserLocation();
+      const loc = await requestBrowserLocation();
+      if (loc.error) {
+        // No location: say so, and stop filtering by distance instead of guessing a place.
+        setLocationNotice(
+          loc.error === 'denied'
+            ? 'Location is unavailable because location access is blocked. Showing all listings without distance filtering.'
+            : 'Location is unavailable right now. Showing all listings without distance filtering.',
+        );
+        setRadius(100);
+        return;
+      }
       setLocation({ lat: loc.latitude, lon: loc.longitude });
-      setLocationName(loc.address || loc.city || 'My Location');
+      setLocationName(loc.address || 'My location');
     } catch (err) {
       console.error('Failed to detect location:', err);
+      setLocationNotice('Location is unavailable right now. Showing all listings without distance filtering.');
+      setRadius(100);
     } finally {
       setIsLocating(false);
     }
   };
+
+  // Ask for the user's location when Browse opens, so distances are measured from them.
+  useEffect(() => {
+    getUserLocation();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleSelectPresetLocation = (preset) => {
     setLocation({ lat: preset.lat, lon: preset.lon });
@@ -233,6 +254,10 @@ const Browse = () => {
               {listings.length} item{listings.length !== 1 ? 's' : ''} found
             </span>
           </div>
+
+          {locationNotice && (
+            <p className="location-notice" role="status">{locationNotice}</p>
+          )}
 
           {loading ? (
             <div className="listings-grid" aria-busy="true" aria-label="Loading listings">

@@ -319,8 +319,11 @@ const Chat = () => {
       const borrowRequestId = response.data?.borrow_request_id;
       await fetchActiveConversation(activeConv.id, true);
       fetchConversations(true);
+      window.dispatchEvent(new Event('notifications:updated'));
       if (borrowRequestId) {
-        navigate(`/borrow-requests/${borrowRequestId}`);
+        navigate(`/borrow-requests/${borrowRequestId}`, {
+          state: { notice: 'Offer accepted. Your booking has been created and the handover is pending.' },
+        });
       }
     } catch (err) {
       console.error('Failed to accept offer:', err);

@@ -46,8 +46,9 @@ def test_admin_listing_owner_retains_lender_evidence_and_confirmation_controls(f
     received = client.post(route + "/borrower-confirm", json={"photo_urls": [receipt], "condition_note": "Checked against lender photos"},
                            headers=flow["headers"]["borrower"])
     assert received.status_code == 200
-    assert received.json()["handover_status"] == "borrower_confirmed"
-    assert received.json()["borrowing_started_at"] is None
+    # Receipt of the shared item completes the handover and starts the rental.
+    assert received.json()["handover_status"] == "lender_confirmed"
+    assert received.json()["borrowing_started_at"] is not None
     assert client.post(route + "/lender-confirm", headers=flow["headers"]["borrower"]).status_code == 403
     active = client.post(route + "/lender-confirm", headers=flow["headers"]["lender"])
     assert active.status_code == 200

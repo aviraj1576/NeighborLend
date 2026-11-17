@@ -326,3 +326,13 @@
   .empty-actions { flex-direction: column; align-items: stretch; width: 100%; }
   .empty-actions .btn { width: 100%; }
 }
+
+.location-notice {
+  margin: 0 0 var(--s-5, 24px);
+  padding: var(--s-3, 12px) var(--s-4, 16px);
+  border-radius: var(--r-md, 12px);
+  border: 1px solid color-mix(in oklab, var(--p-warning, #a86b00) 35%, transparent);
+  background: color-mix(in oklab, var(--p-warning, #a86b00) 10%, var(--card, #fff));
+  color: var(--p-ink, inherit);
+  font: 400 var(--t-small, 14px)/1.45 var(--font-text, inherit);
+}
