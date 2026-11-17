@@ -9,8 +9,8 @@ from app.database import _pool_options_for_url
 
 def test_postgres_pool_is_bounded_for_supabase_session_mode():
     assert _pool_options_for_url("postgresql://example/db") == {
-        "pool_size": 2,
-        "max_overflow": 0,
+        "pool_size": 5,
+        "max_overflow": 3,
         "pool_timeout": 15,
     }
     assert _pool_options_for_url("sqlite:///local.db") == {}

@@ -13,9 +13,12 @@ def _pool_options_for_url(database_url):
     if not database_url.startswith("postgresql"):
         return {}
     # Supabase session-mode pooling is limited to 15 client sessions across
-    # every app process/instance. No overflow means one process can use at most
-    # two; leave room for other app instances and operational connections.
-    return {"pool_size": 2, "max_overflow": 0, "pool_timeout": 15}
+    # every app process/instance. Render runs a single instance, so allow up to
+    # eight here and leave the rest for operational connections. Two was too
+    # few: a damage-check photo request needs a second connection while the
+    # request session still holds one, so parallel photo loads deadlocked
+    # until pool_timeout and returned 500.
+    return {"pool_size": 5, "max_overflow": 3, "pool_timeout": 15}
 
 engine = create_engine(
     settings.database_url,

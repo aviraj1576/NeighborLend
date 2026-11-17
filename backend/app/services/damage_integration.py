@@ -4,12 +4,14 @@ from functools import lru_cache
 
 from dotenv import load_dotenv
 from fastapi import Depends
+from sqlalchemy.orm import Session
 
 from damage_check import (
     DamageCheckService, ProviderError, Settings as DamageSettings, provider_from_settings,
 )
 
 from app.config import BASE_DIR
+from app.database import get_db
 from app.models import User
 from app.services.auth import get_current_user
 from app.services.damage_storage import HostDamageStorage
@@ -46,5 +48,12 @@ def get_damage_service() -> DamageCheckService:
     return DamageCheckService(HostDamageStorage(), provider, settings)
 
 
-def damage_user_id(user: User = Depends(get_current_user)) -> str:
-    return str(user.id)
+def damage_user_id(
+    user: User = Depends(get_current_user), db: Session = Depends(get_db)
+) -> str:
+    user_id = str(user.id)
+    # The module opens its own short sessions for records and photos. Hand the
+    # request's connection back to the pool now instead of holding it for the
+    # whole request, so concurrent photo loads cannot starve the small pool.
+    db.close()
+    return user_id
