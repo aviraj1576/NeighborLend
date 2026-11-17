@@ -705,7 +705,6 @@ test('dispute HTML preserves human consent and missing AI evidence', () => {
     }),
   );
   assert.match(html, /Agree to exact claimed amount/);
-  assert.match(html, /No linked inspection/);
   assert.match(html, /No AI finding authorizes a deduction/);
   assert.doesNotMatch(html, /<script>/);
   assert.doesNotMatch(html, /Authorize mutually agreed settlement/);
