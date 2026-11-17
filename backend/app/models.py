@@ -1,7 +1,7 @@
 import enum
 import uuid
 from datetime import datetime
-from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, String, Text
+from sqlalchemy import BigInteger, Boolean, Column, DateTime, Enum, Float, ForeignKey, Index, Integer, LargeBinary, String, Text
 from sqlalchemy.orm import relationship
 from app.database import Base
 
@@ -217,6 +217,17 @@ class DamageCheckRecord(Base):
     __tablename__ = "damage_check_records"
     check_id = Column(String, primary_key=True)
     record_json = Column(Text, nullable=False)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+class DamageCheckPhoto(Base):
+    """Photo bytes for the damage_check module, kept in the database so they
+    survive restarts and redeploys (the server disk is ephemeral on Render)."""
+    __tablename__ = "damage_check_photos"
+    check_id = Column(String(32), primary_key=True)
+    phase = Column(String(16), primary_key=True)
+    view = Column(String(16), primary_key=True)
+    mime = Column(String(64), nullable=False)
+    data = Column(LargeBinary, nullable=False)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
 class DisputeStatus(str, enum.Enum):

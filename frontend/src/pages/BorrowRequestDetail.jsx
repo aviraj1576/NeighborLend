@@ -179,7 +179,8 @@ export default function BorrowRequestDetail() {
 
       {managed && <>
         {/* Step 1 — lender: 6-photo AI condition check before handover */}
-        {isLender && request.handover_status === 'pending' && (
+        {isLender && (request.handover_status === 'pending'
+          || (request.handover_status === 'photos_uploaded' && usesDamageCheck && damageCheck?.missing_before?.length > 0)) && (
           <div className="damage-check-section card" style={{ marginTop: '16px' }}>
             <h3 className="t-card">Step 1: Condition photos before handover</h3>
             <p className="t-body" style={{ marginBottom: '12px' }}>
