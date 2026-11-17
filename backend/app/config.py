@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     razorpay_key_secret: SecretStr = SecretStr("")
     razorpay_webhook_secret: SecretStr = SecretStr("")
     cors_origins: str = (
-        "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174"
+        "http://localhost:5173,http://localhost:5174,http://127.0.0.1:5173,http://127.0.0.1:5174,https://neighborlend.vercel.app"
     )
     admin_emails: str = "admin@neighborlend.com"
     supabase_url: str = ""

@@ -147,11 +147,12 @@ def health():
 
 # Wrap the fully assembled ASGI application so CORS headers are also added to
 # unhandled-error responses generated outside FastAPI's regular middleware stack.
-# Origins remain an explicit allowlist because credentials (including JWTs) are enabled.
+# Origins allow both explicit origins and Vercel/localhost domains for local and preview frontends.
 _fastapi_app = app
 app = CORSMiddleware(
     _fastapi_app,
     allow_origins=settings.cors_origin_list,
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$|^https://([a-zA-Z0-9_-]+\.)?vercel\.app$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

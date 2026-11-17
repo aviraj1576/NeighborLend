@@ -16,13 +16,16 @@ async def identify(image: UploadFile = File(...)):
 def ai_status():
     settings = get_settings()
     model_path = Path(settings.ai_model_path_abs)
-    model = _get_model()
+    onnx_path = model_path.with_suffix(".onnx")
+    from app.services.ai_identifier import _get_onnx_session, _model
+    onnx_sess = _get_onnx_session()
     return {
         "yolo_library_available": YOLO_AVAILABLE,
         "configured_ai_model_path": settings.ai_model_path,
         "resolved_model_path": str(model_path),
         "file_exists": model_path.is_file(),
-        "file_size": model_path.stat().st_size if model_path.is_file() else None,
-        "model_loaded": model is not None,
+        "onnx_file_exists": onnx_path.is_file(),
+        "onnx_loaded": onnx_sess is not None,
+        "pytorch_loaded": _model is not None,
         "python_version": sys.version,
     }
