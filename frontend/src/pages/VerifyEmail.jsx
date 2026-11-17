@@ -10,9 +10,11 @@ import './VerifyEmail.css';
 const VerifyEmail = () => {
   const [searchParams] = useSearchParams();
   const [email, setEmail] = useState(searchParams.get('email') || '');
-  const [code, setCode] = useState('');
+  const [code, setCode] = useState(searchParams.get('code') || '');
   const [error, setError] = useState('');
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState(
+    searchParams.get('code') ? `Verification code auto-filled: ${searchParams.get('code')}` : ''
+  );
   const [isLoading, setIsLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const { verifyEmail } = useAuth();

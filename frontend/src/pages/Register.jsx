@@ -93,8 +93,9 @@ const Register = () => {
         captcha_answer: formData.captcha_answer,
       };
 
-      await register(registerData);
-      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
+      const res = await register(registerData);
+      const codeParam = res?.dev_code ? `&code=${encodeURIComponent(res.dev_code)}` : '';
+      navigate(`/verify-email?email=${encodeURIComponent(formData.email)}${codeParam}`);
     } catch (err) {
       setError(getRegistrationError(err));
       await fetchCaptcha();

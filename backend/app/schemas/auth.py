@@ -19,6 +19,7 @@ class RegisterIn(BaseModel):
 class RegistrationOut(BaseModel):
     message: str
     email: EmailStr
+    dev_code: Optional[str] = None
 
 
 class VerifyEmailIn(BaseModel):
