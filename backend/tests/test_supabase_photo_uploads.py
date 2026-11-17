@@ -138,15 +138,8 @@ class TestSupabasePhotoUploads(unittest.TestCase):
             )
         finally:
             storage_service.supabase = real_client
-        # With local fallback, upload should succeed even without Supabase
-        self.assertEqual(unavailable.status_code, 200)
-        self.assertIn("url", unavailable.json())
-        # URL uses public_base_url from settings (http://localhost:8000 in test env)
-        url = unavailable.json()["url"]
-        self.assertTrue(
-            url.startswith("http://localhost:8000/uploads/") or 
-            url.startswith("https://lgurfoppprubxbclpoqk.supabase.co/storage/v1/object/public/")
-        )
+        self.assertEqual(unavailable.status_code, 503)
+        self.assertIn("SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY", unavailable.json()["detail"])
 
     def test_listing_allows_localhost_photo_urls_in_dev(self):
         response = self.client.post(

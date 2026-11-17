@@ -59,13 +59,15 @@ def test_upload_uses_original_class_ids_and_excludes_dumbbell(rental_model, imag
 
 
 def test_upload_returns_model_result_to_listing_screen(monkeypatch, rental_model, image_bytes):
-    monkeypatch.setattr(uploads, "save_upload_from_bytes", lambda *a, **kw: "/uploads/kettle.png")
+    save_upload = Mock(return_value="https://project.supabase.co/storage/v1/object/public/listing_photos/images/kettle.png")
+    monkeypatch.setattr(uploads, "save_upload_from_bytes", save_upload)
     upload = UploadFile(
         file=io.BytesIO(image_bytes), filename="item.png",
         headers=Headers({"content-type": "image/png"}),
     )
     response = asyncio.run(uploads.upload_file(file=upload, current_user=SimpleNamespace()))
-    assert response["url"] == "/uploads/kettle.png"
+    assert response["url"].startswith("https://project.supabase.co/storage/v1/object/public/listing_photos/")
+    assert save_upload.call_args.kwargs["require_supabase"] is True
     assert response["ai_label"] == "Kettle"
     assert response["ai_confidence"] == 0.91
     assert len(response["detections"]) == 2
