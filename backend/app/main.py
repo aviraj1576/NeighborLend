@@ -29,10 +29,33 @@ def _preload_model():
             torch.set_num_threads(1)
         except ImportError:
             pass
-        from app.services.ai_identifier import _get_model, get_allowed_classes
+        from app.services import ai_identifier
+        from app.services.ai_identifier import _get_onnx_session, _get_model, get_allowed_classes
+
+        # In unit tests, if _model was explicitly mocked/set, warm that mock
+        if ai_identifier._model is not None:
+            model = ai_identifier._model
+            import numpy as np
+            dummy = np.zeros((640, 640, 3), dtype=np.uint8)
+            model.predict(dummy, imgsz=640, classes=get_allowed_classes(model), verbose=False)
+            return
+
+        # Try lightweight static ONNX session first (~170MB RAM footprint on Render)
+        onnx_sess = _get_onnx_session()
+        if onnx_sess is not None:
+            import numpy as np
+            dummy = np.zeros((1, 3, 640, 640), dtype=np.float32)
+            input_name = onnx_sess.get_inputs()[0].name
+            onnx_sess.run(None, {input_name: dummy})
+            gc.collect()
+            logging.getLogger(__name__).info("YOLOE static ONNX model pre-loaded and warmed up")
+            return
+
+        # Fallback to PyTorch
         model = _get_model()
         if model is None:
             return
+
         # Warm-up inference with a dummy image
         import numpy as np
         dummy = np.zeros((640, 640, 3), dtype=np.uint8)
