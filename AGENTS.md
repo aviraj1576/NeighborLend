@@ -16,7 +16,7 @@
 ## Repository Structure
 - **Monorepo**: `frontend/` (React 18 + Vite 8) + `backend/` (FastAPI + Python 3.11)
 - **Root config**: `.env` (shared), `compose.yaml`, `render.yaml`, `vercel.json`
-- **AI model**: `backend/ai_service/best_model.pt` (YOLOv8 for object detection)
+- **AI model**: `backend/ai_service/models/neighborlend_yoloe_best.pt` (YOLOE; 24 trained classes, 23 active after excluding dumbbell)
 
 ## Development Modes
 
@@ -78,7 +78,7 @@ docker compose up --build   # Requires .env with DATABASE_URL, JWT_SECRET
 - **Health check**: `GET /api/health` — verifies DB connectivity
 - **CORS**: Configured via `CORS_ORIGINS` env var; must include frontend origin
 - **Auth**: JWT (HS256) in Authorization header; Axios interceptor in `frontend/src/api/client.js`
-- **AI inference**: Runs on photo upload via `uploads.py` router → `storage_service.py` → YOLOv8
+- **AI inference**: Photo uploads and `/api/ai/identify` share `ai_identifier.py` (YOLOE, 640px); `ml_service.py` preserves the upload detection response format
 - **Database**: SQLAlchemy 2.0; financial history is maintained by `migrate_payments` / `payment_schema_versions`, with reviewed SQL in `backend/migrations/payments/`. Alembic is installed but inactive. Startup does not migrate by default.
 
 ## Deployment

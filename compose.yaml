@@ -12,8 +12,8 @@ services:
       JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-10080}
       UPLOAD_DIR: /app/uploads
       PUBLIC_BASE_URL: ""
-      AI_MODEL_PATH: /app/ai_service/best_model.pt
-      AI_CONFIDENCE_THRESHOLD: ${AI_CONFIDENCE_THRESHOLD:-0.45}
+      AI_MODEL_PATH: /app/ai_service/models/neighborlend_yoloe_best.pt
+      AI_CONFIDENCE_THRESHOLD: ${AI_CONFIDENCE_THRESHOLD:-0.25}
       MOCK_PAYMENTS: ${MOCK_PAYMENTS:-true}
       PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-disabled}
       PAYMENT_DEMO_MODE: ${PAYMENT_DEMO_MODE:-false}

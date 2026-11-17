@@ -1,7 +1,6 @@
 
 import io
 import logging
-import os
 import re
 from pathlib import Path
 from threading import Lock
@@ -81,13 +80,17 @@ def _get_model():
 
             allowed = get_allowed_classes(loaded)
 
-            if not allowed:
-                raise ValueError("No supported classes available")
+            if len(allowed) != 23:
+                raise ValueError(
+                    f"Expected 23 active rental classes, got {len(allowed)}. "
+                    "Set AI_MODEL_PATH to ai_service/models/neighborlend_yoloe_best.pt."
+                )
 
             _model = loaded
 
             logger.info(
-                "YOLOE loaded: %d trained classes, %d active classes",
+                "YOLOE loaded from %s: %d trained classes, %d active classes",
+                model_path.name,
                 len(loaded.names),
                 len(allowed),
             )

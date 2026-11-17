@@ -20,25 +20,20 @@ if settings.app_env.lower() in {"production", "prod"}:
             "Supabase Storage is not configured; production uploads will use ephemeral local storage."
         )
 
-# Pre-load YOLO model at startup to avoid first-request latency
+# Warm the same YOLOE instance used by uploads and /api/ai/identify.
 def _preload_model():
     try:
-        from ultralytics import YOLO
-        from app.config import get_settings
-        from app.services.ml_service import _model_loaded as _, _model as __  # trigger import
-        import app.services.ml_service as ml_service
-        model_path = get_settings().ai_model_path_abs
-        model = YOLO(str(model_path))
+        from app.services.ai_identifier import _get_model, get_allowed_classes
+        model = _get_model()
+        if model is None:
+            return
         # Warm-up inference with a dummy image
         import numpy as np
         dummy = np.zeros((640, 640, 3), dtype=np.uint8)
-        model(dummy, verbose=False)
-        # Set the global model in ml_service
-        ml_service._model = model
-        ml_service._model_loaded = True
-        logging.getLogger(__name__).info("YOLOv8 model pre-loaded and warmed up")
+        model.predict(dummy, imgsz=640, classes=get_allowed_classes(model), verbose=False)
+        logging.getLogger(__name__).info("YOLOE model pre-loaded and warmed up")
     except Exception as exc:
-        logging.getLogger(__name__).warning(f"YOLOv8 pre-load skipped: {exc}")
+        logging.getLogger(__name__).warning("YOLOE pre-load skipped: %s", exc)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
