@@ -299,7 +299,21 @@ export default function BorrowRequestDetail() {
       {request.conversation_id && request.handover_status === 'issue_reported' && <Link className="link handover-chat-link" to={`/messages/${request.conversation_id}`}><MessageCircle size={16} /> Open conversation</Link>}
 
       {/* Support Chat Button */}
-      <SupportChatButton entityType="borrow_request" entityId={request.id} />
+      <SupportChatButton
+        step={({
+          pending: 'handover_photos',
+          photos_uploaded: 'handover_photos',
+          issue_reported: 'handover_confirm',
+          borrower_confirmed: 'handover_confirm',
+          lender_confirmed: 'return_flow',
+          return_photos_uploaded: 'return_flow',
+          return_confirmed: 'return_flow',
+          disputed: 'dispute',
+          dispute_resolved: 'dispute',
+        })[request.handover_status] || 'general'}
+        entityType="borrow_request"
+        entityId={request.id}
+      />
     </section>
   </div></div>;
 }

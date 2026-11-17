@@ -10,7 +10,13 @@ import './SupportChatButton.css';
  * Props: step (e.g. 'handover_photos'), entityType ('borrow_request' | 'listing' | null),
  * entityId, label.
  */
-export default function SupportChatButton({ step, entityType = null, entityId = null, label = 'Chat with us' }) {
+const errorText = (detail, fallback) => {
+  if (typeof detail === 'string') return detail;
+  if (Array.isArray(detail)) return detail.map((d) => d?.msg).filter(Boolean).join('; ') || fallback;
+  return fallback;
+};
+
+export default function SupportChatButton({ step = 'general', entityType = null, entityId = null, label = 'Chat with us' }) {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -30,7 +36,7 @@ export default function SupportChatButton({ step, entityType = null, entityId = 
       });
       navigate(`/messages/${res.data.conversation_id}`);
     } catch (err) {
-      setError(err.response?.data?.detail || 'Could not open the chat. Please try again.');
+      setError(errorText(err.response?.data?.detail, 'Could not open the chat. Please try again.'));
     } finally {
       setBusy(false);
     }
