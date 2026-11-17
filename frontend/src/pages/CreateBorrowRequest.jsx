@@ -33,9 +33,9 @@ export default function CreateBorrowRequest() {
     description: '',
     max_price_per_day: '',
     radius_km: 10,
-    latitude: 28.6139,
-    longitude: 77.2090,
-    address_text: '',
+    latitude: 30.3362,
+    longitude: 76.3922,
+    address_text: 'Patiala, Punjab',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');

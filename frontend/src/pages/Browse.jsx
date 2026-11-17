@@ -19,8 +19,8 @@ const Browse = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [radius, setRadius] = useState(50);
-  const [location, setLocation] = useState({ lat: 28.6139, lon: 77.2090 }); // Default Delhi
-  const [locationName, setLocationName] = useState('New Delhi (Default Hub)');
+  const [location, setLocation] = useState({ lat: 30.3362, lon: 76.3922 }); // Default Patiala, Punjab
+  const [locationName, setLocationName] = useState('Patiala, Punjab (Hub)');
   const [showLocationMenu, setShowLocationMenu] = useState(false);
 
   const fetchListings = async () => {
@@ -263,13 +263,13 @@ const Browse = () => {
                     <a>Expand to any distance</a>
                   </Button>
                 )}
-                {locationName !== 'New Delhi (Default Hub)' && (
+                {locationName !== 'Patiala, Punjab (Hub)' && (
                   <Button variant="secondary" onClick={() => {
-                    setLocation({ lat: 28.6139, lon: 77.2090 });
-                    setLocationName('New Delhi (Default Hub)');
+                    setLocation({ lat: 30.3362, lon: 76.3922 });
+                    setLocationName('Patiala, Punjab (Hub)');
                     setRadius(50);
                   }}>
-                    View New Delhi hub
+                    View Patiala hub
                   </Button>
                 )}
               </div>

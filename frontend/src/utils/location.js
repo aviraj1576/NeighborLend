@@ -89,23 +89,7 @@ export async function detectUserLocation() {
     };
   }
 
-  // Step 2: Fallback to IP geolocation via backend
-  try {
-    const res = await api.get('/listings/detect-location', { timeout: 4000 });
-    if (res.data && res.data.latitude && res.data.longitude) {
-      return {
-        latitude: Number(res.data.latitude.toFixed(5)),
-        longitude: Number(res.data.longitude.toFixed(5)),
-        address: res.data.address || `${res.data.city}, ${res.data.region}`,
-        city: res.data.city || 'Detected Location',
-        method: 'ip',
-      };
-    }
-  } catch (err) {
-    console.warn('Backend detect-location error:', err);
-  }
-
-  // Step 3: Direct fallback to public IP lookup via ipwho.is (CORS-enabled)
+  // Step 2: Client-side IP lookup via ipwho.is (CORS-enabled, detects user's ISP city directly)
   try {
     const directRes = await fetch('https://ipwho.is/', { signal: AbortSignal.timeout(3500) });
     if (directRes.ok) {
@@ -115,32 +99,48 @@ export async function detectUserLocation() {
         return {
           latitude: Number(data.latitude.toFixed(5)),
           longitude: Number(data.longitude.toFixed(5)),
-          address: loc || 'Detected Area',
-          city: data.city || 'Detected Area',
+          address: loc || 'Patiala, Punjab',
+          city: data.city || 'Patiala',
           method: 'ip',
         };
       }
     }
   } catch {
-    // Ignore fallback failure
+    // Ignore direct IP lookup failure
   }
 
-  // Step 4: Ultimate default fallback
+  // Step 3: Fallback to IP geolocation via backend
+  try {
+    const res = await api.get('/listings/detect-location', { timeout: 4000 });
+    if (res.data && res.data.latitude && res.data.longitude) {
+      return {
+        latitude: Number(res.data.latitude.toFixed(5)),
+        longitude: Number(res.data.longitude.toFixed(5)),
+        address: res.data.address || `${res.data.city}, ${res.data.region}`,
+        city: res.data.city || 'Patiala',
+        method: 'ip',
+      };
+    }
+  } catch (err) {
+    console.warn('Backend detect-location error:', err);
+  }
+
+  // Step 4: Ultimate default fallback to Patiala, Punjab
   return {
-    latitude: 28.6139,
-    longitude: 77.2090,
-    address: 'New Delhi, Delhi',
-    city: 'New Delhi',
-    method: 'default'
+    latitude: 30.3362,
+    longitude: 76.3922,
+    address: 'Patiala, Punjab',
+    city: 'Patiala',
+    method: 'default',
   };
 }
 
 export const POPULAR_LOCATIONS = [
-  { name: 'New Delhi (Hub)', lat: 28.6139, lon: 77.2090 },
+  { name: 'Patiala, Punjab (Hub)', lat: 30.3362, lon: 76.3922 },
+  { name: 'Chandigarh', lat: 30.7333, lon: 76.7794 },
+  { name: 'New Delhi', lat: 28.6139, lon: 77.2090 },
   { name: 'Gurgaon', lat: 28.4595, lon: 77.0266 },
   { name: 'Noida', lat: 28.5355, lon: 77.3910 },
-  { name: 'Patiala / Punjab', lat: 30.3362, lon: 76.3922 },
-  { name: 'Chandigarh', lat: 30.7333, lon: 76.7794 },
   { name: 'Mumbai', lat: 19.0760, lon: 72.8777 },
   { name: 'Bengaluru', lat: 12.9716, lon: 77.5946 }
 ];

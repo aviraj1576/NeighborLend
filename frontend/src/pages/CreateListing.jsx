@@ -179,9 +179,9 @@ const CreateListing = () => {
     description: '',
     price_per_day: '',
     security_deposit: '',
-    lat: 28.6139,
-    lon: 77.2090,
-    address: '',
+    lat: 30.3362,
+    lon: 76.3922,
+    address: 'Patiala, Punjab',
     lending_radius: 5,
     years_owned: '',
     price_bought: '',
@@ -351,14 +351,20 @@ const CreateListing = () => {
         ...prev,
         lat: loc.latitude,
         lon: loc.longitude,
-        address: prev.address && prev.address !== 'Current Location' ? prev.address : loc.address,
+        address: loc.address || prev.address || 'Patiala, Punjab',
       }));
       setLocationNotice(
-        `📍 Located: ${loc.address} (${loc.method === 'gps' ? 'High-accuracy GPS' : 'Network/IP Geolocation'})`,
+        `📍 Located: ${loc.address} (${loc.method === 'gps' ? 'High-accuracy GPS' : loc.method === 'ip' ? 'Network/IP Geolocation' : 'Default Location (Patiala, Punjab)'})`,
       );
     } catch (err) {
       console.error('Failed to get location:', err);
-      setLocationNotice('Could not find location automatically. Please enter your address or coordinates.');
+      setLocationNotice('Location set to Patiala, Punjab (Default).');
+      setFormData((prev) => ({
+        ...prev,
+        lat: 30.3362,
+        lon: 76.3922,
+        address: prev.address || 'Patiala, Punjab',
+      }));
     } finally {
       setIsLocating(false);
     }
@@ -814,12 +820,14 @@ const CreateListing = () => {
                 onChange={handleInputChange}
               />
 
-              <div className="form-group full-width">
+              <div className="form-group full-width lending-radius-group">
                 <div className="slider-label-row">
-                  <label className="t-label">Lending radius: <strong>{formData.lending_radius} km</strong></label>
+                  <label className="t-label" htmlFor="lending_radius">
+                    Lending radius: <strong>{formData.lending_radius} km</strong>
+                  </label>
                   <span className="slider-badge">Borrowers within {formData.lending_radius} km can see this item</span>
                 </div>
-                <Input
+                <input
                   id="lending_radius"
                   name="lending_radius"
                   type="range"

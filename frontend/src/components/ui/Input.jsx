@@ -25,7 +25,8 @@ export default function Input({
   ...rest
 }) {
   const hasLabel = !!label;
-  const inputCls = ['input', error ? 'input--error' : '', className].filter(Boolean).join(' ');
+  const isRange = type === 'range';
+  const inputCls = [isRange ? 'input-range' : 'input', error ? 'input--error' : '', className].filter(Boolean).join(' ');
   const wrapperCls = ['input-wrap', error ? 'input-wrap--error' : ''].filter(Boolean).join(' ');
   const fieldId = id || name;
   const isSelect = type === 'select';

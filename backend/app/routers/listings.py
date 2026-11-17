@@ -199,11 +199,11 @@ def detect_location(request: Request):
         pass
 
     return {
-        "latitude": 28.6139,
-        "longitude": 77.2090,
-        "city": "New Delhi",
-        "region": "Delhi",
-        "address": "New Delhi, Delhi",
+        "latitude": 30.3362,
+        "longitude": 76.3922,
+        "city": "Patiala",
+        "region": "Punjab",
+        "address": "Patiala, Punjab",
         "source": "default"
     }
 
