@@ -18,7 +18,13 @@ def ai_status():
     model_path = Path(settings.ai_model_path_abs)
     onnx_path = model_path.with_suffix(".onnx")
     from app.services.ai_identifier import _get_onnx_session, _model
+    from app.services.storage_service import supabase
     onnx_sess = _get_onnx_session()
+    try:
+        import psutil
+        rss_mb = round(psutil.Process().memory_info().rss / 1024 / 1024, 1)
+    except Exception:
+        rss_mb = None
     return {
         "yolo_library_available": YOLO_AVAILABLE,
         "configured_ai_model_path": settings.ai_model_path,
@@ -27,5 +33,7 @@ def ai_status():
         "onnx_file_exists": onnx_path.is_file(),
         "onnx_loaded": onnx_sess is not None,
         "pytorch_loaded": _model is not None,
+        "supabase_configured": supabase is not None,
+        "memory_rss_mb": rss_mb,
         "python_version": sys.version,
     }

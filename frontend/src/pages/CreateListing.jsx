@@ -239,7 +239,14 @@ const CreateListing = () => {
         const form = new FormData();
         form.append('file', filesToUpload[index]);
         try {
-          const uploadRes = await api.post('/upload', form);
+          let uploadRes;
+          try {
+            uploadRes = await api.post('/upload', form);
+          } catch (initialErr) {
+            // Retry once on transient network or gateway glitch
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            uploadRes = await api.post('/upload', form);
+          }
           const data = uploadRes.data;
           if (!data.url) throw new Error('Upload response did not include an image URL.');
           urls.push(data.url);

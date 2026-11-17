@@ -3,12 +3,12 @@ import io
 import gc
 import logging
 import platform
-import ctypes
 import re
 import types
 from pathlib import Path
 from threading import Lock
 
+from PIL import Image, UnidentifiedImageError
 from app.config import get_settings
 
 settings = get_settings()
@@ -18,7 +18,6 @@ try:
     import torch
     torch.set_num_threads(1)
     from ultralytics import YOLOE
-    from PIL import Image, UnidentifiedImageError
 
     YOLO_AVAILABLE = True
 except ImportError:
@@ -32,11 +31,6 @@ _onnx_lock = Lock()
 
 def _trim_memory():
     gc.collect()
-    if platform.system() == "Linux":
-        try:
-            ctypes.CDLL("libc.so.6").malloc_trim(0)
-        except Exception:
-            pass
 
 YOLOE_NAMES = {
     0: 'electric_drill', 1: 'screwdriver', 2: 'wrench', 3: 'hammer',
@@ -203,17 +197,48 @@ def _get_onnx_session():
                 if _onnx_session is not None:
                     return _onnx_session
                 opts = ort.SessionOptions()
-                opts.enable_cpu_mem_arena = False
                 opts.intra_op_num_threads = 1
                 opts.inter_op_num_threads = 1
-                opts.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
                 _onnx_session = ort.InferenceSession(
                     str(onnx_file), opts, providers=["CPUExecutionProvider"]
                 )
-                logger.info("Loaded ONNX session from %s (static memory mode)", onnx_file.name)
+                logger.info("Loaded ONNX session from %s (optimized CPU mode)", onnx_file.name)
     except Exception as exc:
         logger.warning("ONNX runtime session init skipped: %s", exc)
     return _onnx_session
+
+
+def _nms(boxes, scores, iou_thresh: float = 0.45) -> list[int]:
+    """Pure NumPy NMS - zero native C++ crash risk, fast and robust."""
+    if not boxes or not scores:
+        return []
+    import numpy as np
+    b = np.array(boxes, dtype=np.float32)
+    s = np.array(scores, dtype=np.float32)
+    x1 = b[:, 0]
+    y1 = b[:, 1]
+    x2 = b[:, 0] + b[:, 2]
+    y2 = b[:, 1] + b[:, 3]
+    areas = (x2 - x1) * (y2 - y1)
+    order = s.argsort()[::-1]
+    keep = []
+    while order.size > 0:
+        i = int(order[0])
+        keep.append(i)
+        if order.size == 1:
+            break
+        xx1 = np.maximum(x1[i], x1[order[1:]])
+        yy1 = np.maximum(y1[i], y1[order[1:]])
+        xx2 = np.minimum(x2[i], x2[order[1:]])
+        yy2 = np.minimum(y2[i], y2[order[1:]])
+        w = np.maximum(0.0, xx2 - xx1)
+        h = np.maximum(0.0, yy2 - yy1)
+        inter = w * h
+        union = areas[i] + areas[order[1:]] - inter
+        iou = inter / np.maximum(union, 1e-6)
+        inds = np.where(iou <= iou_thresh)[0]
+        order = order[inds + 1]
+    return keep
 
 
 def _run_onnx_inference(session, image_bytes: bytes) -> list[dict]:
@@ -249,15 +274,7 @@ def _run_onnx_inference(session, image_bytes: bytes) -> list[dict]:
     xywh = np.stack([x, y, w, h], axis=1).tolist()
     scores_list = [float(s) for s in filtered_scores]
 
-    try:
-        import cv2
-        indices = cv2.dnn.NMSBoxes(xywh, scores_list, conf_thresh, 0.45)
-        if hasattr(indices, "flatten"):
-            keep_indices = indices.flatten()
-        else:
-            keep_indices = [i[0] if isinstance(i, (list, tuple)) else i for i in indices]
-    except Exception:
-        keep_indices = range(len(scores_list))
+    keep_indices = _nms(xywh, scores_list, 0.45)
 
     predictions = []
     for idx in keep_indices:
@@ -285,7 +302,9 @@ def identify_item(image_bytes: bytes) -> dict:
     if _model is None:
         onnx_sess = _get_onnx_session()
 
-    if onnx_sess is None and _get_model() is None:
+    # Never load heavy 500MB PyTorch model in production if ONNX is missing or failing
+    is_production = settings.app_env.lower() in {"production", "prod"}
+    if onnx_sess is None and (is_production or _get_model() is None):
         return {
             "model_available": False,
             "predictions": [],
