@@ -3,6 +3,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from sqlalchemy import or_, desc
+from sqlalchemy.exc import DBAPIError, IntegrityError
 
 from app.database import get_db
 from app.models import (
@@ -148,7 +149,46 @@ def list_conversations(current_user: User = Depends(get_current_user), db: Sessi
 def create_or_get_conversation(
     data: ConversationCreateIn,
     current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+):
+    try:
+        return _create_or_get_conversation(data, current_user, db)
+    except HTTPException:
+        db.rollback()
+        raise
+    except IntegrityError as exc:
+        db.rollback()
+        # A concurrent request may have committed the same listing thread.
+        # Return that thread so duplicate clicks remain idempotent.
+        if data.listing_id:
+            existing = db.query(Conversation).filter(
+                Conversation.borrower_id == current_user.id,
+                Conversation.lender_id == data.lender_id,
+                Conversation.listing_id == data.listing_id,
+            ).first()
+            if existing:
+                return _conversation_detail(existing, current_user)
+        raise HTTPException(
+            status_code=409,
+            detail="Conversation conflicts with existing participant or listing records",
+        ) from exc
+    except DBAPIError as exc:
+        db.rollback()
+        original = getattr(exc, "orig", None)
+        pgcode = getattr(original, "pgcode", None)
+        message = str(original or "").lower()
+        if pgcode == "42703" and "conversations.listing_id" in message:
+            raise HTTPException(
+                status_code=503,
+                detail="Conversation database schema is outdated; apply the reviewed listing conversation migration",
+            ) from None
+        raise
+
+
+def _create_or_get_conversation(
+    data: ConversationCreateIn,
+    current_user: User,
+    db: Session,
 ):
     """Return exactly the borrower's listing thread, retaining legacy general chats."""
     lender = db.query(User).filter(User.id == data.lender_id).first()
@@ -165,8 +205,7 @@ def create_or_get_conversation(
 
     # Serialize lookup/adoption/insertion for this borrower on SQLite and PostgreSQL.
     # The unique index also protects scoped threads from other writers.
-    db.query(User).filter(User.id == current_user.id).update(
-        {User.trust_score: User.trust_score}, synchronize_session=False)
+    db.query(User).filter(User.id == current_user.id).with_for_update().first()
     conv = (
         db.query(Conversation)
         .filter(
@@ -247,6 +286,23 @@ def create_or_get_conversation(
         active_offer=active_offer,
         created_at=conv.created_at,
         updated_at=conv.updated_at
+    )
+
+
+def _conversation_detail(conv: Conversation, current_user: User) -> ConversationDetailOut:
+    active_offer = _get_active_offer(conv.offers)
+    return ConversationDetailOut(
+        id=conv.id,
+        listing_id=conv.listing_id,
+        listing=conv.listing,
+        borrower=_format_participant(conv.borrower),
+        lender=_format_participant(conv.lender),
+        is_borrower=conv.borrower_id == current_user.id,
+        messages=[_format_message(message) for message in conv.messages],
+        offers=[_format_offer(offer) for offer in conv.offers],
+        active_offer=_format_offer(active_offer) if active_offer else None,
+        created_at=conv.created_at,
+        updated_at=conv.updated_at,
     )
 
 @router.get("/conversations/{conversation_id}", response_model=ConversationDetailOut)

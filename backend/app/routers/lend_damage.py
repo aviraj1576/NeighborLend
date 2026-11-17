@@ -53,12 +53,26 @@ async def start_damage_check(
     if req.damage_check_id:
         return {"check_id": req.damage_check_id}
     try:
+        # SQLite cannot keep the request's read transaction open while the
+        # service saves its check on a worker thread. End it first, then reload
+        # the request after the service write before attaching the check.
+        sqlite = db.get_bind().dialect.name == "sqlite"
+        if sqlite:
+            db.commit()
         view = await service.create_check(
             current_user.id, req.id, lender_id, req.borrower_id,
             item_class=req.listing.category if req.listing else None,
         )
     except DamageCheckError as exc:
         raise _http(exc)
+    if sqlite:
+        req, lender_id = _get_handover_request(request_id, db, current_user, lock=True)
+        if current_user.id != lender_id:
+            raise HTTPException(status_code=403, detail="Only the lender can start the condition check")
+        if req.damage_check_id:
+            return {"check_id": req.damage_check_id}
+        if req.handover_status not in (HandoverStatus.pending.value, HandoverStatus.photos_uploaded.value):
+            raise HTTPException(status_code=409, detail="The condition check can only be started before handover")
     req.damage_check_id = view.id
     db.commit()
     return {"check_id": view.id}
@@ -206,9 +220,20 @@ async def submit_return(
                 status_code=409,
                 detail="Missing return photos: " + ", ".join(check.missing_after),
             )
+        sqlite = db.get_bind().dialect.name == "sqlite"
+        if sqlite:
+            db.commit()
         _, should_run = await service.start_analysis(current_user.id, req.damage_check_id)
     except DamageCheckError as exc:
         raise _http(exc)
+    if sqlite:
+        req, lender_id = _get_handover_request(request_id, db, current_user, lock=True)
+        if current_user.id != req.borrower_id:
+            raise HTTPException(status_code=403, detail="Only the borrower can submit the return")
+        if req.handover_status == HandoverStatus.return_photos_uploaded.value:
+            raise HTTPException(status_code=409, detail="Return already submitted")
+        if req.handover_status != HandoverStatus.lender_confirmed.value:
+            raise HTTPException(status_code=409, detail="The rental is not active, so it cannot be returned yet")
     if should_run:
         background.add_task(service.run_analysis, req.damage_check_id)
 
@@ -248,10 +273,19 @@ async def approve_return(
     if req.handover_status != HandoverStatus.return_photos_uploaded.value:
         raise HTTPException(status_code=409, detail="There is no submitted return to approve")
     if req.damage_check_id:
+        sqlite = db.get_bind().dialect.name == "sqlite"
+        if sqlite:
+            db.commit()
         try:  # best effort: record the lender's decision on the AI warning
             await service.decide(current_user.id, req.damage_check_id, "dismissed", "Lender approved the return")
         except DamageCheckError:
             pass  # analysis not finished yet; the approval still stands
+        if sqlite:
+            req, lender_id = _get_handover_request(request_id, db, current_user, lock=True)
+            if current_user.id != lender_id:
+                raise HTTPException(status_code=403, detail="Only the lender can approve the return")
+            if req.handover_status != HandoverStatus.return_photos_uploaded.value:
+                raise HTTPException(status_code=409, detail="There is no submitted return to approve")
     now = datetime.utcnow()
     req.handover_status = HandoverStatus.return_confirmed.value
     req.return_confirmed_at = now

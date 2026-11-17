@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from app.main import app
+from app.main import _fastapi_app as app
 
 FRONTEND = Path(__file__).resolve().parents[2] / "frontend/src"
 SOURCES = [*FRONTEND.joinpath("pages").glob("*.jsx"), FRONTEND / "context/AuthContext.jsx",
@@ -12,6 +12,17 @@ SOURCES = [*FRONTEND.joinpath("pages").glob("*.jsx"), FRONTEND / "context/AuthCo
 CALLS = set()
 for source in SOURCES:
     content = source.read_text(encoding="utf-8")
+    # This template literal contains a nested JavaScript string literal. Strip
+    # it before the general API-call scan, then inventory both real branches.
+    rating_call = re.compile(
+        r"api\.post\(`/borrow-requests/\$\{id\}/rate-\$\{forLender \? 'lender' : 'borrower'\}`"
+    )
+    if rating_call.search(content):
+        CALLS.update({
+            ("POST", "/api/borrow-requests/synthetic-id/rate-lender"),
+            ("POST", "/api/borrow-requests/synthetic-id/rate-borrower"),
+        })
+        content = rating_call.sub("", content)
     for method, _, path in re.findall(r"api\.(get|post|patch|delete)\(\s*([`'\"])(.*?)\2", content, re.S):
         variants = [path]
         if "${action}" in path:

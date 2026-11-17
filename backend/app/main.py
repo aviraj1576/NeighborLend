@@ -123,10 +123,14 @@ def health():
 # Wrap the fully assembled ASGI application so CORS headers are also added to
 # unhandled-error responses generated outside FastAPI's regular middleware stack.
 # Origins remain an explicit allowlist because credentials (including JWTs) are enabled.
+_fastapi_app = app
 app = CORSMiddleware(
-    app,
+    _fastapi_app,
     allow_origins=settings.cors_origin_list,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Keep FastAPI's dependency override registry accessible through the outer ASGI
+# wrapper used to attach CORS headers to unhandled-error responses.
+app.dependency_overrides = _fastapi_app.dependency_overrides

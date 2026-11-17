@@ -69,6 +69,53 @@ class TestListingsAuthAndTrailingSlash(unittest.TestCase):
         self.assertEqual(data["name"], "Cordless Drill")
         self.assertEqual(data["owner_id"], self.user.id)
 
+    def test_published_listing_is_saved_and_appears_in_public_feed(self):
+        payload = {
+            "name": "Persisted Test Listing",
+            "category": "Tools",
+            "description": "Verify publish persistence",
+            "price_per_day": 25.0,
+            "security_deposit": 100.0,
+            "lending_radius_km": 10.0,
+            "publish": True,
+        }
+        response = self.client.post("/api/listings", json=payload, headers=self.headers)
+        self.assertEqual(response.status_code, 200, response.text)
+        listing_id = response.json()["id"]
+
+        saved = self.db.query(Listing).filter(Listing.id == listing_id).one()
+        self.assertEqual(saved.status.value if hasattr(saved.status, "value") else saved.status, "published")
+
+        feed = self.client.get("/api/listings/search?radius_km=500")
+        self.assertEqual(feed.status_code, 200, feed.text)
+        self.assertIn(listing_id, {item["id"] for item in feed.json()})
+
+    def test_draft_listing_is_saved_and_visible_in_my_listings_only(self):
+        payload = {
+            "name": "Persisted Draft Listing",
+            "category": "Tools",
+            "description": "Verify draft persistence",
+            "price_per_day": 25.0,
+            "security_deposit": 100.0,
+            "lending_radius_km": 10.0,
+            "publish": False,
+        }
+        response = self.client.post("/api/listings", json=payload, headers=self.headers)
+        self.assertEqual(response.status_code, 200, response.text)
+        listing_id = response.json()["id"]
+
+        saved = self.db.query(Listing).filter(Listing.id == listing_id).one()
+        status_value = saved.status.value if hasattr(saved.status, "value") else saved.status
+        self.assertEqual(status_value, "draft")
+
+        mine = self.client.get("/api/listings", headers=self.headers)
+        self.assertEqual(mine.status_code, 200, mine.text)
+        self.assertIn(listing_id, {item["id"] for item in mine.json()})
+
+        feed = self.client.get("/api/listings/search?radius_km=500")
+        self.assertEqual(feed.status_code, 200, feed.text)
+        self.assertNotIn(listing_id, {item["id"] for item in feed.json()})
+
     def test_post_listing_with_trailing_slash_returns_200(self):
         """POST /api/listings/ (with trailing slash) must also succeed with 200/201."""
         payload = {

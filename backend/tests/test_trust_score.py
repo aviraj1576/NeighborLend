@@ -1,9 +1,10 @@
 from datetime import datetime
+from sqlalchemy import event
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
 
-from app.database import SessionLocal
+from app.database import SessionLocal, engine
 from app.main import app
 from app.models import (
     BorrowRequest, BorrowRequestStatus, Conversation, Dispute, DisputeStatus,
@@ -11,6 +12,7 @@ from app.models import (
 )
 from app.payment_models import RentalBooking, RentalDispute
 from app.services.auth import create_access_token
+from app.services import trust_score
 from app.services.trust_score import calculate_trust_components, refresh_user_trust_score
 
 
@@ -65,6 +67,46 @@ def test_components_are_bayesian_weighted_and_bounded():
     assert many_fives["score"] <= 5
     assert many_fives["rating_score"] > new_user["rating_score"]
     assert many_fives["completed_transactions"] == 100
+
+
+def test_snapshot_table_probe_reuses_session_connection_and_caches():
+    with trust_score._snapshot_table_cache_lock:
+        trust_score._snapshot_table_cache.pop(engine, None)
+
+    checkouts = []
+    def record_checkout(dbapi_connection, *_args):
+        checkouts.append(dbapi_connection)
+
+    event.listen(engine, "checkout", record_checkout)
+    try:
+        with SessionLocal() as db:
+            user = _user(db, "Snapshot cache")
+            db.commit()
+            before_refresh = len(checkouts)
+
+            refresh_user_trust_score(db, user)
+            refresh_user_trust_score(db, user)
+
+            # The session checks out one connection for the refresh work. The
+            # schema probe reuses it and runs only once for this engine.
+            assert len(checkouts) - before_refresh == 1
+            assert engine in trust_score._snapshot_table_cache
+    finally:
+        event.remove(engine, "checkout", record_checkout)
+
+
+def test_database_dependency_closes_session_and_returns_connection():
+    from sqlalchemy import text
+    from app.database import get_db
+
+    baseline = engine.pool.checkedout()
+    dependency = get_db()
+    db = next(dependency)
+    db.execute(text("SELECT 1"))
+    assert engine.pool.checkedout() == baseline + 1
+
+    dependency.close()
+    assert engine.pool.checkedout() == baseline
 
 
 def test_completed_rentals_count_once_and_ratings_update_each_role():

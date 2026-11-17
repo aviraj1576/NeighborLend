@@ -133,9 +133,12 @@ def _handover_conversation_id(req: BorrowRequest) -> Optional[str]:
 def _get_handover_request(request_id: str, db: Session, current_user: User, *, lock: bool = False):
     if lock:
         from app.payment_models import RentalBooking
-        # Match financial-service lock order: booking before physical rental.
-        db.query(RentalBooking).filter_by(borrow_request_id=request_id).update(
-            {RentalBooking.booking_status: RentalBooking.booking_status}, synchronize_session=False)
+        # Match financial-service lock order on databases with row locks. On
+        # SQLite this no-op UPDATE still takes the database's sole write lock,
+        # blocking damage-check worker sessions that write through asyncio.to_thread.
+        if db.get_bind().dialect.name != "sqlite":
+            db.query(RentalBooking).filter_by(borrow_request_id=request_id).update(
+                {RentalBooking.booking_status: RentalBooking.booking_status}, synchronize_session=False)
     query = db.query(BorrowRequest)
     if lock:
         query = query.with_for_update()

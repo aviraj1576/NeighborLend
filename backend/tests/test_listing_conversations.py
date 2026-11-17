@@ -160,6 +160,21 @@ def test_repeated_and_concurrent_clicks_reuse_one_thread(flow):
         assert db.query(Conversation).filter(Conversation.listing_id == listing_id).count() == 1
 
 
+def test_create_then_reopen_returns_same_listing_conversation(flow):
+    listing_id = add_ladder(flow)
+    body = {"lender_id": flow["ids"]["lender"], "listing_id": listing_id}
+    first = flow["client"].post(
+        "/api/conversations", headers=flow["headers"]["borrower"], json=body
+    )
+    reopened = flow["client"].post(
+        "/api/conversations", headers=flow["headers"]["borrower"], json=body
+    )
+    assert first.status_code == reopened.status_code == 200
+    assert reopened.json()["id"] == first.json()["id"]
+    assert reopened.json()["listing_id"] == listing_id
+    assert len(reopened.json()["messages"]) == 1
+
+
 @pytest.mark.parametrize("flow", ["mock", "postgres"], indirect=True)
 def test_listing_and_borrower_authorization(flow):
     listing_id = add_ladder(flow)
@@ -184,6 +199,12 @@ def test_listing_and_borrower_authorization(flow):
     wrong_owner = client.post("/api/conversations", headers=headers["borrower"],
                                json={"lender_id": flow["ids"]["other"], "listing_id": listing_id})
     assert wrong_owner.status_code == 404
+    missing_listing = client.post(
+        "/api/conversations",
+        headers=headers["borrower"],
+        json={"lender_id": flow["ids"]["lender"], "listing_id": "missing-listing-id"},
+    )
+    assert missing_listing.status_code == 404
 
 
 @pytest.mark.parametrize("flow", ["mock", "postgres"], indirect=True)

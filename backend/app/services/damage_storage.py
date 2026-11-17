@@ -5,15 +5,18 @@ Photo bytes live on local disk under backend/damage_data/ and are deliberately
 NOT under uploads/, which is served publicly without authentication.
 """
 from pathlib import Path
+from threading import Lock
+from contextlib import nullcontext
 
 from damage_check._compat import dump_json, parse_json
 from damage_check.schemas import CheckRecord
 from damage_check.storage import LocalStorage
 
-from app.database import SessionLocal
+from app.database import SessionLocal, engine
 from app.models import DamageCheckRecord
 
 DAMAGE_DATA_DIR = Path(__file__).resolve().parents[2] / "damage_data"
+_SQLITE_CHECK_WRITE_LOCK = Lock()
 
 
 class HostDamageStorage:
@@ -21,18 +24,18 @@ class HostDamageStorage:
         self._photos = LocalStorage(DAMAGE_DATA_DIR)
 
     # The service calls these from worker threads, so each call opens and closes
-    # its own session.
+    # its own session. SQLite permits one writer; serialize check read/modify/
+    # write operations so concurrent worker threads cannot race on the same file.
     def save_check(self, record: CheckRecord) -> None:
-        db = SessionLocal()
-        try:
-            row = db.get(DamageCheckRecord, record.id)
-            if row is None:
-                row = DamageCheckRecord(check_id=record.id)
-                db.add(row)
-            row.record_json = dump_json(record)
-            db.commit()
-        finally:
-            db.close()
+        lock = _SQLITE_CHECK_WRITE_LOCK if engine.dialect.name == "sqlite" else nullcontext()
+        with lock:
+            with SessionLocal() as db:
+                row = db.get(DamageCheckRecord, record.id)
+                if row is None:
+                    row = DamageCheckRecord(check_id=record.id)
+                    db.add(row)
+                row.record_json = dump_json(record)
+                db.commit()
 
     def load_check(self, check_id: str):
         db = SessionLocal()

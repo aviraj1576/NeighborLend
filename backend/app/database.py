@@ -1,6 +1,7 @@
 from sqlalchemy import create_engine, inspect, text, event
 from sqlalchemy.orm import declarative_base, sessionmaker
 from app.config import get_settings
+from threading import Lock
 
 settings = get_settings()
 
@@ -8,20 +9,40 @@ connect_args = {}
 if settings.database_url.startswith("sqlite"):
     connect_args = {"check_same_thread": False}
 
+def _pool_options_for_url(database_url):
+    if not database_url.startswith("postgresql"):
+        return {}
+    # Supabase session-mode pooling is limited to 15 client sessions across
+    # every app process/instance. No overflow means one process can use at most
+    # two; leave room for other app instances and operational connections.
+    return {"pool_size": 2, "max_overflow": 0, "pool_timeout": 15}
+
 engine = create_engine(
     settings.database_url,
     connect_args=connect_args,
     pool_pre_ping=True,
-    future=True
+    future=True,
+    **_pool_options_for_url(settings.database_url),
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, future=True)
 Base = declarative_base()
 
 if settings.database_url.startswith("sqlite"):
+    _sqlite_journal_mode_lock = Lock()
+    _sqlite_journal_mode_ready = False
+
     @event.listens_for(engine, "connect")
     def configure_sqlite(connection, record):
+        global _sqlite_journal_mode_ready
         connection.execute("PRAGMA foreign_keys=ON")
         connection.execute("PRAGMA busy_timeout=15000")
+        if not _sqlite_journal_mode_ready:
+            with _sqlite_journal_mode_lock:
+                if not _sqlite_journal_mode_ready:
+                    # WAL lets damage-check worker sessions commit while the
+                    # request session has an open read transaction.
+                    connection.execute("PRAGMA journal_mode=WAL")
+                    _sqlite_journal_mode_ready = True
 
 def get_db():
     db = SessionLocal()

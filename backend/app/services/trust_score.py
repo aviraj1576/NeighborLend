@@ -2,6 +2,8 @@
 
 import math
 from datetime import datetime
+from threading import RLock
+from weakref import WeakKeyDictionary
 
 from sqlalchemy import inspect, or_, select
 
@@ -10,6 +12,25 @@ from app.payment_models import RentalBooking, RentalDispute
 
 RATING_PRIOR = 3.5
 RATING_PRIOR_COUNT = 5
+_snapshot_table_cache = WeakKeyDictionary()
+_snapshot_table_cache_lock = RLock()
+
+
+def _has_snapshot_table(db):
+    """Check the optional legacy-compatible table once per engine.
+
+    Inspect the Session's checked-out connection so this capability check never
+    consumes a second Supabase session. A deployment schema change is picked up
+    after the app process restarts; inspection errors still propagate.
+    """
+    bind = db.get_bind()
+    engine = getattr(bind, "engine", bind)
+    with _snapshot_table_cache_lock:
+        if engine not in _snapshot_table_cache:
+            _snapshot_table_cache[engine] = inspect(db.connection()).has_table(
+                TrustScoreSnapshot.__tablename__
+            )
+        return _snapshot_table_cache[engine]
 
 
 def _clamp(value):
@@ -149,8 +170,7 @@ def refresh_user_trust_score(db, user_or_id):
     changed = any(getattr(user, field) != value for field, value in values.items())
     for field, value in values.items():
         setattr(user, field, value)
-    bind = db.get_bind()
-    has_snapshot_table = inspect(bind).has_table(TrustScoreSnapshot.__tablename__)
+    has_snapshot_table = _has_snapshot_table(db)
     snapshot = db.get(TrustScoreSnapshot, user.id) if has_snapshot_table else None
     now = datetime.utcnow()
     if has_snapshot_table:
