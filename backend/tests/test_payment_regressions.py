@@ -133,8 +133,18 @@ def test_render_urls_are_public_https_even_if_app_env_is_not_set_to_production()
         cors_origins="https://neighborlend.vercel.app",
     )
     assert configured_provider(settings).kind == "disabled"
-    with pytest.raises(ProviderError, match="public_deployment_requires_https_urls"):
+    with pytest.raises(
+        ProviderError,
+        match="public_deployment_requires_https_urls:PUBLIC_BASE_URL",
+    ):
         configured_provider(settings.model_copy(update={"public_base_url": "http://neighborlend-api.onrender.com"}))
+    with pytest.raises(
+        ProviderError,
+        match=r"public_deployment_requires_https_urls:CORS_ORIGINS\[0\]",
+    ):
+        configured_provider(
+            settings.model_copy(update={"cors_origins": "http://neighborlend.vercel.app"})
+        )
 
 
 def test_disabled_mode_preserves_private_inspection_and_intent_recovery(flow):
