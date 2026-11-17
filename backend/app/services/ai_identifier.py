@@ -37,6 +37,11 @@ YOLOE_NAMES = {
     20: 'backpack', 21: 'camping_chair', 22: 'suitcase', 23: 'guitar'
 }
 
+NINE_CLASS_NAMES = {
+    0: 'bicycle', 1: 'book', 2: 'drill', 3: 'hammer',
+    4: 'headphones', 5: 'ladder', 6: 'keyboard', 7: 'pliers', 8: 'umbrella'
+}
+
 # Exclude dumbbells from application predictions
 EXCLUDED_CLASSES = {"dumbbell", "dumbbells"}
 
@@ -189,6 +194,7 @@ def _get_onnx_session():
         import onnxruntime as ort
         model_path = Path(settings.ai_model_path_abs)
         candidates = [
+            model_path.parent / "best_model.onnx",
             model_path.with_suffix(".onnx"),
             model_path.parent / "neighborlend_yoloe_best.onnx",
         ]
@@ -246,18 +252,31 @@ def _nms(boxes, scores, iou_thresh: float = 0.45) -> list[int]:
     return keep
 
 
+def _letterbox_image(img: Image.Image, target_size: int = 640) -> Image.Image:
+    w, h = img.size
+    scale = target_size / max(w, h)
+    nw, nh = int(w * scale), int(h * scale)
+    img_resized = img.resize((nw, nh), Image.Resampling.BILINEAR)
+    new_img = Image.new("RGB", (target_size, target_size), (114, 114, 114))
+    new_img.paste(img_resized, ((target_size - nw) // 2, (target_size - nh) // 2))
+    return new_img
+
+
 def _run_onnx_inference(session, image_bytes: bytes) -> list[dict]:
     import numpy as np
 
     with Image.open(io.BytesIO(image_bytes)) as img:
-        resized = img.convert("RGB").resize((640, 640))
-    arr = np.ascontiguousarray(np.array(resized, dtype=np.float32).transpose(2, 0, 1) / 255.0)
+        l_img = _letterbox_image(img.convert("RGB"), 640)
+    arr = np.ascontiguousarray(np.array(l_img, dtype=np.float32).transpose(2, 0, 1) / 255.0)
     arr = np.expand_dims(arr, 0)
 
     input_name = session.get_inputs()[0].name
-    out = session.run(None, {input_name: arr})[0][0].T  # Shape: (8400, 28)
+    out = session.run(None, {input_name: arr})[0][0].T  # Shape: (8400, 4 + num_classes)
     boxes = out[:, :4]
     scores = out[:, 4:]
+
+    num_classes = scores.shape[1]
+    class_name_dict = NINE_CLASS_NAMES if num_classes == 9 else YOLOE_NAMES
 
     max_scores = np.max(scores, axis=1)
     best_classes = np.argmax(scores, axis=1)
@@ -285,7 +304,7 @@ def _run_onnx_inference(session, image_bytes: bytes) -> list[dict]:
     for idx in keep_indices:
         cls_id = int(filtered_classes[idx])
         conf = float(filtered_scores[idx])
-        label = YOLOE_NAMES.get(cls_id, "")
+        label = class_name_dict.get(cls_id, "")
         if normalize_class_name(label) in EXCLUDED_CLASSES:
             continue
         mapped_label = CLASS_MAP.get(label.lower().replace(" ", "_"), label.replace("_", " ").title())

@@ -178,6 +178,26 @@ def detect_location(request: Request):
     except Exception:
         pass
 
+    try:
+        url = f"https://ipwho.is/{client_ip}" if client_ip and client_ip not in ("127.0.0.1", "::1", "localhost") else "https://ipwho.is/"
+        req = urllib.request.Request(url, headers={"User-Agent": "NeighborLend/1.0"})
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+            if data.get("success") and "latitude" in data and "longitude" in data:
+                city = data.get("city") or "Local Area"
+                region = data.get("region") or ""
+                loc_name = f"{city}, {region}".strip(", ")
+                return {
+                    "latitude": float(data["latitude"]),
+                    "longitude": float(data["longitude"]),
+                    "city": city,
+                    "region": region,
+                    "address": loc_name or "Detected Location",
+                    "source": "ip"
+                }
+    except Exception:
+        pass
+
     return {
         "latitude": 28.6139,
         "longitude": 77.2090,
