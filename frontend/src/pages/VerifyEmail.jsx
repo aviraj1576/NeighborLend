@@ -48,7 +48,12 @@ const VerifyEmail = () => {
     setMessage('');
     try {
       const response = await api.post('/auth/resend-verification', { email });
-      setMessage(response.data.message);
+      if (response.data?.dev_code) {
+        setCode(response.data.dev_code);
+        setMessage(`Verification code auto-filled: ${response.data.dev_code}`);
+      } else {
+        setMessage(response.data.message);
+      }
       setResendCooldown(60);
     } catch (err) {
       const retryAfter = Number(err.response?.headers?.['retry-after']);
