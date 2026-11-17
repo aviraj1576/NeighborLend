@@ -833,15 +833,51 @@ const CreateListing = () => {
                   type="range"
                   min="1"
                   max="50"
+                  step="1"
                   value={formData.lending_radius}
                   onChange={handleInputChange}
                   className="range-input"
+                  style={{
+                    '--slider-fill': `${((Math.min(50, Math.max(1, Number(formData.lending_radius) || 1)) - 1) / 49) * 100}%`,
+                  }}
+                  aria-valuemin={1}
+                  aria-valuemax={50}
+                  aria-valuenow={Number(formData.lending_radius) || 1}
+                  aria-label="Lending radius in kilometers"
                 />
-                <div className="radius-scale-markers">
-                  <span className="t-small muted">1 km</span>
-                  <span className="t-small muted">10 km</span>
-                  <span className="t-small muted">25 km</span>
-                  <span className="t-small muted">50 km</span>
+                <div className="radius-scale-markers" role="presentation">
+                  <button
+                    type="button"
+                    className={`radius-scale-marker radius-marker-1 ${Number(formData.lending_radius) === 1 ? 'is-active' : ''}`}
+                    onClick={() => setFormData((prev) => ({ ...prev, lending_radius: 1 }))}
+                    aria-label="Set lending radius to 1 km"
+                  >
+                    1 km
+                  </button>
+                  <button
+                    type="button"
+                    className={`radius-scale-marker radius-marker-10 ${Number(formData.lending_radius) === 10 ? 'is-active' : ''}`}
+                    onClick={() => setFormData((prev) => ({ ...prev, lending_radius: 10 }))}
+                    aria-label="Set lending radius to 10 km"
+                  >
+                    10 km
+                  </button>
+                  <button
+                    type="button"
+                    className={`radius-scale-marker radius-marker-25 ${Number(formData.lending_radius) === 25 ? 'is-active' : ''}`}
+                    onClick={() => setFormData((prev) => ({ ...prev, lending_radius: 25 }))}
+                    aria-label="Set lending radius to 25 km"
+                  >
+                    25 km
+                  </button>
+                  <button
+                    type="button"
+                    className={`radius-scale-marker radius-marker-50 ${Number(formData.lending_radius) === 50 ? 'is-active' : ''}`}
+                    onClick={() => setFormData((prev) => ({ ...prev, lending_radius: 50 }))}
+                    aria-label="Set lending radius to 50 km"
+                  >
+                    50 km
+                  </button>
                 </div>
               </div>
             </div>

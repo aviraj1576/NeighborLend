@@ -270,7 +270,13 @@ input[type="range"].range-input {
   display: block;
   width: 100%;
   height: 8px;
-  background: var(--p-border, #e2d9cd);
+  background: linear-gradient(
+    to right,
+    var(--p-accent, #d2bf55) 0%,
+    var(--p-accent, #d2bf55) var(--slider-fill, 8.16%),
+    var(--p-ink-soft, #4a3630) var(--slider-fill, 8.16%),
+    var(--p-ink-soft, #4a3630) 100%
+  );
   border-radius: 9999px;
   border: none !important;
   outline: none !important;
@@ -278,7 +284,6 @@ input[type="range"].range-input {
   padding: 0 !important;
   margin: 14px 0 6px 0;
   cursor: pointer;
-  accent-color: var(--p-accent, #702f3b);
 }
 
 input[type="range"].range-input:focus,
@@ -291,7 +296,7 @@ input[type="range"].range-input:focus-visible {
 input[type="range"].range-input::-webkit-slider-runnable-track {
   width: 100%;
   height: 8px;
-  background: var(--p-border, #e2d9cd);
+  background: transparent;
   border-radius: 9999px;
   border: none;
 }
@@ -302,8 +307,8 @@ input[type="range"].range-input::-webkit-slider-thumb {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--p-accent, #702f3b);
-  border: 3px solid var(--surface, #ffffff);
+  background: var(--p-accent, #d2bf55);
+  border: 3px solid var(--p-bg, #ffeed6);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   margin-top: -7px;
   cursor: pointer;
@@ -313,33 +318,86 @@ input[type="range"].range-input::-webkit-slider-thumb {
 input[type="range"].range-input::-webkit-slider-thumb:hover,
 input[type="range"].range-input::-webkit-slider-thumb:active {
   transform: scale(1.15);
-  background: var(--p-accent-dark, #541e28);
+  background: color-mix(in oklab, var(--p-accent, #d2bf55) 85%, var(--p-ink, #2b061e));
 }
 
 input[type="range"].range-input::-moz-range-track {
   width: 100%;
   height: 8px;
-  background: var(--p-border, #e2d9cd);
+  background: var(--p-ink-soft, #4a3630);
   border-radius: 9999px;
   border: none;
+}
+
+input[type="range"].range-input::-moz-range-progress {
+  height: 8px;
+  background: var(--p-accent, #d2bf55);
+  border-radius: 9999px;
 }
 
 input[type="range"].range-input::-moz-range-thumb {
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--p-accent, #702f3b);
-  border: 3px solid var(--surface, #ffffff);
+  background: var(--p-accent, #d2bf55);
+  border: 3px solid var(--p-bg, #ffeed6);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
   cursor: pointer;
 }
 
 .radius-scale-markers {
-  display: flex;
-  justify-content: space-between;
+  position: relative;
+  width: 100%;
+  height: 24px;
   margin-top: var(--s-2, 8px);
-  color: var(--p-muted);
-  font: 400 var(--t-small, 14px)/1 var(--font-text);
+}
+
+.radius-scale-marker {
+  position: absolute;
+  top: 0;
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+  color: var(--p-muted, #76575d);
+  font: 400 var(--t-small, 14px)/1.4 var(--font-text);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: color 0.15s ease, font-weight 0.15s ease;
+}
+
+.radius-scale-marker:hover {
+  color: var(--p-ink, #2b061e);
+}
+
+.radius-scale-marker.is-active {
+  color: var(--p-ink, #2b061e);
+  font-weight: 600;
+}
+
+.radius-marker-1 {
+  left: 0;
+  text-align: left;
+}
+
+.radius-marker-10 {
+  left: calc(18.37% + 7px);
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.radius-marker-25 {
+  left: calc(48.98% + 0.2px);
+  transform: translateX(-50%);
+  text-align: center;
+}
+
+.radius-marker-50 {
+  right: 0;
+  left: auto;
+  transform: none;
+  text-align: right;
 }
 
 /* location */
