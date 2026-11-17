@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Search, MapPin, SlidersHorizontal, Loader2, Globe, Compass, ChevronDown, List } from 'lucide-react';
 import ListingCard from '../components/ListingCard';
 import Button from '../components/ui/Button';
@@ -23,7 +23,13 @@ const Browse = () => {
   const [locationName, setLocationName] = useState('Patiala, Punjab (Hub)');
   const [showLocationMenu, setShowLocationMenu] = useState(false);
 
+  // Filters can change while a search is still in flight; only the newest search may
+  // update the results, so a slow older response cannot overwrite a newer one.
+  const latestSearch = useRef(0);
+
   const fetchListings = async () => {
+    const searchId = latestSearch.current + 1;
+    latestSearch.current = searchId;
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -38,12 +44,14 @@ const Browse = () => {
       }
 
       const res = await api.get(`/listings/search?${params.toString()}`);
+      if (searchId !== latestSearch.current) return;
       setListings(res.data || []);
     } catch (err) {
+      if (searchId !== latestSearch.current) return;
       console.error('Failed to fetch listings:', err);
       setListings([]);
     } finally {
-      setLoading(false);
+      if (searchId === latestSearch.current) setLoading(false);
     }
   };
 
