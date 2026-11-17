@@ -1,0 +1,6 @@
+  android-app-backup                         [m 495d887 Initial clean backup of NeighborLend
+  android-app-backup-old                     [m 8726975 backup
+  feature/2026-redesign                      [m 2cb820d feat: full 2026 visual redesign (Instrument Sans, cream/gold palette, bento layout, skill kit)
+  feature/neighborlend-ai-payment-integration[m 1146c1a fix: preserve rental isolation and allow photo-free borrower receipt
+  integration/payment-main                   [m a4a05bc feat(payments): integrate payment, simulated escrow, and dispute resolution subsystem
+* [32mmain                                       [m cd77d1b [[34morigin/main[m: ahead 1, behind 1] fixed button and draft and reset ssl connection for publishing

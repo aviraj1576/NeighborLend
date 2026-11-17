@@ -104,6 +104,7 @@ class TestSupabasePhotoUploads(unittest.TestCase):
         self.assertTrue(image_url.startswith(
             f"{TEST_SUPABASE_URL}/storage/v1/object/public/{storage_service.LISTING_PHOTOS_BUCKET}/images/"
         ))
+        self.assertTrue(storage_service.is_public_listing_image_url(image_url))
         self.assertEqual(len(storage_service.supabase.storage.bucket.objects), 1)
         listing_response = self.client.post(
             "/api/listings",
@@ -116,6 +117,24 @@ class TestSupabasePhotoUploads(unittest.TestCase):
         self.assertEqual(photo.url, image_url)
         self.assertTrue(photo.is_cover)
         self.assertEqual(listing_response.json()["photos"], [image_url])
+
+    def test_listing_photo_url_validation_is_project_and_public_bucket_scoped(self):
+        valid = (
+            f"{TEST_SUPABASE_URL}/storage/v1/object/public/"
+            f"{storage_service.LISTING_PHOTOS_BUCKET}/images/photo.jpg"
+        )
+        self.assertTrue(storage_service.is_public_listing_image_url(valid))
+        self.assertFalse(storage_service.is_public_listing_image_url(
+            "https://another-project.supabase.co/storage/v1/object/public/"
+            f"{storage_service.LISTING_PHOTOS_BUCKET}/images/photo.jpg"
+        ))
+        self.assertFalse(storage_service.is_public_listing_image_url(f"{valid}?token=signed"))
+        self.assertFalse(storage_service.is_public_listing_image_url(
+            f"{TEST_SUPABASE_URL}/storage/v1/object/sign/{storage_service.LISTING_PHOTOS_BUCKET}/images/photo.jpg"
+        ))
+        self.assertFalse(storage_service.is_public_listing_image_url(
+            f"{TEST_SUPABASE_URL}/storage/v1/object/public/another_bucket/images/photo.jpg"
+        ))
 
     def test_existing_bucket_is_checked_without_creating_or_changing_it(self):
         storage_service._public_bucket_ready = False
