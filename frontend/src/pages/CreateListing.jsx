@@ -11,11 +11,24 @@ import SupportChatButton from '../components/SupportChatButton';
 import './CreateListing.css';
 
 const CATEGORIES = ['Tools', 'Electronics', 'Sports', 'Party', 'Books', 'Other'];
+const apiErrorMessage = (err, fallback) => {
+  const detail = err?.response?.data?.detail;
+  if (typeof detail === 'string' && detail) return detail;
+  if (Array.isArray(detail)) {
+    return detail.map((item) => {
+      const field = Array.isArray(item.loc) ? item.loc[item.loc.length - 1] : 'Listing';
+      return `${field}: ${item.msg}`;
+    }).join(' ');
+  }
+  return err?.message || fallback;
+};
 
 const CreateListing = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const submissionLockRef = useRef(false);
   const [aiOffline, setAiOffline] = useState(false);
   const fileInputRef = useRef(null);
   const cameraFallbackRef = useRef(null);
@@ -148,6 +161,7 @@ const CreateListing = () => {
 
     const urls = [];
     let failedUploads = 0;
+    let firstUploadError = '';
     try {
       for (let index = 0; index < imageFiles.length; index += 1) {
         const form = new FormData();
@@ -168,12 +182,17 @@ const CreateListing = () => {
           }
         } catch (err) {
           failedUploads += 1;
+          if (!firstUploadError) {
+            firstUploadError = apiErrorMessage(err, 'Photo upload failed.');
+          }
           console.error('Image upload failed:', err);
         }
       }
       setUploadedUrls(urls);
       if (failedUploads) {
-        setUploadError(`${failedUploads} photo${failedUploads === 1 ? '' : 's'} could not be uploaded. Select the photos again to retry.`);
+        setUploadError(
+          `${failedUploads} photo${failedUploads === 1 ? '' : 's'} could not be uploaded. ${firstUploadError} Select the photos again to retry.`,
+        );
         setAiOffline(true);
       }
     } finally {
@@ -262,16 +281,39 @@ const CreateListing = () => {
   };
 
   const handleSubmit = async (publish = true) => {
+    if (submissionLockRef.current) return;
+    setSubmitError('');
+
+    if (!formData.title.trim()) {
+      setSubmitError('Enter an item name before saving your listing.');
+      return;
+    }
+    const dailyPrice = Number(formData.price_per_day);
+    if (!formData.price_per_day || !Number.isFinite(dailyPrice) || dailyPrice <= 0) {
+      setSubmitError('Enter a valid price per day greater than zero.');
+      return;
+    }
+    const deposit = Number(formData.security_deposit || 0);
+    if (!Number.isFinite(deposit) || deposit < 0) {
+      setSubmitError('Enter a valid non-negative security deposit.');
+      return;
+    }
+    if (!files.length || uploadedUrls.length !== files.length || uploadError) {
+      setSubmitError('Upload all listing photos before saving.');
+      return;
+    }
+
+    submissionLockRef.current = true;
     setIsLoading(true);
     try {
       const payload = {
-        name: formData.title,
+        name: formData.title.trim(),
         category: formData.category,
         description: formData.description,
         years_owned: formData.years_owned ? Number(formData.years_owned) : 0,
         price_bought: formData.price_bought ? Number(formData.price_bought) : 0,
-        price_per_day: Number(formData.price_per_day),
-        security_deposit: Number(formData.security_deposit),
+        price_per_day: dailyPrice,
+        security_deposit: deposit,
         lending_radius_km: Number(formData.lending_radius),
         latitude: formData.lat ? Number(formData.lat) : null,
         longitude: formData.lon ? Number(formData.lon) : null,
@@ -282,11 +324,25 @@ const CreateListing = () => {
         publish,
       };
 
-      await api.post('/listings', payload);
-      navigate('/my-listings');
+      const { data } = await api.post('/listings', payload);
+      const published = publish && data?.status === 'published';
+      navigate('/my-listings', {
+        state: {
+          listingNotice: {
+            type: published || !publish ? 'success' : 'error',
+            text: published
+              ? 'Listing published.'
+              : publish
+                ? 'Listing was saved, but the server did not publish it. Check its status and try again.'
+                : 'Draft saved.',
+          },
+        },
+      });
     } catch (err) {
       console.error(err);
+      setSubmitError(apiErrorMessage(err, 'Could not save the listing. Please try again.'));
     } finally {
+      submissionLockRef.current = false;
       setIsLoading(false);
     }
   };
@@ -711,6 +767,7 @@ const CreateListing = () => {
                 {isLoading ? <Loader2 size={16} className="animate-spin" /> : 'Publish listing'}
               </Button>
             </div>
+            {submitError && <p className="calc-error" role="alert">{submitError}</p>}
           </Card>
         )}
       </div>

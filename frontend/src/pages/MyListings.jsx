@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Plus, Edit2, Play, Pause, Trash2, X, Save, ImagePlus } from 'lucide-react';
 import api from '../api/client';
 import ListingCard from '../components/ListingCard';
@@ -12,6 +12,7 @@ const isUnpublished = (status) => status === 'draft' || status === 'pending_revi
 const canEditListing = (listing) => listing.status !== 'removed' && !listing.is_currently_rented;
 
 const MyListings = () => {
+  const location = useLocation();
   const [listings, setListings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -19,7 +20,7 @@ const MyListings = () => {
   const [photoFiles, setPhotoFiles] = useState([]);
   const photoFilesRef = useRef(photoFiles);
   photoFilesRef.current = photoFiles;
-  const [notice, setNotice] = useState(null);
+  const [notice, setNotice] = useState(() => location.state?.listingNotice || null);
   const [saving, setSaving] = useState(false);
 
   const fetchMyListings = async () => {

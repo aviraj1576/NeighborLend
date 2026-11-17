@@ -162,12 +162,6 @@ const Chat = () => {
   }, [conversationId]);
 
   useEffect(() => {
-    if (!conversationId && conversations.length > 0) {
-      navigate(`/messages/${conversations[0].id}`, { replace: true });
-    }
-  }, [conversationId, conversations, navigate]);
-
-  useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
