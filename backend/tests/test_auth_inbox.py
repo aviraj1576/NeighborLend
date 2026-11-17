@@ -325,6 +325,32 @@ class TestAuthenticationAndInbox(unittest.TestCase):
         self.assertEqual(notification_types, {"return", "dispute"})
         self.assertEqual(self.db.query(Notification).filter_by(user_id=borrower.id).count(), 0)
 
+    def test_registration_when_smtp_fails_returns_dev_code_and_allows_verification(self):
+        captcha_id, captcha_answer = self._captcha()
+        with patch("app.routers.auth.send_verification_code", side_effect=RuntimeError("SMTP unavailable")):
+            response = self.client.post("/api/auth/register", json={
+                "name": "Fallback Neighbor",
+                "username": "fallbackneighbor",
+                "email": "fallback@example.com",
+                "password": "password123",
+                "captcha_id": captcha_id,
+                "captcha_answer": captcha_answer,
+            })
+            self.assertEqual(response.status_code, 202)
+            data = response.json()
+            self.assertIn("dev_code", data)
+            dev_code = data["dev_code"]
+            self.assertIsNotNone(dev_code)
+            self.assertEqual(len(dev_code), 6)
+
+            # Verification using the dev_code succeeds
+            verify_res = self.client.post("/api/auth/verify-email", json={
+                "email": "fallback@example.com",
+                "code": dev_code,
+            })
+            self.assertEqual(verify_res.status_code, 200)
+            self.assertIn("access_token", verify_res.json())
+
 
 if __name__ == "__main__":
     unittest.main()

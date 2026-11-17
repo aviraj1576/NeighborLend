@@ -2,6 +2,7 @@ import re
 import secrets
 import hashlib
 import hmac
+import logging
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -28,6 +29,8 @@ from app.services.auth import (
 )
 from app.services.email import send_verification_code
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 @router.get("/captcha", response_model=CaptchaOut)
@@ -41,7 +44,7 @@ def _send_otp_or_raise(email: str, code: str) -> bool:
     try:
         send_verification_code(email, code)
         return True
-    except RuntimeError as exc:
+    except Exception as exc:
         logger.warning(
             "Email verification delivery unavailable (%s). Generated fallback OTP for %s: %s",
             exc, email, code
