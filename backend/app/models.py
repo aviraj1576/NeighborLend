@@ -73,7 +73,7 @@ class CaptchaChallenge(Base):
 
 class EmailVerification(Base):
     __tablename__ = "email_verifications"
-    user_id = Column(String, ForeignKey("users.id"), primary_key=True)
+    user_id = Column(String, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     code_hash = Column(String, nullable=False)
     expires_at = Column(DateTime, nullable=False, index=True)
     attempts = Column(Integer, nullable=False, default=0)
