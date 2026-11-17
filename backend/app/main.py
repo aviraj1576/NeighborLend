@@ -24,11 +24,6 @@ if settings.app_env.lower() in {"production", "prod"}:
 def _preload_model():
     try:
         import gc
-        try:
-            import torch
-            torch.set_num_threads(1)
-        except ImportError:
-            pass
         from app.services import ai_identifier
         from app.services.ai_identifier import _get_onnx_session, _get_model, get_allowed_classes
 

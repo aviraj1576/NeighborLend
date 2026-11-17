@@ -8,21 +8,17 @@ import types
 from pathlib import Path
 from threading import Lock
 
+import importlib.util
+
 from PIL import Image, UnidentifiedImageError
 from app.config import get_settings
 
 settings = get_settings()
 logger = logging.getLogger(__name__)
 
-try:
-    import torch
-    torch.set_num_threads(1)
-    from ultralytics import YOLOE
-
-    YOLO_AVAILABLE = True
-except ImportError:
-    YOLO_AVAILABLE = False
-    torch = None
+YOLO_AVAILABLE = importlib.util.find_spec("ultralytics") is not None
+torch = None
+YOLOE = None
 
 _model = None
 _model_lock = Lock()
@@ -91,8 +87,8 @@ def get_allowed_classes(model):
 
 
 def _get_model():
-    """Load the trained YOLOE checkpoint once."""
-    global _model
+    """Load the trained YOLOE checkpoint once (lazy load only when needed)."""
+    global _model, torch
 
     if not YOLO_AVAILABLE:
         logger.error("YOLOE or Pillow is not installed")
@@ -112,6 +108,14 @@ def _get_model():
             return None
 
         try:
+            global YOLOE
+            import torch as _torch
+            _torch.set_num_threads(1)
+            torch = _torch
+            if YOLOE is None:
+                from ultralytics import YOLOE as _YOLOE
+                YOLOE = _YOLOE
+
             loaded = YOLOE(str(model_path))
 
             if not loaded.names:
@@ -197,6 +201,7 @@ def _get_onnx_session():
                 if _onnx_session is not None:
                     return _onnx_session
                 opts = ort.SessionOptions()
+                opts.enable_cpu_mem_arena = False
                 opts.intra_op_num_threads = 1
                 opts.inter_op_num_threads = 1
                 _onnx_session = ort.InferenceSession(
