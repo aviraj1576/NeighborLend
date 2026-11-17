@@ -30,6 +30,9 @@ COPY backend/damage_check ./damage_check
 COPY backend/supabase/migrations ./supabase/migrations
 COPY backend/ai_service ./ai_service
 
+# Pre-export static ONNX graph during build so production runtime stays under 180MB RAM
+RUN python -c "from app.services.ai_identifier import _ensure_onnx_model; _ensure_onnx_model()" || true
+
 RUN mkdir -p uploads
 
 EXPOSE 8000

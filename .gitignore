@@ -47,6 +47,8 @@ backend/uploads/
 results/
 damage_comparison_result.json
 comparison.json
+*.torchscript
+*.onnx
 
 # Logs and temporary files
 *.log

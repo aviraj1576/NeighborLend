@@ -11,6 +11,76 @@ import SupportChatButton from '../components/SupportChatButton';
 import './CreateListing.css';
 
 const CATEGORIES = ['Tools', 'Electronics', 'Sports', 'Party', 'Books', 'Other'];
+
+const mapLabelToCategory = (label) => {
+  if (!label) return 'Other';
+  const l = label.toLowerCase();
+  if (/drill|hammer|wrench|screwdriver|tool|saw|pliers|ladder/.test(l)) return 'Tools';
+  if (/laptop|phone|camera|headphone|keyboard|drone|microwave|kettle|blender|electronic/.test(l)) return 'Electronics';
+  if (/bike|bicycle|scooter|tent|basketball|ball|sports|camping|barbell/.test(l)) return 'Sports';
+  if (/party|speaker|guitar|music/.test(l)) return 'Party';
+  if (/book|novel|textbook/.test(l)) return 'Books';
+  return 'Other';
+};
+
+const compressImage = async (file, maxWidth = 1600, maxHeight = 1600, quality = 0.85) => {
+  if (typeof window === 'undefined' || !window.FileReader) return file;
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onerror = () => resolve(file);
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => resolve(file);
+      img.onload = () => {
+        let width = img.width;
+        let height = img.height;
+        if (width <= maxWidth && height <= maxHeight && file.size < 600 * 1024) {
+          resolve(file);
+          return;
+        }
+        if (width > height) {
+          if (width > maxWidth) {
+            height = Math.round((height * maxWidth) / width);
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width = Math.round((width * maxHeight) / height);
+            height = maxHeight;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          resolve(file);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              resolve(file);
+              return;
+            }
+            const cleanName = (file.name || 'photo.jpg').replace(/\.[^/.]+$/, '') + '.jpg';
+            const compressedFile = new File([blob], cleanName, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          },
+          'image/jpeg',
+          quality
+        );
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+};
+
 const apiErrorMessage = (err, fallback) => {
   const detail = err?.response?.data?.detail;
   if (typeof detail === 'string' && detail) return detail;
@@ -163,9 +233,11 @@ const CreateListing = () => {
     let failedUploads = 0;
     let firstUploadError = '';
     try {
-      for (let index = 0; index < imageFiles.length; index += 1) {
+      const filesToUpload = await Promise.all(imageFiles.map((file) => compressImage(file)));
+
+      for (let index = 0; index < filesToUpload.length; index += 1) {
         const form = new FormData();
-        form.append('file', imageFiles[index]);
+        form.append('file', filesToUpload[index]);
         try {
           const uploadRes = await api.post('/upload', form);
           const data = uploadRes.data;
@@ -173,12 +245,17 @@ const CreateListing = () => {
           urls.push(data.url);
 
           if (index === 0 && data.ai_label) {
+            const cat = mapLabelToCategory(data.ai_label);
             setAiData({
               label: data.ai_label,
               confidence: (data.ai_confidence * 100).toFixed(0),
-              suggested_category: 'Other',
+              suggested_category: cat,
             });
-            setFormData((prev) => ({ ...prev, title: data.ai_label }));
+            setFormData((prev) => ({
+              ...prev,
+              title: prev.title || data.ai_label,
+              category: prev.category === 'Other' ? cat : prev.category,
+            }));
           }
         } catch (err) {
           failedUploads += 1;

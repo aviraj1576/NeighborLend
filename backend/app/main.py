@@ -23,6 +23,12 @@ if settings.app_env.lower() in {"production", "prod"}:
 # Warm the same YOLOE instance used by uploads and /api/ai/identify.
 def _preload_model():
     try:
+        import gc
+        try:
+            import torch
+            torch.set_num_threads(1)
+        except ImportError:
+            pass
         from app.services.ai_identifier import _get_model, get_allowed_classes
         model = _get_model()
         if model is None:
@@ -31,6 +37,7 @@ def _preload_model():
         import numpy as np
         dummy = np.zeros((640, 640, 3), dtype=np.uint8)
         model.predict(dummy, imgsz=640, classes=get_allowed_classes(model), verbose=False)
+        gc.collect()
         logging.getLogger(__name__).info("YOLOE model pre-loaded and warmed up")
     except Exception as exc:
         logging.getLogger(__name__).warning("YOLOE pre-load skipped: %s", exc)
