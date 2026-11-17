@@ -17,21 +17,24 @@ def _send_via_brevo_api(recipient: str, code: str, settings) -> bool:
     Cloud providers such as Render block outbound TCP on ports 25, 465, and 587.
     HTTPS over port 443 is unrestricted, allowing reliable delivery.
     """
-    if not settings.smtp_password or not settings.smtp_from_email:
+    api_key = (getattr(settings, "brevo_api_key", "") or settings.smtp_password or "").strip()
+    from_email = (settings.smtp_from_email or "").strip()
+    if not api_key or not from_email:
         return False
 
     is_brevo = (
-        "brevo" in (settings.smtp_host or "").lower()
+        bool(getattr(settings, "brevo_api_key", ""))
+        or "brevo" in (settings.smtp_host or "").lower()
         or "sendinblue" in (settings.smtp_host or "").lower()
-        or settings.smtp_password.startswith(("xkeysib-", "xsmtpsib-"))
+        or api_key.startswith(("xkeysib-", "xsmtpsib-"))
     )
     if not is_brevo:
         return False
 
     url = "https://api.brevo.com/v3/smtp/email"
     payload = {
-        "sender": {"name": "NeighborLend", "email": settings.smtp_from_email},
-        "to": [{"email": recipient}],
+        "sender": {"name": "NeighborLend", "email": from_email},
+        "to": [{"email": recipient.strip()}],
         "subject": "Your NeighborLend verification code",
         "htmlContent": (
             f"<div style='font-family: -apple-system, BlinkMacSystemFont, \"Segoe UI\", Roboto, sans-serif; "
@@ -57,7 +60,7 @@ def _send_via_brevo_api(recipient: str, code: str, settings) -> bool:
             url,
             data=data,
             headers={
-                "api-key": settings.smtp_password,
+                "api-key": api_key,
                 "Content-Type": "application/json",
                 "Accept": "application/json",
                 "User-Agent": "NeighborLend/1.0",
