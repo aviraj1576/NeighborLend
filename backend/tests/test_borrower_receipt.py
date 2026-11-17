@@ -39,8 +39,8 @@ def test_photo_free_receipt_keeps_payment_baseline_both_parties_and_return_evide
     approved = client.post(route + "/return/confirm", headers=headers["lender"], json={"approved": True})
     assert approved.status_code == 200, approved.text
     booking = client.get(f"/api/payments/bookings/{flow['booking']['id']}", headers=headers["borrower"]).json()
-    assert booking["refund"]["status"] == "created"  # Authorized only; admin dispatch remains separate.
+    assert booking["refund"]["status"] == "processed"  # Approved return releases the deposit automatically.
     assert booking["refund"]["amount_paise"] == 50000
-    assert booking["deposit_refunded_paise"] == 0
+    assert booking["deposit_refunded_paise"] == 50000
     assert client.get(before, headers=headers["borrower"]).status_code == 200
     assert client.get(before, headers=headers["other"]).status_code == 403

@@ -746,6 +746,21 @@ class PaymentService:
             row = self._intent(booking, "clean_return", 0, actor)
             return self._refund_view(row)
 
+    def auto_release(self, booking_id, actor, deduction=None, kind="clean_return"):
+        """Release the deposit without a manual refund step.
+
+        Used after a lender approves a return (deduction 0) and after an admin
+        decides a damage dispute. Creates the settlement intent if needed, then
+        dispatches it. Failures are left for the manual refund panel.
+        """
+        if deduction is not None:
+            with locked(self.db, booking_id) as booking:
+                if booking.payment_status != "captured":
+                    return None
+                deduction = max(0, min(int(deduction), booking.security_deposit_paise))
+                self._intent(booking, kind, deduction, actor)
+        return self.execute_refund(booking_id, actor, admin=True, system=True)
+
     def cancel(self, booking_id, actor):
         with locked(self.db, booking_id) as booking:
             authorize(booking, actor)
@@ -1034,7 +1049,7 @@ class PaymentService:
             if (
                 request.handover_status not in {"return_photos_uploaded", "return_confirmed"}
                 or not request.returned_at
-                or not request.return_photos
+                or not (request.return_photos or request.damage_check_id)
             ):
                 conflict("Physical return evidence is required before dispute settlement")
             row = self.db.scalar(
@@ -1080,7 +1095,7 @@ class PaymentService:
                 claim_version=row.claim_version,
                 authority="administrator",
                 evidence_references={
-                    "return_photos": json.loads(request.return_photos),
+                    "return_photos": json.loads(request.return_photos or "[]"),
                     "inspection_id": row.inspection_id,
                     "cv_run_id": row.cv_run_id,
                     "assessment_id": row.assessment_id,
@@ -1089,11 +1104,13 @@ class PaymentService:
             return self._refund_view(intent)
 
     def execute_refund(
-        self, booking_id, actor, demo_outcome="processed", admin=False, *, allow_dispatch=True
+        self, booking_id, actor, demo_outcome="processed", admin=False, *, allow_dispatch=True,
+        system=False,
     ):
         # Verified gateway webhooks may reconcile existing outcomes with GETs.
-        # Every dispatch, including mock settlement, requires a real admin actor.
-        if allow_dispatch or self.provider.kind == "mock":
+        # Every dispatch, including mock settlement, requires a real admin actor,
+        # except the platform's own automatic release after an approved settlement.
+        if (allow_dispatch or self.provider.kind == "mock") and not system:
             self._refund_admin(actor, admin)
         db = self.db
         with locked(db, booking_id) as booking:

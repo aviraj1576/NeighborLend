@@ -4,7 +4,7 @@ import Input from './ui/Input.jsx';
 import RentalEvidenceImage from './RentalEvidenceImage.jsx';
 import { uploadEvidenceFiles } from './rentalEvidenceUpload.js';
 
-export default function HandoverConfirmation({ request, user, api, bookingId, onChange }) {
+export default function HandoverConfirmation({ request, user, api, bookingId, onChange, hideLenderUpload }) {
   const [files, setFiles] = useState([]);
   const [previews, setPreviews] = useState([]);
   const [issue, setIssue] = useState('');
@@ -36,7 +36,7 @@ export default function HandoverConfirmation({ request, user, api, bookingId, on
       {request.handover_status === 'pending' ? 'Awaiting lender product photos' : request.handover_status === 'photos_uploaded' ? 'Photos uploaded — borrower to confirm receipt' : request.handover_status === 'borrower_confirmed' ? 'Borrower confirmed — lender to complete handover' : 'Handover issue reported'}
     </p>
     {error && <p className="error-banner" role="alert">{error}</p>}
-    {request.handover_status === 'pending' && lender && <div className="handover-step">
+    {request.handover_status === 'pending' && lender && !hideLenderUpload && <div className="handover-step">
       <h3 className="t-card">Lender: upload product photos</h3><p>Payment must be verified before the item can be handed over.</p>
       <input aria-label="Product handover photos" type="file" accept="image/jpeg,image/png" multiple disabled={busy} onChange={selectFiles} />
       <div className="photo-previews">{previews.map((src, i) => <img key={src} src={src} alt={`Preview ${i + 1}`} className="photo-preview" />)}</div>

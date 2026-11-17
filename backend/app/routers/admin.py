@@ -194,6 +194,27 @@ def resolve_dispute(
     from app.services.trust_score import refresh_transaction_participants
     refresh_transaction_participants(db, lend)
     db.commit()
+
+    # Settle the held security deposit according to the admin's decision.
+    from app.payment_models import RentalBooking
+    booking = db.query(RentalBooking).filter_by(borrow_request_id=lend.id).first()
+    if booking is not None and not booking.settlement_kind:
+        deposit = booking.security_deposit_paise or 0
+        deduction = {"lender": deposit, "borrower": 0}.get(data.outcome, deposit // 2)
+        booking_id, admin_id = booking.id, admin.id
+        try:
+            from app.routers.payments import payment_provider
+            from app.services.payments import PaymentService
+            PaymentService(db, payment_provider()).auto_release(
+                booking_id, admin_id, deduction=deduction, kind="dispute"
+            )
+        except Exception as exc:  # admin can still settle from the refund panel
+            db.rollback()
+            import logging
+            logging.getLogger(__name__).warning("Deposit settlement after dispute failed: %s", exc)
+        lend = db.get(BorrowRequest, dispute.borrow_request_id)
+        refresh_transaction_participants(db, lend)
+        db.commit()
     return _summary(db, dispute)
 
 

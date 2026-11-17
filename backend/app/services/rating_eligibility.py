@@ -16,7 +16,7 @@ def rating_eligible(db, request, booking=None):
     dispute = db.scalar(select(RentalDispute).where(RentalDispute.booking_id == booking.id))
     return bool(
         request.returned_at
-        and request.return_photos
+        and (request.return_photos or request.damage_check_id)
         and booking.payment_status == "captured"
         and booking.booking_status == "completed"
         and booking.deposit_state == "settled"

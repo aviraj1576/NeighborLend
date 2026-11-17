@@ -118,14 +118,6 @@ export default function DisputeResolutionModal({
           null,
           `Proposed deposit remainder: ${rupees(booking.security_deposit_paise - claim.claimed_deduction_paise)}`,
         ),
-        ...Object.keys(refs).map((key) =>
-          h('p', { key }, `${key}: ${claim[key] || 'No linked inspection'}`),
-        ),
-        h(
-          'p',
-          null,
-          'References are unverified pointers. No AI report is fabricated or fetched through this payment screen.',
-        ),
       ),
     error && h('p', { role: 'alert', className: 'error-banner' }, error),
     success && h('p', { role: 'status', 'aria-live': 'polite' }, success),
@@ -171,23 +163,6 @@ export default function DisputeResolutionModal({
               value: amount,
               onChange: (e) => setAmount(e.target.value),
             }),
-          ),
-        lender &&
-          h(
-            'details',
-            null,
-            h('summary', null, 'Optional existing AI evidence references'),
-            ...Object.keys(refs).map((key) =>
-              h(
-                'label',
-                { key },
-                key,
-                h('input', {
-                  value: refs[key],
-                  onChange: (e) => setRefs({ ...refs, [key]: e.target.value }),
-                }),
-              ),
-            ),
           ),
         lender &&
           h(

@@ -1,4 +1,5 @@
 import json
+import logging
 import math
 from datetime import datetime, timedelta
 from typing import List, Optional
@@ -26,6 +27,8 @@ from app.schemas.notification import DisputeCreateIn, HandoverIssueCreateIn
 from app.services.auth import get_current_user
 from app.services.negotiation import calculate_rental_duration_and_cost
 from app.services.notifications import create_notification
+
+logger = logging.getLogger(__name__)
 
 
 # New schemas for handover workflow
@@ -641,6 +644,24 @@ def confirm_return(
         provider = payment_provider()
         service = PaymentService(db, provider)
         service.return_decision(bid, actor, data.approved, data.condition_note or "")
+        if data.approved:
+            # Approved return: release the security deposit to the borrower right away.
+            try:
+                service.auto_release(bid, actor)
+            except Exception as exc:  # leave it for the manual refund panel
+                db.rollback()
+                logger.warning("Automatic deposit release failed for %s: %s", bid, exc)
+            req = db.get(BorrowRequest, rid)
+            req.status = BorrowRequestStatus.closed
+            create_notification(
+                db, req.borrower_id, "return_confirmed", "Return approved",
+                f"{current_user.name} approved the return of {req.title}. Your security deposit is being refunded.",
+                f"/borrow-requests/{req.id}", req.id,
+            )
+            _record_handover_event(db, req, current_user, f"{current_user.name} approved the return of {req.title}.")
+            from app.services.trust_score import refresh_transaction_participants
+            refresh_transaction_participants(db, req)
+            db.commit()
         req = db.get(BorrowRequest, rid)
         db.refresh(req)
         return _format_request_out(req, include_private_handover=True)

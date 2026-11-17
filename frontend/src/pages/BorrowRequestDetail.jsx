@@ -90,6 +90,22 @@ export default function BorrowRequestDetail() {
     }
   };
 
+  const [afterComplete, setAfterComplete] = useState(false);
+  const submitDamageReturn = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await api.post(`/borrow-requests/${id}/return/submit`);
+      await refresh();
+      if (request?.damage_check_id) setDamageCheck(await getCheck(request.damage_check_id));
+      window.dispatchEvent(new Event('notifications:updated'));
+    } catch (err) {
+      setError(apiError(err, 'Could not submit the return.'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const shareDamageCheck = async () => {
     setBusy(true);
     setError('');
@@ -142,7 +158,8 @@ export default function BorrowRequestDetail() {
   const isLender = user?.id === request.lender_id;
   const managed = request.handover_status && request.handover_status !== 'not_applicable';
   const canManage = Boolean(request.listing_id && participant);
-  const canRate = request.handover_status === 'return_confirmed' && !request.disputed_at;
+  const canRate = ['return_confirmed', 'dispute_resolved'].includes(request.handover_status);
+  const usesDamageCheck = Boolean(request.damage_check_id);
   const ratingTarget = isBorrower ? 'lender' : 'borrower';
   const alreadyRated = isBorrower ? request.lender_rating : request.borrower_rating;
 
@@ -161,14 +178,12 @@ export default function BorrowRequestDetail() {
       {canManage && <EscrowStatusCard request={request} user={user} api={api} onRentalChange={refresh} />}
 
       {managed && <>
-        <HandoverConfirmation request={request} user={user} api={api} bookingId={bookingId} onChange={refresh} />
-
-        {/* Optional AI 6-photo damage check for lender */}
+        {/* Step 1 — lender: 6-photo AI condition check before handover */}
         {isLender && request.handover_status === 'pending' && (
           <div className="damage-check-section card" style={{ marginTop: '16px' }}>
-            <h3 className="t-card">AI Damage Check (Recommended)</h3>
+            <h3 className="t-card">Step 1: Condition photos before handover</h3>
             <p className="t-body" style={{ marginBottom: '12px' }}>
-              Take 6 structured photos (front, back, left, right, top, bottom) to document baseline condition before handover.
+              Take 6 structured photos (front, back, left, right, top, bottom). The borrower will retake the same 6 shots on return, guided by faded copies of yours, and the AI compares them.
             </p>
             {!request.damage_check_id ? (
               <Button variant="secondary" disabled={busy} onClick={startDamageCheck}>
@@ -190,6 +205,8 @@ export default function BorrowRequestDetail() {
             )}
           </div>
         )}
+
+        <HandoverConfirmation request={request} user={user} api={api} bookingId={bookingId} onChange={refresh} hideLenderUpload={usesDamageCheck} />
 
         {/* Damage Check Link Display */}
         {request.damage_link_token && (
@@ -219,10 +236,26 @@ export default function BorrowRequestDetail() {
           <p className="handover-active-label">Borrowing is active.</p>
         </div>}
 
-        <ReturnSubmission request={request} api={api} bookingId={bookingId} onChange={refresh} />
+        {/* Borrower return: 6 guided photos over the lender's ghost images */}
+        {isBorrower && usesDamageCheck && request.handover_status === 'lender_confirmed' && (
+          <div className="damage-check-section card" style={{ marginTop: '16px' }}>
+            <h3 className="t-card">Return the item: retake the 6 condition photos</h3>
+            <p className="t-body" style={{ marginBottom: '12px' }}>
+              Each shot shows the lender’s photo faded on top. Line the item up with it, take the photo, then submit. The AI compares before and after.
+            </p>
+            <SixPhotoCapture checkId={request.damage_check_id} phase="after" onComplete={() => setAfterComplete(true)} />
+            <div style={{ marginTop: '12px' }}>
+              <Button variant="primary" disabled={busy || !(afterComplete || damageCheck?.missing_after?.length === 0)} onClick={submitDamageReturn}>
+                {busy ? 'Submitting…' : 'Submit return for AI review'}
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {!usesDamageCheck && <ReturnSubmission request={request} api={api} bookingId={bookingId} onChange={refresh} />}
 
         {/* AI Damage Report & Comparison during return inspection */}
-        {damageCheck && (damageCheck.report || damageCheck.after_views?.length === 6) && (
+        {damageCheck && (damageCheck.report || damageCheck.after_views?.length === 6) && request.handover_status !== 'lender_confirmed' && (
           <div className="damage-review-card card" style={{ marginTop: '16px' }}>
             <h3 className="t-card">AI Return Damage Assessment</h3>
             <BeforeAfterCompare pathFor={damagePathFor} report={damageCheck.report} />
@@ -230,8 +263,14 @@ export default function BorrowRequestDetail() {
           </div>
         )}
 
-        <ReturnInspection request={request} user={user} api={api} onChange={refresh} />
-        {request.handover_status === 'return_confirmed' && <p className="rating-done" role="status">Return approved. Deposit settlement status is shown above.</p>}
+        {isBorrower && request.handover_status === 'return_photos_uploaded' && (
+          <p className="rating-done" role="status">Return submitted. Waiting for the lender to approve or dispute.</p>
+        )}
+
+        <ReturnInspection request={request} user={user} api={api} onChange={refresh} usesDamageCheck={usesDamageCheck} />
+        {request.handover_status === 'return_confirmed' && <p className="rating-done" role="status">Return approved. The security deposit is released to the borrower (see payment status above).</p>}
+        {request.handover_status === 'disputed' && <p className="rating-done" role="status">A dispute is open. A NeighborLend admin is reviewing the before/after photos and the AI report and will decide on the deposit.</p>}
+        {request.handover_status === 'dispute_resolved' && <p className="rating-done" role="status">The admin resolved the dispute. The deposit has been settled according to the decision.</p>}
       </>}
 
       {canRate && participant && !alreadyRated && <div className="handover-step rating-form">

@@ -291,11 +291,9 @@ def test_complete_mock_clean_return_refund(flow):
         .get(f"/api/payments/bookings/{flow['booking']['id']}", headers=flow["headers"]["borrower"])
         .json()
     )
-    assert state["booking_status"] == "settling" and state["deposit_refunded_paise"] == 0
-    assert state["held_deposit_paise"] == 50000 and state["deduction_paise"] == 0
-    assert call(flow, "payments/refund-deposit", role="lender").status_code == 200
-    settled = call(flow, "payments/refunds/execute")
-    assert settled.status_code == 200 and settled.json()["deposit_refunded_paise"] == 50000
+    # Approving a clean return releases the full deposit automatically.
+    assert state["booking_status"] == "completed" and state["deposit_refunded_paise"] == 50000
+    assert state["deduction_paise"] == 0
     assert_balanced(flow)
 
 
