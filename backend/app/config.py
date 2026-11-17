@@ -64,8 +64,8 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = 60 * 24 * 7
     upload_dir: str = "./uploads"
     public_base_url: str = "http://localhost:8000"
-    ai_model_path: str = "./ai_service/best_model.pt"
-    ai_confidence_threshold: float = 0.45
+    ai_model_path: str = "./ai_service/models/neighborlend_yoloe_best.pt"
+    ai_confidence_threshold: float = 0.25
     mock_payments: bool = True
     # MOCK_PAYMENTS is deprecated and never grants payment authority.
     payment_provider: Literal["disabled", "mock", "razorpay_test"] = "disabled"

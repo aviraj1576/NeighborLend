@@ -43,6 +43,6 @@ services:
       - key: SMTP_USE_TLS
         value: "true"
       - key: AI_MODEL_PATH
-        value: /app/ai_service/best_model.pt
+        value: /app/ai_service/models/neighborlend_yoloe_best.pt
       - key: AI_CONFIDENCE_THRESHOLD
-        value: "0.45"
+        value: "0.25"

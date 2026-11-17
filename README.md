@@ -94,7 +94,7 @@ flowchart TD
         Auth["Auth & Security (JWT, Argon2, CAPTCHA)"]
         Chat["In-Chat Negotiation & Messaging"]
         Handover["Handover State Machine"]
-        YOLO["YOLOv8 Object Detection (best_model.pt)"]
+        YOLO["YOLOE Object Detection (23 active classes)"]
     end
 
     subgraph Data ["Data & Storage Layer"]
@@ -120,7 +120,7 @@ flowchart TD
 ```text
 NeighborLend/
 ├── backend/
-│   ├── ai_service/             # YOLOv8 model weights (best_model.pt) & damage prototype
+│   ├── ai_service/             # YOLOE model weights (models/neighborlend_yoloe_best.pt) & damage prototype
 │   ├── app/
 │   │   ├── routers/            # FastAPI route handlers
 │   │   │   ├── auth.py         # Login, registration, email OTP, Google OAuth
@@ -182,7 +182,7 @@ NeighborLend/
 
 ### 2. Listings & AI Auto-Tagging
 * **Photo Upload**: Multi-file upload directly into public Supabase Storage buckets.
-* **YOLO Object Detection**: Uploading an item photo runs inference against `ai_service/best_model.pt` to automatically identify the item (tools, bicycles, books, electronics) and pre-fill listing titles.
+* **YOLOE Object Detection**: Photo uploads and `/api/ai/identify` share `ai_service/models/neighborlend_yoloe_best.pt` and run at 640px. The checkpoint has 24 trained classes; dumbbell is excluded, leaving 23 active classes including kettle. Predictions preserve the checkpoint's original class IDs and pre-fill listing titles. See [Render/Vercel model deployment](docs/ai-model-deployment.md).
 * **Proximity Filtering**: Computes real-time Haversine distance between borrower and item GPS coordinates.
 * **Smart Rental Pricing Algorithm**: Calculates daily rent (4% of depreciated value) and refundable deposit (20%) based on purchase price and item age.
 
